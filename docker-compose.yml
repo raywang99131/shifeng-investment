@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  quote:
+    build:
+      context: ./quote_service
+      dockerfile: Dockerfile
+    container_name: shifeng-quote
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    container_name: shifeng-api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - quote
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: shifeng-web
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    restart: unless-stopped
