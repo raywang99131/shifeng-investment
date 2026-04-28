@@ -1,0 +1,1 @@
+export { default as AlternativePanel } from './AlternativePanel';

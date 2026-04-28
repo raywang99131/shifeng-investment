@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "id": "1776352996769",
+      "type": "morning",
+      "news": [
+        {
+          "category": "宏观",
+          "title": "人民币对美元汇率大涨超300点",
+          "source": "华尔街见闻"
+        },
+        {
+          "category": "AI",
+          "title": "DeepSeek上线新功能",
+          "source": "爱范儿"
+        },
+        {
+          "category": "科技",
+          "title": "CoreWeave拿下大单",
+          "source": "华尔街见闻"
+        }
+      ],
+      "createdAt": "2026-04-16T15:23:16.769Z"
+    }
+  ],
+  "lastUpdated": "2026-04-16T15:23:16.769Z"
+}
