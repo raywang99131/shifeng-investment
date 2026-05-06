@@ -27,6 +27,7 @@ const CATEGORY_MAP = {
 
 app.use(cors());
 app.use(bodyParser.json());
+app.use(express.static(path.join(__dirname, '../dist')));
 
 const DATA_DIR = path.join(__dirname, 'data');
 if (!fs.existsSync(DATA_DIR)) {
@@ -268,6 +269,11 @@ app.post('/api/funds', (req, res) => {
   } else {
     res.status(500).json({ error: 'Failed to save funds' });
   }
+});
+
+// SPA fallback
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
 app.listen(PORT, () => {
