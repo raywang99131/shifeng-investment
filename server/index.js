@@ -271,8 +271,11 @@ app.post('/api/funds', (req, res) => {
   }
 });
 
-// SPA fallback
-app.get('*', (req, res) => {
+// SPA fallback - only for non-API, non-file routes
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api') || req.path.includes('.')) {
+    return next();
+  }
   res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
