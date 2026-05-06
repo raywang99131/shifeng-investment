@@ -43,8 +43,6 @@ const PositionModal: React.FC<{
         form.resetFields();
         setInputMode('shares');
       }
-      setPreviewShares(null);
-      setWeightWarning(null);
     }
   }, [open, position, form]);
 
@@ -52,7 +50,6 @@ const PositionModal: React.FC<{
     form.setFieldsValue({ code: val, name: opt.name });
     setNameOptions([]);
     // fetch current price immediately
-    setLoadingPrice(true);
     fetch(`http://localhost:3000/api/sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -64,8 +61,7 @@ const PositionModal: React.FC<{
           form.setFieldsValue({ currentPrice: data.prices[val].currentPrice });
         }
       })
-      .catch(() => {})
-      .finally(() => setLoadingPrice(false));
+      .catch(() => {});
   };
 
   // Auto-fetch current price when code changes (for new positions only)
