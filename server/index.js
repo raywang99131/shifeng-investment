@@ -200,7 +200,8 @@ app.post('/api/sync', async (req, res) => {
   }
   try {
     const codesParam = codes.join(',');
-    const response = await fetch(`http://localhost:3001/quotes/batch?codes=${codesParam}`);
+    const QUOTE_BASE = process.env.QUOTE_SERVICE_URL || 'http://localhost:3001';
+    const response = await fetch(`${QUOTE_BASE}/quotes/batch?codes=${codesParam}`);
     const data = await response.json();
     if (!data.success) {
       return res.json({ success: false, error: data.error || 'Quote service error' });
@@ -222,12 +223,11 @@ app.get('/api/kline', async (req, res) => {
     return res.status(400).json({ success: false, error: 'code required' });
   }
   try {
-    const params = new URLSearchParams({ code, period: period || 'daily', count: count || '60' });
-    const response = await fetch(`http://localhost:3001/kline?${params}`);
+    const response = await fetch(`${QUOTE_BASE}/kline?code=${code}&period=${period || 'daily'}&count=${count || '60'}`);
     const data = await response.json();
     res.json(data);
   } catch (err) {
-    res.status(500).json({ success: false, error: 'Failed to reach quote service' });
+    res.status(500).json({ success: false, error: 'Failed to fetch kline' });
   }
 });
 
