@@ -4,6 +4,8 @@ import bodyParser from 'body-parser';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { spawn } from 'child_process';
+import os from 'os';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,6 +13,17 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = 3000;
 const NEWS_FILE = path.join(__dirname, 'data', 'news.json');
+const FUNDS_FILE = path.join(__dirname, 'data', 'funds.json');
+
+// fetch_all_news.py 输出的分类 → 前端分类映射
+const CATEGORY_MAP = {
+  '1_宏观': '宏观',
+  '2_大宗商品': '大宗商品',
+  '3_加密货币': '加密货币',
+  '4_软件AI': '软件/AI大模型',
+  '5_硬件': '硬件',
+  '6_消费': '消费',
+};
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -93,6 +106,87 @@ app.delete('/api/news', (req, res) => {
   }
 });
 
+// 调用 openclaw 的 fetch_all_news.py 采集真实新闻
+app.post('/api/news/refresh', async (req, res) => {
+  try {
+    const scriptPath = os.homedir() + '/.openclaw/workspace/skills/wrx-news-daily/scripts/fetch_all_news.py';
+
+    const result = await new Promise((resolve, reject) => {
+      const proc = spawn('python3', [scriptPath, '--types', 'all', '--limit', '10']);
+
+      let stdout = '';
+      let stderr = '';
+
+      // 2分钟超时
+      const timer = setTimeout(() => {
+        proc.kill();
+        reject(new Error('Script timed out after 120 seconds'));
+      }, 120000);
+
+      proc.stdout.on('data', (data) => { stdout += data.toString(); });
+      proc.stderr.on('data', (data) => { stderr += data.toString(); });
+
+      proc.on('close', (code) => {
+        clearTimeout(timer);
+        if (code === 0) {
+          resolve(stdout);
+        } else {
+          reject(new Error(`Script exited with code ${code}: ${stderr}`));
+        }
+      });
+
+      proc.on('error', (err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+    });
+
+    // 解析 JSON 输出（最后一行为有效JSON）
+    const lines = result.trim().split('\n');
+    const jsonLine = lines[lines.length - 1];
+    const newsItems = JSON.parse(jsonLine);
+
+    // 转换分类，并为没有URL的新闻生成搜索链接
+    const transformedNews = newsItems.map(item => {
+      let url = item.url || '';
+      if (!url) {
+        // 没有URL时，用必应搜索构造链接
+        const query = encodeURIComponent(item.title);
+        url = `https://www.bing.com/search?q=${query}`;
+      }
+      return {
+        category: CATEGORY_MAP[item.category] || '消费',
+        title: item.title,
+        source: item.source,
+        time: item.time || '',
+        url,
+      };
+    });
+
+    // 保存到 news.json
+    const currentData = readNews();
+    const newEntry = {
+      id: Date.now().toString(),
+      type: 'morning',
+      news: transformedNews,
+      createdAt: new Date().toISOString(),
+    };
+
+    currentData.entries = currentData.entries || [];
+    currentData.entries.unshift(newEntry);
+    if (currentData.entries.length > 50) {
+      currentData.entries = currentData.entries.slice(0, 50);
+    }
+    currentData.lastUpdated = new Date().toISOString();
+    writeNews(currentData);
+
+    res.json({ success: true, entry: newEntry });
+  } catch (err) {
+    console.error('News refresh error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
@@ -117,6 +211,62 @@ app.post('/api/sync', async (req, res) => {
     res.json({ success: true, tradeDate: data.trade_date, prices });
   } catch (err) {
     res.json({ success: false, error: 'Failed to reach quote service' });
+  }
+});
+
+// K-line historical data proxy
+app.get('/api/kline', async (req, res) => {
+  const { code, period, count } = req.query;
+  if (!code) {
+    return res.status(400).json({ success: false, error: 'code required' });
+  }
+  try {
+    const params = new URLSearchParams({ code, period: period || 'daily', count: count || '60' });
+    const response = await fetch(`http://localhost:3001/kline?${params}`);
+    const data = await response.json();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to reach quote service' });
+  }
+});
+
+// Funds portfolio persistence
+function readFunds() {
+  try {
+    if (fs.existsSync(FUNDS_FILE)) {
+      const data = fs.readFileSync(FUNDS_FILE, 'utf-8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Error reading funds:', error);
+  }
+  return { funds: [], lastUpdated: null };
+}
+
+function writeFunds(data) {
+  try {
+    fs.writeFileSync(FUNDS_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    return true;
+  } catch (error) {
+    console.error('Error writing funds:', error);
+    return false;
+  }
+}
+
+// Funds API endpoints
+app.get('/api/funds', (req, res) => {
+  res.json(readFunds());
+});
+
+app.post('/api/funds', (req, res) => {
+  const { funds } = req.body;
+  if (!Array.isArray(funds)) {
+    return res.status(400).json({ error: 'Invalid funds data. Expected { funds: [...] }' });
+  }
+  if (writeFunds({ funds, lastUpdated: new Date().toISOString() })) {
+    res.json({ success: true });
+  } else {
+    res.status(500).json({ error: 'Failed to save funds' });
   }
 });
 

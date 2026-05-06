@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Card, Row, Col, Button, Empty, Typography, Space } from 'antd';
-import { PlusOutlined, RightOutlined, ArrowUpOutlined, ArrowDownOutlined, SyncOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Button, Empty, Typography, Space, Table } from 'antd';
+import { PlusOutlined, ArrowUpOutlined, ArrowDownOutlined, SyncOutlined, AppstoreOutlined, BarsOutlined } from '@ant-design/icons';
 import { type Fund } from '../../types/fund';
 
 const { Text } = Typography;
@@ -59,9 +59,6 @@ const FundDashboardCard: React.FC<{ stats: FundStats; onClick: () => void }> = (
             </div>
           </Col>
         </Row>
-        <Button type="link" icon={<RightOutlined />} iconPlacement="end" style={{ padding: 0, marginTop: 6 }} onClick={onClick}>
-          查看详情
-        </Button>
       </div>
     </Card>
   );
@@ -70,6 +67,7 @@ const FundDashboardCard: React.FC<{ stats: FundStats; onClick: () => void }> = (
 const FundDashboard: React.FC<FundDashboardProps> = ({ funds, onSelectFund, onAddFund, onSyncAll, syncing }) => {
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // 计算每个基金的统计数据
   const allStats = useMemo<FundStats[]>(() => {
@@ -158,6 +156,9 @@ const FundDashboard: React.FC<FundDashboardProps> = ({ funds, onSelectFund, onAd
           <Button size="small" icon={<SyncOutlined />} onClick={onSyncAll} loading={syncing}>
             一键刷新
           </Button>
+          <Button size="small" icon={viewMode === 'grid' ? <BarsOutlined /> : <AppstoreOutlined />} onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}>
+            {viewMode === 'grid' ? '列表' : '网格'}
+          </Button>
         </Space>
         <Space>
           <Text type="secondary" style={{ fontSize: 12 }}>排序：</Text>
@@ -172,13 +173,58 @@ const FundDashboard: React.FC<FundDashboardProps> = ({ funds, onSelectFund, onAd
           </Button>
         </Space>
       </div>
-      <Row gutter={[16, 16]}>
-        {sortedStats.map((stats) => (
-          <Col key={stats.fund.id} span={8}>
-            <FundDashboardCard stats={stats} onClick={() => onSelectFund(stats.fund.id)} />
-          </Col>
-        ))}
-      </Row>
+      {viewMode === 'grid' ? (
+        <Row gutter={[16, 16]}>
+          {sortedStats.map((stats) => (
+            <Col key={stats.fund.id} span={8}>
+              <FundDashboardCard stats={stats} onClick={() => onSelectFund(stats.fund.id)} />
+            </Col>
+          ))}
+        </Row>
+      ) : (
+        <Table
+          dataSource={sortedStats.map(s => ({ ...s, key: s.fund.id }))}
+          rowKey="fund.id"
+          pagination={false}
+          size="small"
+          onRow={(record) => ({ onClick: () => onSelectFund(record.fund.id), style: { cursor: 'pointer' } })}
+          columns={[
+            { title: '基金名称', dataIndex: ['fund', 'name'], render: (v: string) => <Text strong>{v}</Text> },
+            { title: '持仓数', render: (_, r) => r.fund.positions.length },
+            {
+              title: '最新净值',
+              dataIndex: 'nav',
+              align: 'right' as const,
+              render: (v: number) => v.toFixed(4),
+            },
+            {
+              title: '今日涨跌',
+              dataIndex: 'dailyReturn',
+              align: 'right' as const,
+              render: (v: number) => {
+                const color = profitColor(v);
+                const icon = profitIcon(v);
+                return <span style={{ color }}>{icon}{v !== 0 ? `${Math.abs(v).toFixed(2)}%` : '0.00%'}</span>;
+              },
+            },
+            {
+              title: '总市值',
+              dataIndex: 'totalMarketValue',
+              align: 'right' as const,
+              render: (v: number) => `¥${v.toLocaleString()}`,
+            },
+            {
+              title: '累计收益',
+              dataIndex: 'profit',
+              align: 'right' as const,
+              render: (v: number, r) => {
+                const color = r.profit >= 0 ? '#ff4d4f' : '#52c41a';
+                return <span style={{ color }}>{v >= 0 ? '+' : ''}{v.toLocaleString()}</span>;
+              },
+            },
+          ]}
+        />
+      )}
     </div>
   );
 };

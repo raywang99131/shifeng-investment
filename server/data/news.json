@@ -1,6 +1,1294 @@
 {
   "entries": [
     {
+      "id": "1777973837523",
+      "type": "morning",
+      "news": [
+        {
+          "category": "宏观",
+          "title": "鸿海4月营收创同期新高、同比增长近30%，AI服务器需求持续撑盘",
+          "source": "Wall Street CN",
+          "time": "15:33",
+          "url": "https://wallstreetcn.com/articles/3771578"
+        },
+        {
+          "category": "宏观",
+          "title": "2. 不看好eBay收购案！“大空头”伯里火速清仓游戏驿站(GME.US)...",
+          "source": "财联社",
+          "time": "",
+          "url": "https://www.bing.com/search?q=2.%20%E4%B8%8D%E7%9C%8B%E5%A5%BDeBay%E6%94%B6%E8%B4%AD%E6%A1%88%EF%BC%81%E2%80%9C%E5%A4%A7%E7%A9%BA%E5%A4%B4%E2%80%9D%E4%BC%AF%E9%87%8C%E7%81%AB%E9%80%9F%E6%B8%85%E4%BB%93%E6%B8%B8%E6%88%8F%E9%A9%BF%E7%AB%99(GME.US)..."
+        },
+        {
+          "category": "宏观",
+          "title": "全球原油库存告急：距离油价飙升临界点还有多远？",
+          "source": "Wall Street CN",
+          "time": "12:36",
+          "url": "https://wallstreetcn.com/member/articles/3771378"
+        },
+        {
+          "category": "宏观",
+          "title": "决战企业级API：Anthropic ARR首超OpenAI，大模型下半场正被“B端逻辑”改写",
+          "source": "Wall Street CN",
+          "time": "12:25",
+          "url": "https://wallstreetcn.com/member/articles/3771535"
+        },
+        {
+          "category": "宏观",
+          "title": "ClaudeCode之父：“老公司”转型难，现在是“AI原生公司”最好的机会",
+          "source": "Wall Street CN",
+          "time": "14:46",
+          "url": "https://wallstreetcn.com/charts/41959004"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "欧盟官员：能源价格飙升推高欧盟通胀",
+          "source": "36Kr",
+          "time": "1小时前",
+          "url": "https://36kr.com/newsflashes/3796056370240770"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "亚马逊全面开放旗下物流网络",
+          "source": "36Kr",
+          "time": "45秒前",
+          "url": "https://36kr.com/newsflashes/3796131306658816"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "威龙股份：控股股东筹划控制权变更 股票停牌",
+          "source": "36Kr",
+          "time": "19分钟前",
+          "url": "https://36kr.com/newsflashes/3796126353431553"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "金利华电：筹划发行股份及支付现金购买中科西光股权并募集配套资金 股票停牌",
+          "source": "36Kr",
+          "time": "42分钟前",
+          "url": "https://36kr.com/newsflashes/3796124251921415"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "东阳光：控股子公司签署算力服务采购框架合同 预计总额160亿元至190亿元",
+          "source": "36Kr",
+          "time": "1小时前",
+          "url": "https://36kr.com/newsflashes/3796122229644550"
+        },
+        {
+          "category": "消费",
+          "title": "奔跑吧打假",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E5%A5%94%E8%B7%91%E5%90%A7%E6%89%93%E5%81%87&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "世乒赛男团澳大利亚变阵",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E4%B8%96%E4%B9%92%E8%B5%9B%E7%94%B7%E5%9B%A2%E6%BE%B3%E5%A4%A7%E5%88%A9%E4%BA%9A%E5%8F%98%E9%98%B5&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "广交会彰显中国制造硬核实力",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E5%B9%BF%E4%BA%A4%E4%BC%9A%E5%BD%B0%E6%98%BE%E4%B8%AD%E5%9B%BD%E5%88%B6%E9%80%A0%E7%A1%AC%E6%A0%B8%E5%AE%9E%E5%8A%9B&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "你好星期六没有给张婧仪道歉",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E4%BD%A0%E5%A5%BD%E6%98%9F%E6%9C%9F%E5%85%AD%E6%B2%A1%E6%9C%89%E7%BB%99%E5%BC%A0%E5%A9%A7%E4%BB%AA%E9%81%93%E6%AD%89&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "长沙市委市政府致歉",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E9%95%BF%E6%B2%99%E5%B8%82%E5%A7%94%E5%B8%82%E6%94%BF%E5%BA%9C%E8%87%B4%E6%AD%89&Refer=top"
+        }
+      ],
+      "createdAt": "2026-05-05T09:37:17.523Z"
+    },
+    {
+      "id": "1777517983269",
+      "type": "morning",
+      "news": [
+        {
+          "category": "宏观",
+          "title": "2. 特朗普要降息，同僚却反对：沃什的美联储主席之路开局即地狱模式...",
+          "source": "财联社",
+          "time": "",
+          "url": "https://www.bing.com/search?q=2.%20%E7%89%B9%E6%9C%97%E6%99%AE%E8%A6%81%E9%99%8D%E6%81%AF%EF%BC%8C%E5%90%8C%E5%83%9A%E5%8D%B4%E5%8F%8D%E5%AF%B9%EF%BC%9A%E6%B2%83%E4%BB%80%E7%9A%84%E7%BE%8E%E8%81%94%E5%82%A8%E4%B8%BB%E5%B8%AD%E4%B9%8B%E8%B7%AF%E5%BC%80%E5%B1%80%E5%8D%B3%E5%9C%B0%E7%8B%B1%E6%A8%A1%E5%BC%8F..."
+        },
+        {
+          "category": "宏观",
+          "title": "Meta电话会：全年资本开支再上调100亿、创历史最高，AI智能体商业化路径仍不明朗",
+          "source": "Wall Street CN",
+          "time": "09:30",
+          "url": "https://wallstreetcn.com/articles/3771327"
+        },
+        {
+          "category": "宏观",
+          "title": "A股三大股指震荡下跌，芯片半导体拉升，寒武纪暴涨13%重夺新“股王”宝座，恒科指跌超1%，科网股普跌",
+          "source": "Wall Street CN",
+          "time": "10:43",
+          "url": "https://wallstreetcn.com/articles/3771338"
+        },
+        {
+          "category": "宏观",
+          "title": "微软电话会：AI收入同比翻倍，硬件涨价推高资本开支250亿美元，GPU和存储短缺仍将贯穿全年",
+          "source": "Wall Street CN",
+          "time": "09:57",
+          "url": "https://wallstreetcn.com/articles/3771317"
+        },
+        {
+          "category": "宏观",
+          "title": "鲍威尔离场、油价登场、鹰派基调全面升温--华尔街点评美联储决议",
+          "source": "Wall Street CN",
+          "time": "09:55",
+          "url": "https://wallstreetcn.com/articles/3771331"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "摩根资产管理认为美联储加息的门槛很高",
+          "source": "36Kr",
+          "time": "38分钟前",
+          "url": "https://36kr.com/newsflashes/3788696181349635"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "云迹科技发布2025年报，智能体应用收入增长194%",
+          "source": "36Kr",
+          "time": "37分钟前",
+          "url": "https://36kr.com/newsflashes/3788697238166790"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "阿迪达斯全球2026年Q1营收66亿欧元，同比增14%",
+          "source": "36Kr",
+          "time": "44分钟前",
+          "url": "https://36kr.com/newsflashes/3788690092317701"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "市场消息：软银寻求400亿美元贷款用于投资OpenAI的计划吸引了更多银行参与",
+          "source": "36Kr",
+          "time": "3分钟前",
+          "url": "https://36kr.com/newsflashes/3788730370415618"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "特斯拉：电动卡车Semi进入量产新阶段",
+          "source": "36Kr",
+          "time": "31分钟前",
+          "url": "https://36kr.com/newsflashes/3788703209954568"
+        },
+        {
+          "category": "消费",
+          "title": "女生攒到10万怕被嘲笑网友全是鼓励",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E5%A5%B3%E7%94%9F%E6%94%92%E5%88%B010%E4%B8%87%E6%80%95%E8%A2%AB%E5%98%B2%E7%AC%91%E7%BD%91%E5%8F%8B%E5%85%A8%E6%98%AF%E9%BC%93%E5%8A%B1&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "莫氏鸡煲老板还剩40万债务",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E8%8E%AB%E6%B0%8F%E9%B8%A1%E7%85%B2%E8%80%81%E6%9D%BF%E8%BF%98%E5%89%A940%E4%B8%87%E5%80%BA%E5%8A%A1&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "网警严查斗狠类直播13人被拘",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E7%BD%91%E8%AD%A6%E4%B8%A5%E6%9F%A5%E6%96%97%E7%8B%A0%E7%B1%BB%E7%9B%B4%E6%92%AD13%E4%BA%BA%E8%A2%AB%E6%8B%98&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "2025全国十大考古新发现",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=2025%E5%85%A8%E5%9B%BD%E5%8D%81%E5%A4%A7%E8%80%83%E5%8F%A4%E6%96%B0%E5%8F%91%E7%8E%B0&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "张豆豆做的菜被孙母挑刺",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E5%BC%A0%E8%B1%86%E8%B1%86%E5%81%9A%E7%9A%84%E8%8F%9C%E8%A2%AB%E5%AD%99%E6%AF%8D%E6%8C%91%E5%88%BA&Refer=top"
+        },
+        {
+          "category": "加密货币",
+          "title": "BTC drops 40 percent as Fed keeps rates steady",
+          "source": "COINTURK NEWS",
+          "time": "",
+          "url": "https://www.bing.com/search?q=BTC%20drops%2040%20percent%20as%20Fed%20keeps%20rates%20steady"
+        },
+        {
+          "category": "加密货币",
+          "title": "Bitcoin’s Wild Ride: Fed’s Decisions and Global Turbulence Shake the Crypto Market",
+          "source": "BH NEWS",
+          "time": "",
+          "url": "https://www.bing.com/search?q=Bitcoin%E2%80%99s%20Wild%20Ride%3A%20Fed%E2%80%99s%20Decisions%20and%20Global%20Turbulence%20Shake%20the%20Crypto%20Market"
+        },
+        {
+          "category": "加密货币",
+          "title": "Curve DAO Token (CRV) Price Prediction 2026-2030: Can CRV Finally Break Its Long-Term Range?",
+          "source": "BitcoinWorld",
+          "time": "",
+          "url": "https://www.bing.com/search?q=Curve%20DAO%20Token%20(CRV)%20Price%20Prediction%202026-2030%3A%20Can%20CRV%20Finally%20Break%20Its%20Long-Term%20Range%3F"
+        },
+        {
+          "category": "加密货币",
+          "title": "Whale Opens Massive $182M ETH Long Position on Hyperliquid: Market Impact Analyzed",
+          "source": "BitcoinWorld",
+          "time": "",
+          "url": "https://www.bing.com/search?q=Whale%20Opens%20Massive%20%24182M%20ETH%20Long%20Position%20on%20Hyperliquid%3A%20Market%20Impact%20Analyzed"
+        },
+        {
+          "category": "加密货币",
+          "title": "RealOpen and TRON Verify $9.4M in USDT for Crypto-Enabled Real Estate Purchases",
+          "source": "Cryptopolitan",
+          "time": "",
+          "url": "https://www.bing.com/search?q=RealOpen%20and%20TRON%20Verify%20%249.4M%20in%20USDT%20for%20Crypto-Enabled%20Real%20Estate%20Purchases"
+        }
+      ],
+      "createdAt": "2026-04-30T02:59:43.269Z"
+    },
+    {
+      "id": "1777517591621",
+      "type": "morning",
+      "news": [
+        {
+          "category": "宏观",
+          "title": "2. 特朗普要降息，同僚却反对：沃什的美联储主席之路开局即地狱模式...",
+          "source": "财联社",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "宏观",
+          "title": "Meta电话会：全年资本开支再上调100亿、创历史最高，AI智能体商业化路径仍不明朗",
+          "source": "Wall Street CN",
+          "time": "09:30",
+          "url": "https://wallstreetcn.com/articles/3771327"
+        },
+        {
+          "category": "宏观",
+          "title": "微软电话会：AI收入同比翻倍，硬件涨价推高资本开支250亿美元，GPU和存储短缺仍将贯穿全年",
+          "source": "Wall Street CN",
+          "time": "09:57",
+          "url": "https://wallstreetcn.com/articles/3771317"
+        },
+        {
+          "category": "宏观",
+          "title": "鲍威尔离场、油价登场、鹰派基调全面升温--华尔街点评美联储决议",
+          "source": "Wall Street CN",
+          "time": "09:55",
+          "url": "https://wallstreetcn.com/articles/3771331"
+        },
+        {
+          "category": "宏观",
+          "title": "AI大神：从去年12月开始，我不再写代码了",
+          "source": "Wall Street CN",
+          "time": "10:49",
+          "url": "https://wallstreetcn.com/charts/41958980"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "摩根资产管理认为美联储加息的门槛很高",
+          "source": "36Kr",
+          "time": "32分钟前",
+          "url": "https://36kr.com/newsflashes/3788696181349635"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "菲律宾央行：2026年4月的通胀率将保持在5.6%至6.4%之间",
+          "source": "36Kr",
+          "time": "46分钟前",
+          "url": "https://36kr.com/newsflashes/3788682407910404"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "云迹科技发布2025年报，智能体应用收入增长194%",
+          "source": "36Kr",
+          "time": "31分钟前",
+          "url": "https://36kr.com/newsflashes/3788697238166790"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "阿迪达斯全球2026年Q1营收66亿欧元，同比增14%",
+          "source": "36Kr",
+          "time": "38分钟前",
+          "url": "https://36kr.com/newsflashes/3788690092317701"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "特斯拉：电动卡车Semi进入量产新阶段",
+          "source": "36Kr",
+          "time": "24分钟前",
+          "url": "https://36kr.com/newsflashes/3788703209954568"
+        },
+        {
+          "category": "消费",
+          "title": "女生攒到10万怕被嘲笑网友全是鼓励",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E5%A5%B3%E7%94%9F%E6%94%92%E5%88%B010%E4%B8%87%E6%80%95%E8%A2%AB%E5%98%B2%E7%AC%91%E7%BD%91%E5%8F%8B%E5%85%A8%E6%98%AF%E9%BC%93%E5%8A%B1&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "老式水果为何消失了",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E8%80%81%E5%BC%8F%E6%B0%B4%E6%9E%9C%E4%B8%BA%E4%BD%95%E6%B6%88%E5%A4%B1%E4%BA%86&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "网警严查斗狠类直播13人被拘",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E7%BD%91%E8%AD%A6%E4%B8%A5%E6%9F%A5%E6%96%97%E7%8B%A0%E7%B1%BB%E7%9B%B4%E6%92%AD13%E4%BA%BA%E8%A2%AB%E6%8B%98&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "LABUBU首款冰箱京东抢先发售",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=LABUBU%E9%A6%96%E6%AC%BE%E5%86%B0%E7%AE%B1%E4%BA%AC%E4%B8%9C%E6%8A%A2%E5%85%88%E5%8F%91%E5%94%AE&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "张豆豆做的菜被孙母挑刺",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E5%BC%A0%E8%B1%86%E8%B1%86%E5%81%9A%E7%9A%84%E8%8F%9C%E8%A2%AB%E5%AD%99%E6%AF%8D%E6%8C%91%E5%88%BA&Refer=top"
+        },
+        {
+          "category": "加密货币",
+          "title": "BTC drops 40 percent as Fed keeps rates steady",
+          "source": "COINTURK NEWS",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "Bitcoin’s Wild Ride: Fed’s Decisions and Global Turbulence Shake the Crypto Market",
+          "source": "BH NEWS",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "Curve DAO Token (CRV) Price Prediction 2026-2030: Can CRV Finally Break Its Long-Term Range?",
+          "source": "BitcoinWorld",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "Whale Opens Massive $182M ETH Long Position on Hyperliquid: Market Impact Analyzed",
+          "source": "BitcoinWorld",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "RealOpen and TRON Verify $9.4M in USDT for Crypto-Enabled Real Estate Purchases",
+          "source": "Cryptopolitan",
+          "time": "",
+          "url": ""
+        }
+      ],
+      "createdAt": "2026-04-30T02:53:11.621Z"
+    },
+    {
+      "id": "1777517572271",
+      "type": "morning",
+      "news": [
+        {
+          "category": "宏观",
+          "title": "2. 特朗普要降息，同僚却反对：沃什的美联储主席之路开局即地狱模式...",
+          "source": "财联社",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "宏观",
+          "title": "Meta电话会：全年资本开支再上调100亿、创历史最高，AI智能体商业化路径仍不明朗",
+          "source": "Wall Street CN",
+          "time": "09:30",
+          "url": "https://wallstreetcn.com/articles/3771327"
+        },
+        {
+          "category": "宏观",
+          "title": "微软电话会：AI收入同比翻倍，硬件涨价推高资本开支250亿美元，GPU和存储短缺仍将贯穿全年",
+          "source": "Wall Street CN",
+          "time": "09:57",
+          "url": "https://wallstreetcn.com/articles/3771317"
+        },
+        {
+          "category": "宏观",
+          "title": "鲍威尔离场、油价登场、鹰派基调全面升温--华尔街点评美联储决议",
+          "source": "Wall Street CN",
+          "time": "09:55",
+          "url": "https://wallstreetcn.com/articles/3771331"
+        },
+        {
+          "category": "宏观",
+          "title": "AI大神：从去年12月开始，我不再写代码了",
+          "source": "Wall Street CN",
+          "time": "10:49",
+          "url": "https://wallstreetcn.com/charts/41958980"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "摩根资产管理认为美联储加息的门槛很高",
+          "source": "36Kr",
+          "time": "31分钟前",
+          "url": "https://36kr.com/newsflashes/3788696181349635"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "菲律宾央行：2026年4月的通胀率将保持在5.6%至6.4%之间",
+          "source": "36Kr",
+          "time": "45分钟前",
+          "url": "https://36kr.com/newsflashes/3788682407910404"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "云迹科技发布2025年报，智能体应用收入增长194%",
+          "source": "36Kr",
+          "time": "30分钟前",
+          "url": "https://36kr.com/newsflashes/3788697238166790"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "阿迪达斯全球2026年Q1营收66亿欧元，同比增14%",
+          "source": "36Kr",
+          "time": "37分钟前",
+          "url": "https://36kr.com/newsflashes/3788690092317701"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "特斯拉：电动卡车Semi进入量产新阶段",
+          "source": "36Kr",
+          "time": "24分钟前",
+          "url": "https://36kr.com/newsflashes/3788703209954568"
+        },
+        {
+          "category": "消费",
+          "title": "女生攒到10万怕被嘲笑网友全是鼓励",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E5%A5%B3%E7%94%9F%E6%94%92%E5%88%B010%E4%B8%87%E6%80%95%E8%A2%AB%E5%98%B2%E7%AC%91%E7%BD%91%E5%8F%8B%E5%85%A8%E6%98%AF%E9%BC%93%E5%8A%B1&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "老式水果为何消失了",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E8%80%81%E5%BC%8F%E6%B0%B4%E6%9E%9C%E4%B8%BA%E4%BD%95%E6%B6%88%E5%A4%B1%E4%BA%86&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "网警严查斗狠类直播13人被拘",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E7%BD%91%E8%AD%A6%E4%B8%A5%E6%9F%A5%E6%96%97%E7%8B%A0%E7%B1%BB%E7%9B%B4%E6%92%AD13%E4%BA%BA%E8%A2%AB%E6%8B%98&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "LABUBU首款冰箱京东抢先发售",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=LABUBU%E9%A6%96%E6%AC%BE%E5%86%B0%E7%AE%B1%E4%BA%AC%E4%B8%9C%E6%8A%A2%E5%85%88%E5%8F%91%E5%94%AE&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "张豆豆做的菜被孙母挑刺",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E5%BC%A0%E8%B1%86%E8%B1%86%E5%81%9A%E7%9A%84%E8%8F%9C%E8%A2%AB%E5%AD%99%E6%AF%8D%E6%8C%91%E5%88%BA&Refer=top"
+        },
+        {
+          "category": "加密货币",
+          "title": "BTC drops 40 percent as Fed keeps rates steady",
+          "source": "COINTURK NEWS",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "Bitcoin’s Wild Ride: Fed’s Decisions and Global Turbulence Shake the Crypto Market",
+          "source": "BH NEWS",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "Curve DAO Token (CRV) Price Prediction 2026-2030: Can CRV Finally Break Its Long-Term Range?",
+          "source": "BitcoinWorld",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "Whale Opens Massive $182M ETH Long Position on Hyperliquid: Market Impact Analyzed",
+          "source": "BitcoinWorld",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "RealOpen and TRON Verify $9.4M in USDT for Crypto-Enabled Real Estate Purchases",
+          "source": "Cryptopolitan",
+          "time": "",
+          "url": ""
+        }
+      ],
+      "createdAt": "2026-04-30T02:52:52.271Z"
+    },
+    {
+      "id": "1777517537871",
+      "type": "morning",
+      "news": [
+        {
+          "category": "宏观",
+          "title": "2. 特朗普要降息，同僚却反对：沃什的美联储主席之路开局即地狱模式...",
+          "source": "财联社",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "宏观",
+          "title": "Meta电话会：全年资本开支再上调100亿、创历史最高，AI智能体商业化路径仍不明朗",
+          "source": "Wall Street CN",
+          "time": "09:30",
+          "url": "https://wallstreetcn.com/articles/3771327"
+        },
+        {
+          "category": "宏观",
+          "title": "微软电话会：AI收入同比翻倍，硬件涨价推高资本开支250亿美元，GPU和存储短缺仍将贯穿全年",
+          "source": "Wall Street CN",
+          "time": "09:57",
+          "url": "https://wallstreetcn.com/articles/3771317"
+        },
+        {
+          "category": "宏观",
+          "title": "鲍威尔离场、油价登场、鹰派基调全面升温--华尔街点评美联储决议",
+          "source": "Wall Street CN",
+          "time": "09:55",
+          "url": "https://wallstreetcn.com/articles/3771331"
+        },
+        {
+          "category": "宏观",
+          "title": "AI大神：从去年12月开始，我不再写代码了",
+          "source": "Wall Street CN",
+          "time": "10:49",
+          "url": "https://wallstreetcn.com/charts/41958980"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "摩根资产管理认为美联储加息的门槛很高",
+          "source": "36Kr",
+          "time": "31分钟前",
+          "url": "https://36kr.com/newsflashes/3788696181349635"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "菲律宾央行：2026年4月的通胀率将保持在5.6%至6.4%之间",
+          "source": "36Kr",
+          "time": "45分钟前",
+          "url": "https://36kr.com/newsflashes/3788682407910404"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "云迹科技发布2025年报，智能体应用收入增长194%",
+          "source": "36Kr",
+          "time": "30分钟前",
+          "url": "https://36kr.com/newsflashes/3788697238166790"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "阿迪达斯全球2026年Q1营收66亿欧元，同比增14%",
+          "source": "36Kr",
+          "time": "37分钟前",
+          "url": "https://36kr.com/newsflashes/3788690092317701"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "特斯拉：电动卡车Semi进入量产新阶段",
+          "source": "36Kr",
+          "time": "24分钟前",
+          "url": "https://36kr.com/newsflashes/3788703209954568"
+        },
+        {
+          "category": "消费",
+          "title": "女生攒到10万怕被嘲笑网友全是鼓励",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E5%A5%B3%E7%94%9F%E6%94%92%E5%88%B010%E4%B8%87%E6%80%95%E8%A2%AB%E5%98%B2%E7%AC%91%E7%BD%91%E5%8F%8B%E5%85%A8%E6%98%AF%E9%BC%93%E5%8A%B1&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "莫氏鸡煲老板还剩40万债务",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E8%8E%AB%E6%B0%8F%E9%B8%A1%E7%85%B2%E8%80%81%E6%9D%BF%E8%BF%98%E5%89%A940%E4%B8%87%E5%80%BA%E5%8A%A1&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "网警严查斗狠类直播13人被拘",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E7%BD%91%E8%AD%A6%E4%B8%A5%E6%9F%A5%E6%96%97%E7%8B%A0%E7%B1%BB%E7%9B%B4%E6%92%AD13%E4%BA%BA%E8%A2%AB%E6%8B%98&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "张豆豆做的菜被孙母挑刺",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E5%BC%A0%E8%B1%86%E8%B1%86%E5%81%9A%E7%9A%84%E8%8F%9C%E8%A2%AB%E5%AD%99%E6%AF%8D%E6%8C%91%E5%88%BA&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "霍尔木兹海峡部分被困船员已遇难",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E9%9C%8D%E5%B0%94%E6%9C%A8%E5%85%B9%E6%B5%B7%E5%B3%A1%E9%83%A8%E5%88%86%E8%A2%AB%E5%9B%B0%E8%88%B9%E5%91%98%E5%B7%B2%E9%81%87%E9%9A%BE&Refer=top"
+        },
+        {
+          "category": "加密货币",
+          "title": "BTC drops 40 percent as Fed keeps rates steady",
+          "source": "COINTURK NEWS",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "Bitcoin’s Wild Ride: Fed’s Decisions and Global Turbulence Shake the Crypto Market",
+          "source": "BH NEWS",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "Curve DAO Token (CRV) Price Prediction 2026-2030: Can CRV Finally Break Its Long-Term Range?",
+          "source": "BitcoinWorld",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "Whale Opens Massive $182M ETH Long Position on Hyperliquid: Market Impact Analyzed",
+          "source": "BitcoinWorld",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "RealOpen and TRON Verify $9.4M in USDT for Crypto-Enabled Real Estate Purchases",
+          "source": "Cryptopolitan",
+          "time": "",
+          "url": ""
+        }
+      ],
+      "createdAt": "2026-04-30T02:52:17.874Z"
+    },
+    {
+      "id": "1777517342820",
+      "type": "morning",
+      "news": [
+        {
+          "category": "宏观",
+          "title": "2. 特朗普要降息，同僚却反对：沃什的美联储主席之路开局即地狱模式...",
+          "source": "财联社",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "宏观",
+          "title": "Meta电话会：全年资本开支再上调100亿、创历史最高，AI智能体商业化路径仍不明朗",
+          "source": "Wall Street CN",
+          "time": "09:30",
+          "url": "https://wallstreetcn.com/articles/3771327"
+        },
+        {
+          "category": "宏观",
+          "title": "亚马逊电话会：订单积压3640亿，首次系统性披露自研芯片业务规模，CEO高呼AI是“一生一次的机遇”",
+          "source": "Wall Street CN",
+          "time": "09:26",
+          "url": "https://wallstreetcn.com/articles/3771330"
+        },
+        {
+          "category": "宏观",
+          "title": "微软电话会：AI收入同比翻倍，硬件涨价推高资本开支250亿美元，GPU和存储短缺仍将贯穿全年",
+          "source": "Wall Street CN",
+          "time": "09:57",
+          "url": "https://wallstreetcn.com/articles/3771317"
+        },
+        {
+          "category": "宏观",
+          "title": "鲍威尔离场、油价登场、鹰派基调全面升温--华尔街点评美联储决议",
+          "source": "Wall Street CN",
+          "time": "09:55",
+          "url": "https://wallstreetcn.com/articles/3771331"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "摩根资产管理认为美联储加息的门槛很高",
+          "source": "36Kr",
+          "time": "27分钟前",
+          "url": "https://36kr.com/newsflashes/3788696181349635"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "菲律宾央行：2026年4月的通胀率将保持在5.6%至6.4%之间",
+          "source": "36Kr",
+          "time": "41分钟前",
+          "url": "https://36kr.com/newsflashes/3788682407910404"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "云迹科技发布2025年报，智能体应用收入增长194%",
+          "source": "36Kr",
+          "time": "26分钟前",
+          "url": "https://36kr.com/newsflashes/3788697238166790"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "阿迪达斯全球2026年Q1营收66亿欧元，同比增14%",
+          "source": "36Kr",
+          "time": "34分钟前",
+          "url": "https://36kr.com/newsflashes/3788690092317701"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "特斯拉：电动卡车Semi进入量产新阶段",
+          "source": "36Kr",
+          "time": "20分钟前",
+          "url": "https://36kr.com/newsflashes/3788703209954568"
+        },
+        {
+          "category": "消费",
+          "title": "女生攒到10万怕被嘲笑网友全是鼓励",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E5%A5%B3%E7%94%9F%E6%94%92%E5%88%B010%E4%B8%87%E6%80%95%E8%A2%AB%E5%98%B2%E7%AC%91%E7%BD%91%E5%8F%8B%E5%85%A8%E6%98%AF%E9%BC%93%E5%8A%B1&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "莫氏鸡煲老板还剩40万债务",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E8%8E%AB%E6%B0%8F%E9%B8%A1%E7%85%B2%E8%80%81%E6%9D%BF%E8%BF%98%E5%89%A940%E4%B8%87%E5%80%BA%E5%8A%A1&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "网警严查斗狠类直播13人被拘",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E7%BD%91%E8%AD%A6%E4%B8%A5%E6%9F%A5%E6%96%97%E7%8B%A0%E7%B1%BB%E7%9B%B4%E6%92%AD13%E4%BA%BA%E8%A2%AB%E6%8B%98&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "LABUBU首款冰箱京东抢先发售",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=LABUBU%E9%A6%96%E6%AC%BE%E5%86%B0%E7%AE%B1%E4%BA%AC%E4%B8%9C%E6%8A%A2%E5%85%88%E5%8F%91%E5%94%AE&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "张豆豆做的菜被孙母挑刺",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E5%BC%A0%E8%B1%86%E8%B1%86%E5%81%9A%E7%9A%84%E8%8F%9C%E8%A2%AB%E5%AD%99%E6%AF%8D%E6%8C%91%E5%88%BA&Refer=top"
+        },
+        {
+          "category": "加密货币",
+          "title": "BTC drops 40 percent as Fed keeps rates steady",
+          "source": "COINTURK NEWS",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "Bitcoin’s Wild Ride: Fed’s Decisions and Global Turbulence Shake the Crypto Market",
+          "source": "BH NEWS",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "Curve DAO Token (CRV) Price Prediction 2026-2030: Can CRV Finally Break Its Long-Term Range?",
+          "source": "BitcoinWorld",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "Whale Opens Massive $182M ETH Long Position on Hyperliquid: Market Impact Analyzed",
+          "source": "BitcoinWorld",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "RealOpen and TRON Verify $9.4M in USDT for Crypto-Enabled Real Estate Purchases",
+          "source": "Cryptopolitan",
+          "time": "",
+          "url": ""
+        }
+      ],
+      "createdAt": "2026-04-30T02:49:02.820Z"
+    },
+    {
+      "id": "1777517106148",
+      "type": "morning",
+      "news": [
+        {
+          "category": "宏观",
+          "title": "2. 特朗普要降息，同僚却反对：沃什的美联储主席之路开局即地狱模式...",
+          "source": "财联社",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "宏观",
+          "title": "Meta电话会：全年资本开支再上调100亿、创历史最高，AI智能体商业化路径仍不明朗",
+          "source": "Wall Street CN",
+          "time": "09:30",
+          "url": "https://wallstreetcn.com/articles/3771327"
+        },
+        {
+          "category": "宏观",
+          "title": "亚马逊电话会：订单积压3640亿，首次系统性披露自研芯片业务规模，CEO高呼AI是“一生一次的机遇”",
+          "source": "Wall Street CN",
+          "time": "09:26",
+          "url": "https://wallstreetcn.com/articles/3771330"
+        },
+        {
+          "category": "宏观",
+          "title": "微软电话会：AI收入同比翻倍，硬件涨价推高资本开支250亿美元，GPU和存储短缺仍将贯穿全年",
+          "source": "Wall Street CN",
+          "time": "09:57",
+          "url": "https://wallstreetcn.com/articles/3771317"
+        },
+        {
+          "category": "宏观",
+          "title": "鲍威尔离场、油价登场、鹰派基调全面升温--华尔街点评美联储决议",
+          "source": "Wall Street CN",
+          "time": "09:55",
+          "url": "https://wallstreetcn.com/articles/3771331"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "摩根资产管理认为美联储加息的门槛很高",
+          "source": "36Kr",
+          "time": "24分钟前",
+          "url": "https://36kr.com/newsflashes/3788696181349635"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "菲律宾央行：2026年4月的通胀率将保持在5.6%至6.4%之间",
+          "source": "36Kr",
+          "time": "38分钟前",
+          "url": "https://36kr.com/newsflashes/3788682407910404"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "云迹科技发布2025年报，智能体应用收入增长194%",
+          "source": "36Kr",
+          "time": "22分钟前",
+          "url": "https://36kr.com/newsflashes/3788697238166790"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "阿迪达斯全球2026年Q1营收66亿欧元，同比增14%",
+          "source": "36Kr",
+          "time": "30分钟前",
+          "url": "https://36kr.com/newsflashes/3788690092317701"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "特斯拉：电动卡车Semi进入量产新阶段",
+          "source": "36Kr",
+          "time": "16分钟前",
+          "url": "https://36kr.com/newsflashes/3788703209954568"
+        },
+        {
+          "category": "消费",
+          "title": "女生攒到10万怕被嘲笑网友全是鼓励",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E5%A5%B3%E7%94%9F%E6%94%92%E5%88%B010%E4%B8%87%E6%80%95%E8%A2%AB%E5%98%B2%E7%AC%91%E7%BD%91%E5%8F%8B%E5%85%A8%E6%98%AF%E9%BC%93%E5%8A%B1&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "莫氏鸡煲老板还剩40万债务",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E8%8E%AB%E6%B0%8F%E9%B8%A1%E7%85%B2%E8%80%81%E6%9D%BF%E8%BF%98%E5%89%A940%E4%B8%87%E5%80%BA%E5%8A%A1&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "网警严查斗狠类直播13人被拘",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E7%BD%91%E8%AD%A6%E4%B8%A5%E6%9F%A5%E6%96%97%E7%8B%A0%E7%B1%BB%E7%9B%B4%E6%92%AD13%E4%BA%BA%E8%A2%AB%E6%8B%98&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "张豆豆做的菜被孙母挑刺",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E5%BC%A0%E8%B1%86%E8%B1%86%E5%81%9A%E7%9A%84%E8%8F%9C%E8%A2%AB%E5%AD%99%E6%AF%8D%E6%8C%91%E5%88%BA&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "霍尔木兹海峡部分被困船员已遇难",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E9%9C%8D%E5%B0%94%E6%9C%A8%E5%85%B9%E6%B5%B7%E5%B3%A1%E9%83%A8%E5%88%86%E8%A2%AB%E5%9B%B0%E8%88%B9%E5%91%98%E5%B7%B2%E9%81%87%E9%9A%BE&Refer=top"
+        },
+        {
+          "category": "加密货币",
+          "title": "Exciting Offers Lure Crypto Enthusiasts as Ledger Launches Campaign",
+          "source": "BH NEWS",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "Tech Titans Set to Unleash Unprecedented AI Investment",
+          "source": "BH NEWS",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "Tech giants to invest $650 billion in AI by 2026",
+          "source": "COINTURK NEWS",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "Meta adds USDC payments via Solana and Polygon",
+          "source": "COINTURK NEWS",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "MoonPay Establishes Institutional Arm Following Sodot Acquisition",
+          "source": "CryptoBreaking",
+          "time": "",
+          "url": ""
+        }
+      ],
+      "createdAt": "2026-04-30T02:45:06.148Z"
+    },
+    {
+      "id": "1777517097601",
+      "type": "morning",
+      "news": [
+        {
+          "category": "宏观",
+          "title": "2. 特朗普要降息，同僚却反对：沃什的美联储主席之路开局即地狱模式...",
+          "source": "财联社",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "宏观",
+          "title": "Meta电话会：全年资本开支再上调100亿、创历史最高，AI智能体商业化路径仍不明朗",
+          "source": "Wall Street CN",
+          "time": "09:30",
+          "url": "https://wallstreetcn.com/articles/3771327"
+        },
+        {
+          "category": "宏观",
+          "title": "亚马逊电话会：订单积压3640亿，首次系统性披露自研芯片业务规模，CEO高呼AI是“一生一次的机遇”",
+          "source": "Wall Street CN",
+          "time": "09:26",
+          "url": "https://wallstreetcn.com/articles/3771330"
+        },
+        {
+          "category": "宏观",
+          "title": "微软电话会：AI收入同比翻倍，硬件涨价推高资本开支250亿美元，GPU和存储短缺仍将贯穿全年",
+          "source": "Wall Street CN",
+          "time": "09:57",
+          "url": "https://wallstreetcn.com/articles/3771317"
+        },
+        {
+          "category": "宏观",
+          "title": "鲍威尔离场、油价登场、鹰派基调全面升温--华尔街点评美联储决议",
+          "source": "Wall Street CN",
+          "time": "09:55",
+          "url": "https://wallstreetcn.com/articles/3771331"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "摩根资产管理认为美联储加息的门槛很高",
+          "source": "36Kr",
+          "time": "23分钟前",
+          "url": "https://36kr.com/newsflashes/3788696181349635"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "菲律宾央行：2026年4月的通胀率将保持在5.6%至6.4%之间",
+          "source": "36Kr",
+          "time": "37分钟前",
+          "url": "https://36kr.com/newsflashes/3788682407910404"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "云迹科技发布2025年报，智能体应用收入增长194%",
+          "source": "36Kr",
+          "time": "22分钟前",
+          "url": "https://36kr.com/newsflashes/3788697238166790"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "阿迪达斯全球2026年Q1营收66亿欧元，同比增14%",
+          "source": "36Kr",
+          "time": "30分钟前",
+          "url": "https://36kr.com/newsflashes/3788690092317701"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "特斯拉：电动卡车Semi进入量产新阶段",
+          "source": "36Kr",
+          "time": "16分钟前",
+          "url": "https://36kr.com/newsflashes/3788703209954568"
+        },
+        {
+          "category": "消费",
+          "title": "女生攒到10万怕被嘲笑网友全是鼓励",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E5%A5%B3%E7%94%9F%E6%94%92%E5%88%B010%E4%B8%87%E6%80%95%E8%A2%AB%E5%98%B2%E7%AC%91%E7%BD%91%E5%8F%8B%E5%85%A8%E6%98%AF%E9%BC%93%E5%8A%B1&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "莫氏鸡煲老板还剩40万债务",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E8%8E%AB%E6%B0%8F%E9%B8%A1%E7%85%B2%E8%80%81%E6%9D%BF%E8%BF%98%E5%89%A940%E4%B8%87%E5%80%BA%E5%8A%A1&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "网警严查斗狠类直播13人被拘",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E7%BD%91%E8%AD%A6%E4%B8%A5%E6%9F%A5%E6%96%97%E7%8B%A0%E7%B1%BB%E7%9B%B4%E6%92%AD13%E4%BA%BA%E8%A2%AB%E6%8B%98&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "超会评开分",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E8%B6%85%E4%BC%9A%E8%AF%84%E5%BC%80%E5%88%86&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "张豆豆做的菜被孙母挑刺",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E5%BC%A0%E8%B1%86%E8%B1%86%E5%81%9A%E7%9A%84%E8%8F%9C%E8%A2%AB%E5%AD%99%E6%AF%8D%E6%8C%91%E5%88%BA&Refer=top"
+        },
+        {
+          "category": "加密货币",
+          "title": "Exciting Offers Lure Crypto Enthusiasts as Ledger Launches Campaign",
+          "source": "BH NEWS",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "Tech Titans Set to Unleash Unprecedented AI Investment",
+          "source": "BH NEWS",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "Tech giants to invest $650 billion in AI by 2026",
+          "source": "COINTURK NEWS",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "Meta adds USDC payments via Solana and Polygon",
+          "source": "COINTURK NEWS",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "MoonPay Establishes Institutional Arm Following Sodot Acquisition",
+          "source": "CryptoBreaking",
+          "time": "",
+          "url": ""
+        }
+      ],
+      "createdAt": "2026-04-30T02:44:57.601Z"
+    },
+    {
+      "id": "1777516962756",
+      "type": "morning",
+      "news": [
+        {
+          "category": "宏观",
+          "title": "2. 特朗普要降息，同僚却反对：沃什的美联储主席之路开局即地狱模式...",
+          "source": "财联社",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "宏观",
+          "title": "Meta电话会：全年资本开支再上调100亿、创历史最高，AI智能体商业化路径仍不明朗",
+          "source": "Wall Street CN",
+          "time": "09:30",
+          "url": "https://wallstreetcn.com/articles/3771327"
+        },
+        {
+          "category": "宏观",
+          "title": "亚马逊电话会：订单积压3640亿，首次系统性披露自研芯片业务规模，CEO高呼AI是“一生一次的机遇”",
+          "source": "Wall Street CN",
+          "time": "09:26",
+          "url": "https://wallstreetcn.com/articles/3771330"
+        },
+        {
+          "category": "宏观",
+          "title": "微软电话会：AI收入同比翻倍，硬件涨价推高资本开支250亿美元，GPU和存储短缺仍将贯穿全年",
+          "source": "Wall Street CN",
+          "time": "09:57",
+          "url": "https://wallstreetcn.com/articles/3771317"
+        },
+        {
+          "category": "宏观",
+          "title": "鲍威尔离场、油价登场、鹰派基调全面升温--华尔街点评美联储决议",
+          "source": "Wall Street CN",
+          "time": "09:55",
+          "url": "https://wallstreetcn.com/articles/3771331"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "摩根资产管理认为美联储加息的门槛很高",
+          "source": "36Kr",
+          "time": "21分钟前",
+          "url": "https://36kr.com/newsflashes/3788696181349635"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "菲律宾央行：2026年4月的通胀率将保持在5.6%至6.4%之间",
+          "source": "36Kr",
+          "time": "35分钟前",
+          "url": "https://36kr.com/newsflashes/3788682407910404"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "云迹科技发布2025年报，智能体应用收入增长194%",
+          "source": "36Kr",
+          "time": "20分钟前",
+          "url": "https://36kr.com/newsflashes/3788697238166790"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "阿迪达斯全球2026年Q1营收66亿欧元，同比增14%",
+          "source": "36Kr",
+          "time": "27分钟前",
+          "url": "https://36kr.com/newsflashes/3788690092317701"
+        },
+        {
+          "category": "软件/AI大模型",
+          "title": "特斯拉：电动卡车Semi进入量产新阶段",
+          "source": "36Kr",
+          "time": "14分钟前",
+          "url": "https://36kr.com/newsflashes/3788703209954568"
+        },
+        {
+          "category": "消费",
+          "title": "女生攒到10万怕被嘲笑网友全是鼓励",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E5%A5%B3%E7%94%9F%E6%94%92%E5%88%B010%E4%B8%87%E6%80%95%E8%A2%AB%E5%98%B2%E7%AC%91%E7%BD%91%E5%8F%8B%E5%85%A8%E6%98%AF%E9%BC%93%E5%8A%B1&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "莫氏鸡煲老板还剩40万债务",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E8%8E%AB%E6%B0%8F%E9%B8%A1%E7%85%B2%E8%80%81%E6%9D%BF%E8%BF%98%E5%89%A940%E4%B8%87%E5%80%BA%E5%8A%A1&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "网警严查斗狠类直播13人被拘",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E7%BD%91%E8%AD%A6%E4%B8%A5%E6%9F%A5%E6%96%97%E7%8B%A0%E7%B1%BB%E7%9B%B4%E6%92%AD13%E4%BA%BA%E8%A2%AB%E6%8B%98&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "张豆豆做的菜被孙母挑刺",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E5%BC%A0%E8%B1%86%E8%B1%86%E5%81%9A%E7%9A%84%E8%8F%9C%E8%A2%AB%E5%AD%99%E6%AF%8D%E6%8C%91%E5%88%BA&Refer=top"
+        },
+        {
+          "category": "消费",
+          "title": "霍尔木兹海峡部分被困船员已遇难",
+          "source": "Weibo Hot Search",
+          "time": "Real-time",
+          "url": "https://s.weibo.com/weibo?q=%E9%9C%8D%E5%B0%94%E6%9C%A8%E5%85%B9%E6%B5%B7%E5%B3%A1%E9%83%A8%E5%88%86%E8%A2%AB%E5%9B%B0%E8%88%B9%E5%91%98%E5%B7%B2%E9%81%87%E9%9A%BE&Refer=top"
+        },
+        {
+          "category": "加密货币",
+          "title": "Exciting Offers Lure Crypto Enthusiasts as Ledger Launches Campaign",
+          "source": "BH NEWS",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "Tech Titans Set to Unleash Unprecedented AI Investment",
+          "source": "BH NEWS",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "Tech giants to invest $650 billion in AI by 2026",
+          "source": "COINTURK NEWS",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "Meta adds USDC payments via Solana and Polygon",
+          "source": "COINTURK NEWS",
+          "time": "",
+          "url": ""
+        },
+        {
+          "category": "加密货币",
+          "title": "MoonPay Establishes Institutional Arm Following Sodot Acquisition",
+          "source": "CryptoBreaking",
+          "time": "",
+          "url": ""
+        }
+      ],
+      "createdAt": "2026-04-30T02:42:42.756Z"
+    },
+    {
       "id": "1776352996769",
       "type": "morning",
       "news": [
@@ -23,5 +1311,5 @@
       "createdAt": "2026-04-16T15:23:16.769Z"
     }
   ],
-  "lastUpdated": "2026-04-16T15:23:16.769Z"
+  "lastUpdated": "2026-05-05T09:37:17.523Z"
 }

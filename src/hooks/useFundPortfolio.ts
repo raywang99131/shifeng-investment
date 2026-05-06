@@ -1,6 +1,7 @@
-import { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { type Fund, type Position, type NAVRecord } from '../types/fund';
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 const STORAGE_KEY = 'shifeng_funds';
 
 const DEFAULT_FUNDS: Fund[] = [
@@ -41,17 +42,50 @@ function saveFunds(funds: Fund[]) {
   }
 }
 
+// Sync funds to backend server
+async function syncFundsToBackend(funds: Fund[]) {
+  try {
+    const response = await fetch(`${API_BASE}/api/funds`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ funds }),
+    });
+    return response.ok;
+  } catch {
+    // ignore network errors - localStorage is still the source of truth
+    return false;
+  }
+}
+
+// Load funds from backend server
+async function loadFundsFromBackend(): Promise<Fund[] | null> {
+  try {
+    const response = await fetch(`${API_BASE}/api/funds`);
+    if (response.ok) {
+      const data = await response.json();
+      if (data.funds && Array.isArray(data.funds)) {
+        return data.funds;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
 interface UseFundPortfolioReturn {
   funds: Fund[];
   currentFund: Fund | null;
   selectFund: (id: string) => void;
   addFund: (name: string, initialCapital: number) => void;
-  updateFund: (id: string, updates: { name?: string; initialCapital?: number; navHistory?: NAVRecord[] }) => void;
+  updateFund: (id: string, updates: { name?: string; initialCapital?: number; lastSyncDate?: string }) => void;
   deleteFund: (id: string) => void;
   addPosition: (fundId: string, position: Omit<Position, never>) => void;
   updatePosition: (fundId: string, code: string, updates: Partial<Position>) => void;
   deletePosition: (fundId: string, code: string) => void;
   addNAVRecord: (fundId: string, record: NAVRecord) => void;
+  /** 内部 persist 函数，直接触发状态更新+localStorage 写入 */
+  persistFunds: (newFunds: Fund[]) => void;
 }
 
 export function useFundPortfolio(): UseFundPortfolioReturn {
@@ -60,6 +94,20 @@ export function useFundPortfolio(): UseFundPortfolioReturn {
     const loaded = loadFunds();
     return loaded.length > 0 ? loaded[0].id : null;
   });
+  const [initialized, setInitialized] = useState(false);
+
+  // Load from backend on first mount
+  React.useEffect(() => {
+    if (initialized) return;
+    setInitialized(true);
+    loadFundsFromBackend().then((backendFunds) => {
+      if (backendFunds && backendFunds.length > 0) {
+        setFunds(backendFunds);
+        saveFunds(backendFunds);
+        setCurrentFundId(backendFunds[0].id);
+      }
+    });
+  }, [initialized]);
 
   const currentFund = useMemo(
     () => funds.find((f) => f.id === currentFundId) ?? null,
@@ -73,6 +121,8 @@ export function useFundPortfolio(): UseFundPortfolioReturn {
   const persist = useCallback((newFunds: Fund[]) => {
     setFunds(newFunds);
     saveFunds(newFunds);
+    // Also persist to backend server (async, don't block UI)
+    syncFundsToBackend(newFunds);
   }, []);
 
   const addFund = useCallback((name: string, initialCapital: number) => {
@@ -88,7 +138,7 @@ export function useFundPortfolio(): UseFundPortfolioReturn {
     setCurrentFundId(newFund.id);
   }, [funds, persist]);
 
-  const updateFund = useCallback((id: string, updates: { name?: string; initialCapital?: number }) => {
+  const updateFund = useCallback((id: string, updates: { name?: string; initialCapital?: number; lastSyncDate?: string }) => {
     persist(funds.map((f) => (f.id === id ? { ...f, ...updates } : f)));
   }, [funds, persist]);
 
@@ -151,5 +201,6 @@ export function useFundPortfolio(): UseFundPortfolioReturn {
     updatePosition,
     deletePosition,
     addNAVRecord,
+    persistFunds: persist,
   };
 }

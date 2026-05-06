@@ -22,4 +22,5 @@ export interface Fund {
   navHistory: NAVRecord[];
   createdAt: string;
   shareToken?: string;
+  lastSyncDate?: string; // 上次同步日期 YYYY-MM-DD
 }

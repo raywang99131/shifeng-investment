@@ -3,3 +3,4 @@ export { ResearchPanel } from './Research';
 export { PortfolioPanel } from './Portfolio';
 export { AlternativePanel } from './Alternative';
 export { NewsPanel } from './News';
+export { default as StockDetailPanel } from './Stock/StockDetailPanel';

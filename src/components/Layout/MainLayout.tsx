@@ -30,7 +30,7 @@ const MainLayout: React.FC = () => {
     {
       key: '/news',
       icon: <FileProtectOutlined />,
-      label: '新闻晨报',
+      label: '新闻资讯',
     },
     {
       key: '/market',
@@ -102,12 +102,12 @@ const MainLayout: React.FC = () => {
           }}
         >
           {collapsed ? (
-            <Button type="text" onClick={() => navigate('/')} style={{ fontSize: 18, color: '#1890ff', height: 'auto', padding: 0 }}>
-              <Text strong style={{ fontSize: 18, color: '#1890ff' }}>SF</Text>
+            <Button type="text" onClick={() => navigate('/')} style={{ fontSize: 18, color: '#ff4d4f', height: 'auto', padding: 0 }}>
+              <Text strong style={{ fontSize: 18, color: '#ff4d4f' }}>SF</Text>
             </Button>
           ) : (
-            <Button type="text" onClick={() => navigate('/')} style={{ fontSize: 20, color: '#1890ff', height: 'auto', padding: 0 }}>
-              <Text strong style={{ fontSize: 20, color: '#1890ff' }}>石锋资产</Text>
+            <Button type="text" onClick={() => navigate('/')} style={{ fontSize: 20, color: '#ff4d4f', height: 'auto', padding: 0 }}>
+              <Text strong style={{ fontSize: 20, color: '#ff4d4f' }}>石锋资产</Text>
             </Button>
           )}
         </div>

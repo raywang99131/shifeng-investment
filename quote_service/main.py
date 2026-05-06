@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request
-from services.akshareFetcher import fetch_batch_quotes, fetch_single_quote
+from services.akshareFetcher import fetch_batch_quotes, fetch_single_quote, fetch_kline
 
 app = Flask(__name__)
 
@@ -33,6 +33,22 @@ def single_quote():
     if not quote:
         return jsonify({"success": False, "error": f"No data for {code}"}), 404
     return jsonify(quote)
+
+@app.route("/kline")
+def kline():
+    code = request.args.get("code", "")
+    period = request.args.get("period", "daily")
+    count = request.args.get("count", "60")
+    try:
+        count = int(count)
+    except ValueError:
+        count = 60
+
+    if not code:
+        return jsonify({"success": False, "error": "No code provided"}), 400
+
+    result = fetch_kline(code, period, count)
+    return jsonify(result)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=3001)

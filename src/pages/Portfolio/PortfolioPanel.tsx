@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Card, Row, Col, Statistic, Table, Tag, Space, DatePicker, Button, Modal, Form, InputNumber, Popconfirm, message, Empty, AutoComplete } from 'antd';
-import { DollarOutlined, RiseOutlined, FallOutlined, SyncOutlined, PlusOutlined, EditOutlined, DeleteOutlined, ArrowLeftOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
+import { Card, Row, Col, Statistic, Table, Space, DatePicker, Button, Modal, Form, InputNumber, Popconfirm, message, Empty, AutoComplete } from 'antd';
+import { RiseOutlined, FallOutlined, SyncOutlined, PlusOutlined, EditOutlined, DeleteOutlined, ArrowLeftOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
 import ReactECharts from 'echarts-for-react';
 import { useTheme } from '../../hooks/useTheme';
 import { syncPrices } from '../../services/quoteApi';
@@ -26,6 +27,7 @@ const PositionModal: React.FC<{
   const [nameOptions, setNameOptions] = useState<{ value: string; label: string; name: string; code: string }[]>([]);
   const [previewShares, setPreviewShares] = useState<number | null>(null);
   const [weightWarning, setWeightWarning] = useState<string | null>(null);
+  const [loadingPrice, setLoadingPrice] = useState(false);
   const title = position ? '编辑持仓' : '添加持仓';
 
   // 计算其他持仓的市值总和（编辑时排除自身），以初始资金为分母
@@ -49,27 +51,59 @@ const PositionModal: React.FC<{
     }
   }, [open, position, form]);
 
+  const handleCodeSelect = (val: string, opt: { name: string; code: string }) => {
+    form.setFieldsValue({ code: val, name: opt.name });
+    setNameOptions([]);
+    // fetch current price immediately
+    setLoadingPrice(true);
+    fetch(`http://localhost:3000/api/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fundId: '', codes: [val] }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.prices && data.prices[val]) {
+          form.setFieldsValue({ currentPrice: data.prices[val].currentPrice });
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingPrice(false));
+  };
+
+  // Auto-fetch current price when code changes (for new positions only)
+  React.useEffect(() => {
+    if (position) return;
+    const code = form.getFieldValue('code');
+    if (!code || code.length < 6) return;
+    // price already loaded via onSelect
+  }, [form, position]);
+
   const handleOk = () => {
     form.validateFields().then((values) => {
       const shares = Number(values.shares);
       const avgCost = Number(values.avgCost);
-      const currentPrice = Number(values.currentPrice);
-      const thisPrice = currentPrice || avgCost;
-      const thisMarketValue = shares * thisPrice;
+      const currentPrice = Number(form.getFieldValue('currentPrice'));
+      console.log('[handleOk] from form:', currentPrice, '| from values:', values.currentPrice);
 
-      if (inputMode === 'weight' && shares > 0 && avgCost > 0 && initialCapital > 0) {
+      if (inputMode === 'weight' && shares > 0 && initialCapital > 0) {
+        // 检查 currentPrice 是否获取到
+        if (!currentPrice || currentPrice <= 0) {
+          message.error('当前价获取失败，请尝试重新选择股票代码');
+          return;
+        }
         // 检查权重是否超限
         const newTotal = otherWeightSum + shares;
         if (newTotal > 100) {
           message.error(`权重总和已达 ${newTotal.toFixed(1)}%，超过 100%，请降低权重`);
           return;
         }
-        // 按权重计算股数：initialCapital * weight% / 当前价(avgCost)
-        // avgCost 在 weight 模式里是"当前价"，currentPrice 是"平均成本"
-        const calculatedShares = Math.floor((initialCapital * (shares / 100)) / avgCost);
-        onSave({ code: values.code, name: values.name, shares: calculatedShares, avgCost: currentPrice || avgCost, currentPrice: avgCost });
+        // 按权重计算股数：initialCapital * weight% / 当前价
+        const calculatedShares = Math.floor((initialCapital * (shares / 100)) / currentPrice);
+        onSave({ code: values.code, name: values.name, shares: calculatedShares, avgCost, currentPrice });
       } else {
         // 按股数录入：检查总持仓是否超过初始资金（编辑时用表单新值替换旧持仓市值）
+        const thisMarketValue = shares * (currentPrice || avgCost);
         if (otherMarketValueSum + thisMarketValue > initialCapital) {
           const newPct = ((otherMarketValueSum + thisMarketValue) / initialCapital) * 100;
           message.error(`总持仓市值已达 ${newPct.toFixed(1)}%，超过 100%，请降低持仓`);
@@ -104,7 +138,7 @@ const PositionModal: React.FC<{
           <AutoComplete
             options={codeOptions}
             onSearch={(val) => setCodeOptions(searchStocks(val).slice(0, 10))}
-            onSelect={(val, opt) => { form.setFieldsValue({ code: val, name: opt.name }); setNameOptions([]); }}
+            onSelect={(val, opt) => handleCodeSelect(val, opt)}
             placeholder="如 000001"
             disabled={!!position}
           />
@@ -113,7 +147,7 @@ const PositionModal: React.FC<{
           <AutoComplete
             options={nameOptions}
             onSearch={(val) => setNameOptions(searchStocks(val).slice(0, 10))}
-            onSelect={(_val, opt) => { form.setFieldsValue({ name: opt.name, code: opt.code }); setCodeOptions([]); }}
+            onSelect={(_val, opt) => { form.setFieldsValue({ name: opt.name, code: opt.code }); setCodeOptions([]); handleCodeSelect(opt.code, opt); }}
             placeholder="如 平安银行"
           />
         </Form.Item>
@@ -125,74 +159,20 @@ const PositionModal: React.FC<{
             <Form.Item name="avgCost" label="平均成本" rules={[{ required: true, message: '请输入平均成本' }]}>
               <InputNumber placeholder="如 12.50" style={{ width: '100%' }} min={0} precision={2} />
             </Form.Item>
-            <Form.Item name="currentPrice" label="当前价（留空则默认等于平均成本）">
-              <InputNumber placeholder="如 13.20（留空则等于平均成本）" style={{ width: '100%' }} min={0} precision={2} />
+            <Form.Item name="currentPrice" label="当前价（自动获取）">
+              <InputNumber placeholder="自动获取" style={{ width: '100%' }} min={0} precision={2} disabled />
             </Form.Item>
           </>
         ) : (
           <>
-            <Form.Item
-              name="shares"
-              label="目标权重 (%)"
-              rules={[{ required: true, message: '请输入目标权重' }, { type: 'number', min: 0.01, max: 100, message: '权重需在 0.01~100 之间' }]}
-              extra={`初始资金 ¥${initialCapital.toLocaleString()}，输入权重后系统将自动计算股数`}
-            >
-              <InputNumber
-                placeholder="如 20"
-                style={{ width: '100%' }}
-                min={0.01}
-                max={100}
-                precision={2}
-                suffix="%"
-                disabled={initialCapital <= 0}
-                onChange={(val) => {
-                  const weight = Number(val);
-                  const price = Number(form.getFieldValue('avgCost'));
-                  if (weight > 0 && price > 0 && initialCapital > 0) {
-                    setPreviewShares(Math.floor((initialCapital * (weight / 100)) / price));
-                    // 检查权重是否超限
-                    const newTotal = otherWeightSum + weight;
-                    if (newTotal > 100) {
-                      setWeightWarning(`权重总和已达 ${newTotal.toFixed(1)}%，超过 100%，请降低权重`);
-                    } else {
-                      setWeightWarning(null);
-                    }
-                  } else {
-                    setPreviewShares(null);
-                    setWeightWarning(null);
-                  }
-                }}
-              />
+            <Form.Item name="shares" label="目标权重 (%)" rules={[{ required: true, message: '请输入目标权重' }]}>
+              <InputNumber placeholder="如 20" style={{ width: '100%' }} min={0.01} max={100} precision={2} suffix="%" />
             </Form.Item>
-            <Form.Item name="avgCost" label="当前价（用于计算股数）" rules={[{ required: true, message: '请输入当前价' }]}>
-              <InputNumber
-                placeholder="如 13.50"
-                style={{ width: '100%' }}
-                min={0}
-                precision={2}
-                onChange={() => {
-                  const weight = Number(form.getFieldValue('shares'));
-                  const price = Number(form.getFieldValue('avgCost'));
-                  if (weight > 0 && price > 0 && initialCapital > 0) {
-                    setPreviewShares(Math.floor((initialCapital * (weight / 100)) / price));
-                  } else {
-                    setPreviewShares(null);
-                  }
-                }}
-              />
+            <Form.Item name="avgCost" label="平均成本" rules={[{ required: true, message: '请输入平均成本' }]}>
+              <InputNumber placeholder="如 12.50" style={{ width: '100%' }} min={0} precision={2} />
             </Form.Item>
-            {previewShares !== null && (
-              <Form.Item label="计算结果">
-                <InputNumber value={previewShares} disabled style={{ width: '100%', background: 'transparent', border: 'none' }} />
-              </Form.Item>
-            )}
-            {weightWarning && (
-              <div style={{ color: '#ff4d4f', fontSize: 12, marginTop: 4 }}>
-                {weightWarning}
-              </div>
-            )}
-            <Form.Item name="currentPrice" label="平均成本（留空则默认等于当前价）">
-              <InputNumber placeholder="如 12.50（留空则等于当前价）" style={{ width: '100%' }} min={0} precision={2} />
+            <Form.Item label="当前价（自动获取）">
+              <InputNumber value={form.getFieldValue('currentPrice')} style={{ width: '100%' }} disabled />
             </Form.Item>
           </>
         )}
@@ -215,7 +195,10 @@ const PortfolioPanel: React.FC = () => {
     updatePosition,
     deletePosition,
     addNAVRecord,
+    persistFunds,
   } = useFundPortfolio();
+
+  const navigate = useNavigate();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [isViewingDashboard, setIsViewingDashboard] = useState(true);
@@ -326,16 +309,30 @@ const handleFundSelect = (fundId: string) => {
         const codes = fund.positions.map((p) => p.code);
         const res = await syncPrices({ fundId: fund.id, codes });
         if (res.success && res.prices) {
-          for (const [code, priceData] of Object.entries(res.prices)) {
-            updatePosition(fund.id, code, { currentPrice: priceData.currentPrice, prevClose: priceData.prevClose });
-          }
-          const totalMV = fund.positions.reduce((sum, p) => {
-            const pd = res.prices![p.code];
-            const price = pd ? pd.currentPrice : (p.currentPrice ?? p.avgCost);
-            return sum + p.shares * price;
-          }, 0);
-          const nav = fund.initialCapital > 0 ? totalMV / fund.initialCapital : 1;
-          addNAVRecord(fund.id, { date: res.tradeDate!, nav, cumulativeNav: nav, marketValue: totalMV });
+          const today = res.tradeDate!;
+          const newFunds = funds.map((f) => {
+            if (f.id !== fund.id) return f;
+            const newPositions = f.positions.map((p) => {
+              const pd = res.prices![p.code];
+              if (!pd) return p;
+              return { ...p, currentPrice: pd.currentPrice, prevClose: pd.prevClose };
+            });
+            const totalMV = newPositions.reduce((sum, p) => {
+              const pd = res.prices![p.code];
+              const price = pd ? pd.currentPrice : (p.currentPrice ?? p.avgCost);
+              return sum + p.shares * price;
+            }, 0);
+            const nav = f.initialCapital > 0 ? totalMV / f.initialCapital : 1;
+            let newNavHistory = f.navHistory;
+            const exists = f.navHistory.some((n) => n.date === today);
+            if (exists) {
+              newNavHistory = f.navHistory.map((n) => n.date === today ? { ...n, nav, cumulativeNav: nav, marketValue: totalMV } : n);
+            } else {
+              newNavHistory = [...f.navHistory, { date: today, nav, cumulativeNav: nav, marketValue: totalMV }].sort((a, b) => a.date.localeCompare(b.date));
+            }
+            return { ...f, positions: newPositions, navHistory: newNavHistory, lastSyncDate: today };
+          });
+          persistFunds(newFunds);
           successCount++;
         }
       }
@@ -355,28 +352,52 @@ const handleFundSelect = (fundId: string) => {
       const codes = currentFund.positions.map((p) => p.code);
       const res = await syncPrices({ fundId: currentFund.id, codes });
       if (res.success && res.prices) {
-        for (const [code, priceData] of Object.entries(res.prices)) {
-          updatePosition(currentFund.id, code, { currentPrice: priceData.currentPrice, prevClose: priceData.prevClose });
-        }
-        // 同步完成后自动记录今日净值
-        const updatedFund = funds.find(f => f.id === currentFund.id);
-        if (updatedFund) {
-          const totalMarketValue = updatedFund.positions.reduce((sum, p) => {
-            const priceData = res.prices![p.code];
-            const price = priceData ? priceData.currentPrice : (p.currentPrice ?? p.avgCost);
+        const today = res.tradeDate!;
+        const shouldRecordNAV = currentFund.lastSyncDate !== today;
+        const fundId = currentFund.id;
+
+        // 构建完整的更新后基金对象，单次 persist 避免多次 setState 时序问题
+        const newFunds = funds.map((f) => {
+          if (f.id !== fundId) return f;
+
+          // 更新所有持仓价格
+          const newPositions = f.positions.map((p) => {
+            const pd = res.prices![p.code];
+            if (!pd) return p;
+            return { ...p, currentPrice: pd.currentPrice, prevClose: pd.prevClose };
+          });
+
+          // 计算总市值（用最新价格）
+          const totalMV = newPositions.reduce((sum, p) => {
+            const pd = res.prices![p.code];
+            const price = pd ? pd.currentPrice : (p.currentPrice ?? p.avgCost);
             return sum + p.shares * price;
           }, 0);
-          const nav = updatedFund.initialCapital > 0 ? totalMarketValue / updatedFund.initialCapital : 1;
-          addNAVRecord(currentFund.id, {
-            date: res.tradeDate!,
-            nav,
-            cumulativeNav: nav,
-            marketValue: totalMarketValue,
-          });
-          message.success(`数据已更新 (${res.tradeDate})，净值已记录: ${nav.toFixed(4)}`);
-        } else {
-          message.success(`数据已更新 (${res.tradeDate})`);
-        }
+          const nav = f.initialCapital > 0 ? totalMV / f.initialCapital : 1;
+
+          // 更新 navHistory
+          let newNavHistory = f.navHistory;
+          if (shouldRecordNAV) {
+            const exists = f.navHistory.some((n) => n.date === today);
+            if (exists) {
+              newNavHistory = f.navHistory.map((n) => n.date === today ? { ...n, nav, cumulativeNav: nav, marketValue: totalMV } : n);
+            } else {
+              newNavHistory = [...f.navHistory, { date: today, nav, cumulativeNav: nav, marketValue: totalMV }].sort((a, b) => a.date.localeCompare(b.date));
+            }
+          }
+
+          return {
+            ...f,
+            positions: newPositions,
+            navHistory: newNavHistory,
+            lastSyncDate: shouldRecordNAV ? today : f.lastSyncDate,
+          };
+        });
+
+        // 直接调用 persistFunds 单次更新所有数据（positions + navHistory + lastSyncDate）
+        persistFunds(newFunds);
+
+        message.success(`数据已更新 (${today})`);
       } else {
         message.error(res.error || '同步失败');
       }
@@ -454,7 +475,7 @@ const handleFundSelect = (fundId: string) => {
       trigger: 'item',
       formatter: (params: unknown) => {
         const data = params as { name: string; value: number; percent: number };
-        return `${data.name}: ¥${data.value.toLocaleString()} (${data.percent.toFixed(1)}%)`;
+        return `${data.name}: ¥${(data.value || 0).toLocaleString()} (${data.percent.toFixed(1)}%)`;
       },
     },
     series: [
@@ -483,98 +504,101 @@ const handleFundSelect = (fundId: string) => {
 
   const columns = [
     {
-      title: '股票代码',
-      dataIndex: 'code',
-      key: 'code',
-      width: 100,
-      render: (code: string) => <Tag color="blue">{code}</Tag>,
-    },
-    {
-      title: '股票名称',
-      dataIndex: 'name',
-      key: 'name',
-      width: 100,
-      render: (name: string) => <span style={{ fontWeight: 500 }}>{name}</span>,
-    },
-    {
-      title: '持仓数量',
-      dataIndex: 'shares',
-      key: 'shares',
-      width: 100,
-      align: 'right' as const,
-      render: (shares: number) => shares.toLocaleString(),
-    },
-    {
-      title: '平均成本',
-      dataIndex: 'avgCost',
-      key: 'avgCost',
-      width: 100,
-      align: 'right' as const,
-      render: (cost: number) => `¥${cost.toFixed(2)}`,
-    },
-    {
-      title: '当前价',
-      dataIndex: 'currentPrice',
-      key: 'currentPrice',
-      width: 100,
-      align: 'right' as const,
-      render: (price: number) => `¥${price.toFixed(2)}`,
-    },
-    {
-      title: '今日涨跌',
-      key: 'dailyReturn',
-      width: 100,
-      align: 'right' as const,
-      render: (_: unknown, record: Position & { dailyReturn: number }) => {
-        const dr = record.dailyReturn;
-        const color = dr > 0 ? '#ff4d4f' : dr < 0 ? '#52c41a' : '#888';
-        const icon = dr > 0 ? <ArrowUpOutlined /> : dr < 0 ? <ArrowDownOutlined /> : null;
-        return (
-          <span style={{ color, fontSize: 12 }}>
-            {icon}{dr !== 0 ? ` ${Math.abs(dr).toFixed(2)}%` : '0.00%'}
-          </span>
-        );
-      },
-    },
-    {
-      title: '市值',
-      dataIndex: 'marketValue',
-      key: 'marketValue',
-      width: 120,
-      align: 'right' as const,
-      render: (value: number) => `¥${value.toLocaleString()}`,
+      title: '名称/代码',
+      key: 'nameCode',
+      width: 130,
+      render: (_: unknown, record: Position) => (
+        <div style={{ lineHeight: 1.4 }}>
+          <div style={{ fontWeight: 500, fontSize: 13 }}>{record.name}</div>
+          <div style={{ fontSize: 11, color: '#888' }}>{record.code}</div>
+        </div>
+      ),
     },
     {
       title: '成本/现价',
       key: 'costPrice',
-      width: 150,
+      width: 144,
       align: 'right' as const,
       render: (_: unknown, record: Position & { currentPrice: number; profitPercent: number }) => {
-        const direction = record.profitPercent > 0 ? '↑' : record.profitPercent < 0 ? '↓' : '';
-        const color = record.profitPercent > 0 ? '#ff4d4f' : record.profitPercent < 0 ? '#52c41a' : '#888';
+        const pctColor = record.profitPercent > 0 ? '#ff4d4f' : record.profitPercent < 0 ? '#52c41a' : '#888';
         return (
-          <span style={{ color }}>
-            {record.avgCost.toFixed(2)} {direction} {record.currentPrice.toFixed(2)}
-            <span style={{ fontSize: 11, marginLeft: 4 }}>({record.profitPercent >= 0 ? '+' : ''}{record.profitPercent.toFixed(1)}%)</span>
-          </span>
+          <div style={{ lineHeight: 1.4, textAlign: 'right' }}>
+            <div style={{ fontSize: 13 }}>
+              <span style={{ color: pctColor }}>{record.avgCost.toFixed(2)}</span>
+              <span style={{ color: '#aaa', margin: '0 4px' }}>→</span>
+              <span style={{ color: pctColor }}>{record.currentPrice.toFixed(2)}</span>
+            </div>
+            <div style={{ fontSize: 11, color: pctColor }}>
+              {record.profitPercent >= 0 ? '+' : ''}{record.profitPercent.toFixed(1)}%
+            </div>
+          </div>
         );
       },
     },
     {
-      title: '持仓占比',
-      key: 'weight',
-      width: 90,
+      title: '持仓',
+      key: 'shares',
+      width: 104,
       align: 'right' as const,
-      render: (_: unknown, record: Position & { weight: number }) => {
-        return `${record.weight.toFixed(1)}%`;
+      render: (_: unknown, record: Position) => (
+        <div style={{ lineHeight: 1.4, textAlign: 'right' }}>
+          <div style={{ fontSize: 13 }}>{(record.shares || 0).toLocaleString()}</div>
+          <div style={{ fontSize: 11, color: '#888' }}>股</div>
+        </div>
+      ),
+    },
+    {
+      title: '持仓盈亏',
+      key: 'profit',
+      width: 120,
+      align: 'right' as const,
+      render: (_: unknown, record: Position & { profit: number; profitPercent: number }) => {
+        const color = record.profit > 0 ? '#ff4d4f' : record.profit < 0 ? '#52c41a' : '#888';
+        return (
+          <div style={{ lineHeight: 1.4, textAlign: 'right' }}>
+            <div style={{ fontSize: 11, color }}>{record.profitPercent >= 0 ? '+' : ''}{record.profitPercent.toFixed(1)}%</div>
+            <div style={{ fontSize: 13, color }}>{record.profit >= 0 ? '+' : ''}{(Math.round(record.profit) || 0).toLocaleString()}</div>
+          </div>
+        );
       },
+    },
+    {
+      title: '当日盈亏',
+      key: 'dailyReturn',
+      width: 96,
+      align: 'right' as const,
+      render: (_: unknown, record: Position & { dailyReturn: number; prevClose?: number; currentPrice: number }) => {
+        const dr = record.dailyReturn;
+        const color = dr > 0 ? '#ff4d4f' : dr < 0 ? '#52c41a' : '#888';
+        const icon = dr > 0 ? <ArrowUpOutlined /> : dr < 0 ? <ArrowDownOutlined /> : null;
+        const change = record.prevClose ? (record.currentPrice - record.prevClose) * (record.shares || 0) : 0;
+        return (
+          <div style={{ lineHeight: 1.4, textAlign: 'right' }}>
+            <div style={{ fontSize: 11, color }}>
+              {icon}{dr !== 0 ? `${dr > 0 ? '+' : ''}${dr.toFixed(2)}%` : '0.00%'}
+            </div>
+            <div style={{ fontSize: 13, color }}>
+              {change >= 0 ? '+' : ''}{(Math.round(change) || 0).toLocaleString()}
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      title: '仓位',
+      key: 'weight',
+      width: 88,
+      align: 'right' as const,
+      render: (_: unknown, record: Position & { weight: number }) => (
+        <span style={{ fontSize: 13 }}>{record.weight.toFixed(1)}%</span>
+      ),
     },
     {
       title: '操作',
       key: 'action',
       width: 120,
       render: (_: unknown, record: Position) => (
-        <Space size="small">
+        <Space size="small" onClick={(e) => e.stopPropagation()}>
           <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
             编辑
           </Button>
@@ -618,34 +642,27 @@ const handleFundSelect = (fundId: string) => {
   return (
     <div>
       <div style={{ marginBottom: 16 }}>
-        <Space>
+        <Space style={{ marginBottom: 12 }}>
           <Button icon={<ArrowLeftOutlined />} onClick={handleBackToDashboard}>
             返回九宫格
           </Button>
         </Space>
-        <FundSwitcher
-          funds={funds}
-          currentFundId={currentFund.id}
-          onSelect={selectFund}
-          onAdd={(name, ic) => addFund(name, ic)}
-          onUpdate={updateFund}
-          onDelete={deleteFund}
-        />
+      </div>
+
+      <FundSwitcher
+        funds={funds}
+        currentFundId={currentFund.id}
+        onSelect={selectFund}
+        onAdd={(name, ic) => addFund(name, ic)}
+        onUpdate={updateFund}
+        onDelete={deleteFund}
+      />
+
+      <div style={{ fontSize: 32, fontWeight: 700, color: theme === 'dark' ? '#fff' : '#333', marginBottom: 16 }}>
+        {currentFund.name}
       </div>
 
       <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={6}>
-          <Card size="small" style={{ background: theme === 'dark' ? '#1f1f1f' : '#fff' }}>
-            <Statistic
-              title={<span style={{ color: theme === 'dark' ? '#888' : '#666' }}>总市值</span>}
-              value={stats.totalMarketValue}
-              precision={2}
-              prefix={<DollarOutlined />}
-              valueStyle={{ color: theme === 'dark' ? '#fff' : '#333' }}
-              suffix="元"
-            />
-          </Card>
-        </Col>
         <Col span={6}>
           <Card size="small" style={{ background: theme === 'dark' ? '#1f1f1f' : '#fff' }}>
             <Statistic
@@ -741,62 +758,6 @@ const handleFundSelect = (fundId: string) => {
         </Col>
       </Row>
 
-      {currentFund && currentFund.navHistory.length > 0 && (
-        <Card
-          size="small"
-          title="净值历史"
-          extra={
-            <span style={{ color: '#888', fontSize: 12 }}>
-              共 {currentFund.navHistory.length} 条记录
-            </span>
-          }
-          style={{ marginBottom: 16, background: theme === 'dark' ? '#1f1f1f' : '#fff' }}
-        >
-          <Table
-            dataSource={[...currentFund.navHistory].reverse().map((r) => ({ ...r, key: r.date }))}
-            columns={[
-              { title: '日期', dataIndex: 'date', width: 120 },
-              {
-                title: '净值',
-                dataIndex: 'nav',
-                width: 100,
-                align: 'right' as const,
-                render: (v: number) => v.toFixed(4),
-              },
-              {
-                title: '市值（元）',
-                dataIndex: 'marketValue',
-                width: 150,
-                align: 'right' as const,
-                render: (v: number) => v.toLocaleString('zh-CN', { maximumFractionDigits: 0 }),
-              },
-              {
-                title: '操作',
-                width: 80,
-                render: (_: unknown, record: { date: string }) => (
-                  <Popconfirm
-                    title="删除该条记录？"
-                    onConfirm={() => {
-                      if (!currentFund) return;
-                      const newHistory = currentFund.navHistory.filter((n) => n.date !== record.date);
-                      updateFund(currentFund.id, { navHistory: newHistory } as unknown as { name?: string; initialCapital?: number });
-                      message.success('已删除');
-                    }}
-                    okText="删除"
-                    cancelText="取消"
-                  >
-                    <Button type="link" size="small" danger>删除</Button>
-                  </Popconfirm>
-                ),
-              },
-            ]}
-            pagination={false}
-            size="small"
-            scroll={{ x: 400 }}
-          />
-        </Card>
-      )}
-
       <Card
         size="small"
         title="持仓明细"
@@ -824,40 +785,75 @@ const handleFundSelect = (fundId: string) => {
             rowKey="code"
             pagination={false}
             size="small"
+            style={{ width: '100%' }}
+            onRow={(_, index) => ({ onClick: () => navigate(`/stock/${stats.positions[index!].code}`), style: { cursor: 'pointer' } })}
             summary={() => (
-              <Table.Summary fixed>
+              <Table.Summary>
                 <Table.Summary.Row>
-                  <Table.Summary.Cell index={0} colSpan={5}>
+                  <Table.Summary.Cell index={0}>
                     <strong>股票合计</strong>
                   </Table.Summary.Cell>
                   <Table.Summary.Cell index={1} align="right">
                     <strong>¥{stats.totalMarketValue.toLocaleString()}</strong>
                   </Table.Summary.Cell>
                   <Table.Summary.Cell index={2} align="right">
-                    <strong style={{ color: stats.totalProfit >= 0 ? '#ff4d4f' : '#52c41a' }}>
-                      {stats.totalProfit >= 0 ? '+' : ''}{stats.totalProfit.toLocaleString()}
-                    </strong>
+                    <strong>{stats.positions.reduce((s, p) => s + p.shares, 0).toLocaleString()}</strong>
                   </Table.Summary.Cell>
                   <Table.Summary.Cell index={3} align="right">
+                    <div style={{ lineHeight: 1.4, textAlign: 'right' }}>
+                      <div style={{ fontSize: 11, color: stats.totalProfit >= 0 ? '#ff4d4f' : '#52c41a' }}>
+                        {stats.profitPercent >= 0 ? '+' : ''}{stats.profitPercent.toFixed(1)}%
+                      </div>
+                      <div style={{ fontSize: 13, color: stats.totalProfit >= 0 ? '#ff4d4f' : '#52c41a' }}>
+                        {stats.totalProfit >= 0 ? '+' : ''}{Math.round(stats.totalProfit).toLocaleString()}
+                      </div>
+                    </div>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={4} align="right">
+                    <div style={{ lineHeight: 1.4, textAlign: 'right' }}>
+                      <div style={{ fontSize: 11, color: stats.dailyReturn > 0 ? '#ff4d4f' : stats.dailyReturn < 0 ? '#52c41a' : '#888' }}>
+                        {stats.dailyReturn !== 0 ? `${stats.dailyReturn > 0 ? '+' : ''}${stats.dailyReturn.toFixed(2)}%` : '0.00%'}
+                      </div>
+                      <div style={{ fontSize: 13, color: stats.dailyReturn > 0 ? '#ff4d4f' : stats.dailyReturn < 0 ? '#52c41a' : '#888' }}>
+                        {(() => {
+                          const totalChange = stats.positions.reduce((s, p) => {
+                            const curr = (p.currentPrice ?? p.avgCost) * p.shares;
+                            const prev = (p.prevClose ?? p.currentPrice ?? p.avgCost) * p.shares;
+                            return s + curr - prev;
+                          }, 0);
+                          return `${totalChange >= 0 ? '+' : ''}${Math.round(totalChange).toLocaleString()}`;
+                        })()}
+                      </div>
+                    </div>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={5} align="right">
                     <strong>{(stats.totalMarketValue / stats.initialCapital * 100).toFixed(1)}%</strong>
                   </Table.Summary.Cell>
+                  <Table.Summary.Cell index={6} />
                 </Table.Summary.Row>
-                {stats.cash > 0 && (
+                {stats.cash > 0 ? (
                   <Table.Summary.Row>
-                    <Table.Summary.Cell index={0} colSpan={5}>
+                    <Table.Summary.Cell index={0}>
                       <span style={{ color: '#888' }}>现金</span>
                     </Table.Summary.Cell>
                     <Table.Summary.Cell index={1} align="right">
-                      <span style={{ color: '#888' }}>¥{stats.cash.toLocaleString()}</span>
+                      <span style={{ color: '#888' }}>¥{(stats.cash || 0).toLocaleString()}</span>
                     </Table.Summary.Cell>
                     <Table.Summary.Cell index={2} align="right">
                       <span style={{ color: '#888' }}>—</span>
                     </Table.Summary.Cell>
                     <Table.Summary.Cell index={3} align="right">
-                      <span style={{ color: '#888' }}>{(stats.cash / stats.initialCapital * 100).toFixed(1)}%</span>
+                      <span style={{ color: '#888' }}>—</span>
                     </Table.Summary.Cell>
+                    <Table.Summary.Cell index={4} align="right">
+                      <span style={{ color: '#888' }}>—</span>
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={5} align="right">
+                      <span style={{ color: '#888' }}>{((stats.cash || 0) / (stats.initialCapital || 1) * 100).toFixed(1)}%</span>
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={6} />
                   </Table.Summary.Row>
-                )}
+                ) : null}
               </Table.Summary>
             )}
           />
@@ -865,6 +861,49 @@ const handleFundSelect = (fundId: string) => {
           <Empty description="暂无持仓，点击「添加持仓」添加" />
         )}
       </Card>
+
+      {currentFund && currentFund.navHistory.length > 0 && (
+        <Card
+          size="small"
+          title="净值历史"
+          extra={
+            <span style={{ color: '#888', fontSize: 12 }}>
+              共 {currentFund.navHistory.length} 条记录
+            </span>
+          }
+          style={{ marginBottom: 16, background: theme === 'dark' ? '#1f1f1f' : '#fff' }}
+        >
+          <Table
+            dataSource={[...currentFund.navHistory].reverse().map((r) => ({ ...r, key: r.date }))}
+            columns={[
+              { title: '日期', dataIndex: 'date', width: 120 },
+              { title: '净值', dataIndex: 'nav', width: 100, align: 'right' as const, render: (v: number) => v.toFixed(4) },
+              { title: '市值（元）', dataIndex: 'marketValue', width: 150, align: 'right' as const, render: (v: number) => v.toLocaleString('zh-CN', { maximumFractionDigits: 0 }) },
+              {
+                title: '操作',
+                width: 80,
+                render: (_: unknown, record: { date: string }) => (
+                  <Popconfirm
+                    title="删除该条记录？"
+                    onConfirm={() => {
+                      if (!currentFund) return;
+                      const newHistory = currentFund.navHistory.filter((n) => n.date !== record.date);
+                      updateFund(currentFund.id, { navHistory: newHistory } as unknown as { name?: string; initialCapital?: number });
+                      message.success('已删除');
+                    }}
+                    okText="删除"
+                    cancelText="取消"
+                  >
+                    <Button type="link" size="small" danger>删除</Button>
+                  </Popconfirm>
+                ),
+              },
+            ]}
+            pagination={false}
+            size="small"
+          />
+        </Card>
+      )}
 
       <PositionModal
         open={modalOpen}
