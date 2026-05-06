@@ -25,9 +25,6 @@ const PositionModal: React.FC<{
   const [inputMode, setInputMode] = useState<'shares' | 'weight'>('shares');
   const [codeOptions, setCodeOptions] = useState<{ value: string; label: string; name: string; code: string }[]>([]);
   const [nameOptions, setNameOptions] = useState<{ value: string; label: string; name: string; code: string }[]>([]);
-  const [previewShares, setPreviewShares] = useState<number | null>(null);
-  const [weightWarning, setWeightWarning] = useState<string | null>(null);
-  const [loadingPrice, setLoadingPrice] = useState(false);
   const title = position ? '编辑持仓' : '添加持仓';
 
   // 计算其他持仓的市值总和（编辑时排除自身），以初始资金为分母
