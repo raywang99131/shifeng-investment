@@ -5,18 +5,19 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM python:3.11-slim
+FROM python:3.11-slim AS quote-builder
 WORKDIR /app
 COPY quote_service/requirements.txt ./
 RUN pip install -r requirements.txt --no-cache-dir
 COPY quote_service/ .
-EXPOSE 3001
-CMD ["python3", "main.py"]
 
 FROM node:20-alpine AS server-builder
 WORKDIR /app
 COPY server/package*.json ./
 RUN npm ci --omit=dev
 COPY server/ .
-EXPOSE 3000
-CMD ["node", "index.js"]
+
+FROM nginx:alpine
+COPY --from=frontend-builder /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
