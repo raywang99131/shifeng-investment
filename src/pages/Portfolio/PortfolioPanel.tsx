@@ -55,10 +55,11 @@ const syncFundQuotes = async (fund: { id: string; market: 'a' | 'hk' | 'us' | 'j
   };
 };
 
-const handleExportPositions = (fund: {positions: any[]; name: string; initialCapital?: number}) => {
-  const totalMarketValue = fund.positions.reduce((sum: number, p: any) => sum + p.shares * (p.currentPrice ?? p.avgCost), 0);
-  const data = fund.positions.map((p: any) => {
-    const mv = p.shares * p.currentPrice;
+const handleExportPositions = (fund: { positions: Position[]; name: string; initialCapital?: number }) => {
+  const totalMarketValue = fund.positions.reduce((sum, position) => sum + position.shares * (position.currentPrice ?? position.avgCost), 0);
+  const data = fund.positions.map((p) => {
+    const currentPrice = p.currentPrice ?? p.avgCost;
+    const mv = p.shares * currentPrice;
     const cost = p.shares * p.avgCost;
     const weight = totalMarketValue > 0 ? (mv / totalMarketValue * 100) : 0;
     return {
@@ -66,13 +67,13 @@ const handleExportPositions = (fund: {positions: any[]; name: string; initialCap
       '股票名称': p.name,
       '持仓数量': p.shares,
       '平均成本': p.avgCost,
-      '现价': p.currentPrice,
+      '现价': currentPrice,
       '前收': p.prevClose,
-      '涨跌幅%': p.currentPrice && p.prevClose ? (((p.currentPrice - p.prevClose) / p.prevClose) * 100).toFixed(2) + '%' : '-',
+      '涨跌幅%': currentPrice && p.prevClose ? (((currentPrice - p.prevClose) / p.prevClose) * 100).toFixed(2) + '%' : '-',
       '持仓市值': mv,
       '仓位%': weight.toFixed(2) + '%',
       '浮盈亏': mv - cost,
-      '盈亏%': p.avgCost ? (((p.currentPrice - p.avgCost) / p.avgCost) * 100).toFixed(2) + '%' : '-',
+      '盈亏%': p.avgCost ? (((currentPrice - p.avgCost) / p.avgCost) * 100).toFixed(2) + '%' : '-',
     };
   });
   const ws = XLSX.utils.json_to_sheet(data);
