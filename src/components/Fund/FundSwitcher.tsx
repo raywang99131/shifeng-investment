@@ -3,11 +3,19 @@ import { Select, Button, Modal, Form, Input, InputNumber, Popconfirm, Space, mes
 import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { type Fund } from '../../types/fund';
 
+const INITIAL_MAP = {
+  a: { value: 1000000, label: '元', suffix: '初始规模默认为 100万元' },
+  hk: { value: 1000000, label: '港币', suffix: '初始规模默认为 100万港币' },
+  us: { value: 100000, label: '美元', suffix: '初始规模默认为 10万美元' },
+  jp: { value: 10000000, label: '日元', suffix: '初始规模默认为 1000万日元' },
+  kr: { value: 10000000, label: '韩元', suffix: '初始规模默认为 1000万韩元' },
+};
+
 interface FundSwitcherProps {
   funds: Fund[];
   currentFundId: string | null;
   onSelect: (id: string) => void;
-  onAdd: (name: string, initialCapital: number) => void;
+  onAdd: (name: string, initialCapital: number, market?: 'a' | 'hk' | 'us' | 'jp' | 'kr') => void;
   onUpdate: (id: string, updates: { name?: string; initialCapital?: number }) => void;
   onDelete: (id: string) => void;
 }
@@ -23,16 +31,23 @@ const FundSwitcher: React.FC<FundSwitcherProps> = ({
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingFund, setEditingFund] = useState<Fund | null>(null);
+  const [market, setMarket] = useState<'a' | 'hk' | 'us' | 'jp' | 'kr'>('a');
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
 
   const handleAdd = () => {
     form.validateFields().then((values) => {
-      onAdd(values.name, Number(values.initialCapital));
+      onAdd(values.name, Number(values.initialCapital) || INITIAL_MAP[market].value, market);
       form.resetFields();
       setAddModalOpen(false);
+      setMarket('a');
       message.success('基金已添加');
     });
+  };
+
+  const handleMarketChange = (v: 'a' | 'hk' | 'us' | 'jp' | 'kr') => {
+    setMarket(v);
+    form.setFieldsValue({ initialCapital: INITIAL_MAP[v].value });
   };
 
   const handleEdit = () => {
@@ -99,13 +114,22 @@ const FundSwitcher: React.FC<FundSwitcherProps> = ({
             <Form.Item name="name" label="基金名称" rules={[{ required: true, message: '请输入基金名称' }]}>
               <Input placeholder="如 锋行成长1号" />
             </Form.Item>
+            <Form.Item name="market" label="市场" rules={[{ required: true, message: '请选择市场' }]}>
+              <Select onChange={handleMarketChange}>
+                <Select.Option value="a">A股</Select.Option>
+                <Select.Option value="hk">港股</Select.Option>
+                <Select.Option value="us">美股</Select.Option>
+                <Select.Option value="jp">日股</Select.Option>
+                  <Select.Option value="kr">韩股</Select.Option>
+              </Select>
+            </Form.Item>
             <Form.Item
               name="initialCapital"
-              label="初始规模（元）"
+              label={`初始规模（${INITIAL_MAP[market].label}）`}
               rules={[{ required: true, message: '请输入初始规模' }, { type: 'number', min: 0, message: '规模不能为负' }]}
-              extra="基金发行时的管理规模，用于计算净值"
+              extra={INITIAL_MAP[market].suffix}
             >
-              <InputNumber placeholder="如 1000000（表示100万元）" style={{ width: '100%' }} min={0} precision={0} />
+              <InputNumber placeholder={`如 ${INITIAL_MAP[market].value.toLocaleString()}`} style={{ width: '100%' }} min={0} precision={0} />
             </Form.Item>
           </Form>
         </div>
@@ -121,7 +145,6 @@ const FundSwitcher: React.FC<FundSwitcherProps> = ({
               name="initialCapital"
               label="初始规模（元）"
               rules={[{ required: true, message: '请输入初始规模' }, { type: 'number', min: 0, message: '规模不能为负' }]}
-              extra="基金发行时的管理规模，用于计算净值"
             >
               <InputNumber placeholder="如 1000000（表示100万元）" style={{ width: '100%' }} min={0} precision={0} />
             </Form.Item>

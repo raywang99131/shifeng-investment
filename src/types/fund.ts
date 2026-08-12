@@ -17,6 +17,7 @@ export interface NAVRecord {
 export interface Fund {
   id: string;
   name: string;
+  market: 'a' | 'hk' | 'us' | 'jp' | 'kr'; // 市场：A=A股，HK=港股，US=美股，JP=日股，KR=韩股
   initialCapital: number; // 初始规模（单位：元）
   positions: Position[];
   navHistory: NAVRecord[];

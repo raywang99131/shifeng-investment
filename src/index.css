@@ -15,6 +15,20 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+html[data-theme='light'],
+html[data-theme='light'] body {
+  background: #f5f7fa;
+  color: #262626;
+  color-scheme: light;
+}
+
+html[data-theme='dark'],
+html[data-theme='dark'] body {
+  background: #141414;
+  color: #f0f0f0;
+  color-scheme: dark;
+}
+
 #root {
   width: 100%;
   min-height: 100vh;

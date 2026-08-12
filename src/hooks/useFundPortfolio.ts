@@ -1,13 +1,15 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { type Fund, type Position, type NAVRecord } from '../types/fund';
+import { API_BASE } from '../config/api';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 const STORAGE_KEY = 'shifeng_funds';
+const SAVED_AT_KEY = 'shifeng_funds_saved_at';
 
 const DEFAULT_FUNDS: Fund[] = [
   {
     id: 'fund_1',
     name: '锋行成长1号',
+    market: 'a',
     initialCapital: 1000000,
     positions: [
       { code: '600519', name: '贵州茅台', shares: 100, avgCost: 1680.00, currentPrice: 1680.00 },
@@ -42,42 +44,66 @@ function saveFunds(funds: Fund[]) {
   }
 }
 
+// 记录 localStorage 最近一次保存时间，用于和服务端 lastUpdated 比对
+function getLocalSavedAt(): number {
+  const v = localStorage.getItem(SAVED_AT_KEY);
+  return v ? new Date(v).getTime() : 0;
+}
+function setLocalSavedAt(iso: string) {
+  try {
+    localStorage.setItem(SAVED_AT_KEY, iso);
+  } catch {
+    // ignore
+  }
+}
+
 // Sync funds to backend server
-async function syncFundsToBackend(funds: Fund[]) {
+async function syncFundsToBackend(funds: Fund[]): Promise<boolean> {
   try {
     const response = await fetch(`${API_BASE}/api/funds`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ funds }),
     });
+    if (!response.ok) {
+      console.error(`[syncFundsToBackend] HTTP ${response.status} ${response.statusText} (payload size: ${JSON.stringify({ funds }).length} bytes)`);
+    }
     return response.ok;
-  } catch {
-    // ignore network errors - localStorage is still the source of truth
+  } catch (err) {
+    console.error('[syncFundsToBackend] network error:', err);
     return false;
   }
 }
 
 // Load funds from backend server
-async function loadFundsFromBackend(): Promise<Fund[] | null> {
+async function loadFundsFromBackend(): Promise<{ funds: Fund[]; lastUpdated: string | null } | null> {
   try {
     const response = await fetch(`${API_BASE}/api/funds`);
     if (response.ok) {
       const data = await response.json();
       if (data.funds && Array.isArray(data.funds)) {
-        return data.funds;
+        return { funds: data.funds, lastUpdated: data.lastUpdated ?? null };
       }
+    } else {
+      console.error(`[loadFundsFromBackend] HTTP ${response.status} ${response.statusText}`);
     }
-  } catch {
-    // ignore
+  } catch (err) {
+    console.error('[loadFundsFromBackend] network error:', err);
   }
   return null;
 }
 
 interface UseFundPortfolioReturn {
   funds: Fund[];
+  syncStatus: {
+    localCount: number;
+    backendCount: number;
+    source: 'backend' | 'local';
+    backendReachable: boolean;
+  };
   currentFund: Fund | null;
   selectFund: (id: string) => void;
-  addFund: (name: string, initialCapital: number) => void;
+  addFund: (name: string, initialCapital: number, market?: 'a' | 'hk' | 'us' | 'jp' | 'kr') => void;
   updateFund: (id: string, updates: { name?: string; initialCapital?: number; lastSyncDate?: string }) => void;
   deleteFund: (id: string) => void;
   addPosition: (fundId: string, position: Omit<Position, never>) => void;
@@ -90,21 +116,114 @@ interface UseFundPortfolioReturn {
 
 export function useFundPortfolio(): UseFundPortfolioReturn {
   const [funds, setFunds] = useState<Fund[]>(() => loadFunds());
+  const [syncStatus, setSyncStatus] = useState<UseFundPortfolioReturn['syncStatus']>(() => {
+    const localFunds = loadFunds();
+    return {
+      localCount: localFunds.length,
+      backendCount: 0,
+      source: 'local',
+      backendReachable: false,
+    };
+  });
   const [currentFundId, setCurrentFundId] = useState<string | null>(() => {
     const loaded = loadFunds();
     return loaded.length > 0 ? loaded[0].id : null;
   });
   const [initialized, setInitialized] = useState(false);
 
-  // Load from backend on first mount
+  // Load from backend on first mount. Compare timestamps so that:
+  // - If localStorage has unsynced changes (saved after backend's lastUpdated), use localStorage and re-push to backend
+  // - Otherwise use backend as source of truth and update localStorage
+  // This prevents the previous bug where backend data would silently overwrite newer localStorage data.
   React.useEffect(() => {
     if (initialized) return;
     setInitialized(true);
-    loadFundsFromBackend().then((backendFunds) => {
+
+    const localFunds = loadFunds();
+    const localCount = localFunds.length;
+    setSyncStatus((prev) => ({
+      ...prev,
+      localCount,
+      backendReachable: false,
+    }));
+
+    loadFundsFromBackend().then((backendData) => {
+      if (!backendData) {
+        // Backend unavailable, keep local state as the only source
+        setSyncStatus({
+          localCount,
+          backendCount: 0,
+          source: 'local',
+          backendReachable: false,
+        });
+        if (localFunds.length > 0) {
+          setFunds(localFunds);
+          setCurrentFundId(localFunds[0]?.id ?? null);
+        }
+        return;
+      }
+
+      const backendFunds = backendData?.funds;
+      const backendTime = backendData?.lastUpdated ? new Date(backendData.lastUpdated).getTime() : 0;
+      const localTime = getLocalSavedAt();
+      const backendCount = backendFunds?.length || 0;
+
       if (backendFunds && backendFunds.length > 0) {
-        setFunds(backendFunds);
-        saveFunds(backendFunds);
-        setCurrentFundId(backendFunds[0].id);
+        if (localTime > backendTime && localFunds.length > 0) {
+          // localStorage has unsynced changes — use local and re-push to backend
+          console.warn('[useFundPortfolio] localStorage is newer than backend, re-syncing', { localTime, backendTime });
+          setFunds(localFunds);
+          setCurrentFundId(localFunds[0]?.id ?? null);
+          setSyncStatus({
+            localCount,
+            backendCount,
+            source: 'local',
+            backendReachable: true,
+          });
+          syncFundsToBackend(localFunds).then((ok) => {
+            setSyncStatus((prev) => ({
+              ...prev,
+              backendReachable: ok,
+              backendCount: ok ? localCount : prev.backendCount,
+            }));
+          });
+        } else {
+          // backend is at least as recent — use as source of truth
+          setFunds(backendFunds);
+          saveFunds(backendFunds);
+          if (backendData?.lastUpdated) setLocalSavedAt(backendData.lastUpdated);
+          setCurrentFundId(backendFunds[0].id);
+          setSyncStatus({
+            localCount,
+            backendCount,
+            source: 'backend',
+            backendReachable: true,
+          });
+        }
+      } else if (localFunds.length > 0) {
+        // backend empty — use localStorage, try to push to backend
+        setFunds(localFunds);
+        setCurrentFundId(localFunds[0].id);
+        setSyncStatus({
+          localCount,
+          backendCount,
+          source: 'local',
+          backendReachable: true,
+        });
+        syncFundsToBackend(localFunds).then((ok) => {
+          setSyncStatus((prev) => ({
+            ...prev,
+            backendReachable: ok,
+            backendCount: ok ? localCount : prev.backendCount,
+          }));
+        });
+      } else {
+        setSyncStatus({
+          localCount,
+          backendCount,
+          source: 'local',
+          backendReachable: true,
+        });
       }
     });
   }, [initialized]);
@@ -121,14 +240,28 @@ export function useFundPortfolio(): UseFundPortfolioReturn {
   const persist = useCallback((newFunds: Fund[]) => {
     setFunds(newFunds);
     saveFunds(newFunds);
-    // Also persist to backend server (async, don't block UI)
-    syncFundsToBackend(newFunds);
+    // Stamp localStorage save time so the next load can detect unsynced changes
+    setLocalSavedAt(new Date().toISOString());
+    setSyncStatus((prev) => ({
+      ...prev,
+      localCount: newFunds.length,
+      source: 'local',
+    }));
+    // Also persist to backend server (async, don't block UI; failures are logged)
+    syncFundsToBackend(newFunds).then((ok) => {
+      setSyncStatus((prev) => ({
+        ...prev,
+        backendReachable: ok,
+        backendCount: ok ? newFunds.length : prev.backendCount,
+      }));
+    });
   }, []);
 
-  const addFund = useCallback((name: string, initialCapital: number) => {
+  const addFund = useCallback((name: string, initialCapital: number, market: 'a' | 'hk' | 'us' | 'jp' | 'kr' = 'a') => {
     const newFund: Fund = {
       id: generateId(),
       name,
+      market,
       initialCapital,
       positions: [],
       navHistory: [],
@@ -192,6 +325,7 @@ export function useFundPortfolio(): UseFundPortfolioReturn {
 
   return {
     funds,
+    syncStatus,
     currentFund,
     selectFund,
     addFund,

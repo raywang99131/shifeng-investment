@@ -3,6 +3,7 @@ import { Card, Tag, Space, Button, Spin, Empty, Typography, Divider, Alert } fro
 import { ReloadOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useTheme } from '../../hooks/useTheme';
+import { API_BASE } from '../../config/api';
 
 const { Text } = Typography;
 
@@ -19,8 +20,6 @@ interface NewsEntry {
   news: NewsItem[];
   createdAt: string;
 }
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 const NewsFeed: React.FC = () => {
   const { theme } = useTheme();
@@ -56,6 +55,7 @@ const NewsFeed: React.FC = () => {
   const getCategoryColor = (category: string) => {
     const colors: Record<string, string> = {
       '宏观': 'blue',
+      'AI涨价': 'red',
       'AI': 'purple',
       '科技': 'cyan',
       '加密货币': 'orange',

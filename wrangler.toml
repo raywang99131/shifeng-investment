@@ -1,0 +1,35 @@
+name = "shifeng-investment"
+compatibility_date = "2024-09-23"
+pages_build_output_dir = "./dist"
+
+# KV namespace bindings — local dev preview values.
+# Production values must be set in Cloudflare Pages dashboard:
+#   Settings → Functions → KV namespace bindings
+# Bind the namespace IDs you create there to the variable names below.
+#
+# CLI commands to create (run after first deploy):
+#   wrangler kv:namespace create NEWS_DATA
+#   wrangler kv:namespace create FUNDS_DATA
+[[kv_namespaces]]
+binding = "NEWS_DATA"
+id = "REPLACE_WITH_NEWS_DATA_KV_ID"
+preview_id = "REPLACE_WITH_NEWS_DATA_KV_PREVIEW_ID"
+
+[[kv_namespaces]]
+binding = "FUNDS_DATA"
+id = "REPLACE_WITH_FUNDS_DATA_KV_ID"
+preview_id = "REPLACE_WITH_FUNDS_DATA_KV_PREVIEW_ID"
+
+# Watchlist (used by /api/macd) — embedded as a static asset binding
+# so we don't have to copy the CSV into the worker bundle.
+# Create as a KV namespace and upload the watchlist there.
+[[kv_namespaces]]
+binding = "WATCHLIST"
+id = "REPLACE_WITH_WATCHLIST_KV_ID"
+preview_id = "REPLACE_WITH_WATCHLIST_KV_PREVIEW_ID"
+
+# Local dev: serve the dist directory together with the functions
+[dev]
+port = 8788
+ip = "0.0.0.0"
+local = true

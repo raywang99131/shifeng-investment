@@ -27,6 +27,25 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+~$*.xlsx
+macd screener/*.xlsx
+server/data/calendar/events.json
 server/data/funds.json
 server/data/news.json
+server/data/macd_cache.json
+server/data/price-tracking/
+server/data/quant/
+server/data/research/
+server/data/tmt-margin/
+server/data/tungsten-price-history.json
+server/data/x-followers.json
+server/data/research/completed.json
+server/public/reports/
+server/price_tracking/*.xlsx*
+server/price_tracking/*.csv
+.playwright-cli/
+output/
+state/
+tmp/
 quote_service/__pycache__
+*.pyc

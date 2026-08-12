@@ -1,6 +1,7 @@
-import type { ThemeConfig } from 'antd';
+import { theme as antdTheme, type ThemeConfig } from 'antd';
 
 export const lightTheme: ThemeConfig = {
+  algorithm: antdTheme.defaultAlgorithm,
   token: {
     colorPrimary: '#1890ff',
     colorBgContainer: '#ffffff',
@@ -31,12 +32,17 @@ export const lightTheme: ThemeConfig = {
 };
 
 export const darkTheme: ThemeConfig = {
+  algorithm: antdTheme.darkAlgorithm,
   token: {
     colorPrimary: '#177ddc',
     colorBgContainer: '#1f1f1f',
     colorBgLayout: '#141414',
-    colorText: '#ffffff',
-    colorTextSecondary: '#a6a6a6',
+    colorText: '#f0f0f0',
+    colorTextSecondary: '#c7c7c7',
+    colorTextTertiary: '#a6a6a6',
+    colorBorder: '#3a3a3a',
+    colorBorderSecondary: '#303030',
+    colorFillAlter: '#262626',
     borderRadius: 8,
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
   },
