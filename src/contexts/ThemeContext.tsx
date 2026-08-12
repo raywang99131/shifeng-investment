@@ -1,4 +1,4 @@
-import React, { createContext, useState, useMemo, type ReactNode } from 'react';
+import React, { createContext, useEffect, useState, useMemo, type ReactNode } from 'react';
 import { ConfigProvider } from 'antd';
 import { lightTheme, darkTheme } from '../config/theme';
 import type { ThemeConfig } from 'antd';
@@ -31,6 +31,10 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   }, [theme]);
 
   const value = useMemo(() => ({ theme, toggleTheme }), [theme]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   return (
     <ThemeContext.Provider value={value}>

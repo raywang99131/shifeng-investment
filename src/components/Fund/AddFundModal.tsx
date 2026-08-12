@@ -1,24 +1,33 @@
 import React, { useEffect } from 'react';
-import { Modal, Form, Input, InputNumber } from 'antd';
+import { Modal, Form, Input, InputNumber, Select } from 'antd';
 import { type Fund } from '../../types/fund';
+
+const INITIAL_MAP = {
+  a: { value: 1000000, label: '元', suffix: '初始规模默认为 100万元' },
+  hk: { value: 1000000, label: '港币', suffix: '初始规模默认为 100万港币' },
+  us: { value: 100000, label: '美元', suffix: '初始规模默认为 10万美元' },
+  jp: { value: 10000000, label: '日元', suffix: '初始规模默认为 1000万日元' },
+  kr: { value: 10000000, label: '韩元', suffix: '初始规模默认为 1000万韩元' },
+};
 
 interface AddFundModalProps {
   open: boolean;
-  fund?: Fund; // 如果有 fund则是编辑模式
+  fund?: Fund;
   onClose: () => void;
-  onSave: (name: string, initialCapital: number) => void;
+  onSave: (name: string, initialCapital: number, market?: 'a' | 'hk' | 'us' | 'jp' | 'kr') => void;
 }
 
 const AddFundModal: React.FC<AddFundModalProps> = ({ open, fund, onClose, onSave }) => {
   const [form] = Form.useForm();
   const isEdit = !!fund;
+  const market = (Form.useWatch('market', form) as 'a' | 'hk' | 'us' | 'jp' | 'kr' | undefined) ?? 'a';
 
   useEffect(() => {
     if (open) {
       if (fund) {
         form.setFieldsValue({ name: fund.name, initialCapital: Math.round(fund.initialCapital) });
       } else {
-        form.setFieldsValue({ initialCapital: 1000000 });
+        form.setFieldsValue({ initialCapital: 1000000, market: 'a' });
       }
     }
   }, [open, fund, form]);
@@ -28,10 +37,15 @@ const AddFundModal: React.FC<AddFundModalProps> = ({ open, fund, onClose, onSave
       if (isEdit) {
         onSave(values.name, Number(values.initialCapital));
       } else {
-        onSave(values.name, 1000000); // 新建基金默认100万
+        const m: 'a' | 'hk' | 'us' | 'jp' | 'kr' = values.market || 'a';
+        onSave(values.name, Number(values.initialCapital) || INITIAL_MAP[m].value, m);
       }
       onClose();
     });
+  };
+
+  const handleMarketChange = (v: 'a' | 'hk' | 'us' | 'jp' | 'kr') => {
+    form.setFieldsValue({ initialCapital: INITIAL_MAP[v].value });
   };
 
   return (
@@ -50,9 +64,25 @@ const AddFundModal: React.FC<AddFundModalProps> = ({ open, fund, onClose, onSave
             <Input placeholder="如 锋行成长1号" />
           </Form.Item>
           {!isEdit && (
-            <Form.Item label="初始规模（元）" extra="新建基金初始规模默认为 100万元">
-              <InputNumber value={1000000} disabled style={{ width: '100%' }} />
-            </Form.Item>
+            <>
+              <Form.Item name="market" label="市场" rules={[{ required: true, message: '请选择市场' }]}>
+                <Select onChange={handleMarketChange}>
+                  <Select.Option value="a">A股</Select.Option>
+                  <Select.Option value="hk">港股</Select.Option>
+                  <Select.Option value="us">美股</Select.Option>
+                  <Select.Option value="jp">日股</Select.Option>
+                  <Select.Option value="kr">韩股</Select.Option>
+                </Select>
+              </Form.Item>
+              <Form.Item
+                label={`初始规模（${INITIAL_MAP[market].label}）`}
+                extra={INITIAL_MAP[market].suffix}
+              >
+                <Form.Item name="initialCapital" noStyle>
+                  <InputNumber style={{ width: '100%' }} min={0} />
+                </Form.Item>
+              </Form.Item>
+            </>
           )}
         </Form>
       </div>

@@ -1,4 +1,79 @@
-# React + TypeScript + Vite
+# 石锋资产投研平台
+
+## 本地公网访问
+
+推荐使用两种方式（二选一）：
+
+### 1) 免费稳定版（Cloudflare Named Tunnel，推荐）
+
+这是更稳一点的方式：你给它一个固定的 Cloudflare 子域名，重启后链接不会变。
+
+前提：
+
+- 你在 Cloudflare 上有一个域名（有免费账户即可配置 Tunnel）。
+- 已安装 `cloudflared`。
+
+部署步骤：
+
+```bash
+brew install cloudflared
+```
+
+1. 在 Cloudflare 创建一个 Tunnel，并拿到 `Tunnel token`。
+2. 在 Cloudflare 的 `DNS` 中加一条你想用的子域名（比如 `inv.shifeng.com`）指向这个 Tunnel。
+3. 在本机创建一个环境文件（不放进仓库）：
+
+```bash
+cat > ~/.config/shifeng-investment/tunnel.env <<'EOF'
+export CLOUDFLARE_TUNNEL_TOKEN=你的_TOKEN
+export CLOUDFLARE_TUNNEL_MODE=stable
+export CLOUDFLARE_TUNNEL_TRANSPORT_PROTOCOL=http2
+export CLOUDFLARE_TUNNEL_HOSTNAME=inv.shifeng.com
+export CLOUDFLARE_TUNNEL_EDGE_IP_VERSION=auto
+export CLOUDFLARE_TUNNEL_NAME=shifeng-investment
+EOF
+chmod 600 ~/.config/shifeng-investment/tunnel.env
+```
+
+4. 在项目目录运行：
+
+```bash
+npm run public:tunnel
+```
+
+终端里会启动固定域名站点（你在 DNS 设置的域名），同事可直接访问。
+说明：`CLOUDFLARE_TUNNEL_MODE=stable` 会在缺 token 时直接报错，不会退化到 Quick Tunnel。
+
+你也可以把服务装进 launchd 后台（重启后也能自动启动）：
+
+```bash
+launchctl bootout gui/$(id -u) com.shifeng-investment.cloudflare-tunnel >/dev/null 2>&1 || true
+launchctl bootstrap gui/$(id -u) "$HOME/Library/LaunchAgents/com.shifeng-investment.cloudflare-tunnel.plist"
+```
+
+### 2) 快速演示版（Quick Tunnel）
+
+如果你临时想发一个临时口子，可以直接用：
+
+```bash
+unset CLOUDFLARE_TUNNEL_TOKEN
+unset CLOUDFLARE_TUNNEL_TOKEN_FILE
+unset CLOUDFLARE_TUNNEL_ENV_FILE
+export CLOUDFLARE_TUNNEL_MODE=quick
+export CLOUDFLARE_TUNNEL_TRANSPORT_PROTOCOL=auto
+npm run public:tunnel
+```
+
+它会走临时 `https://*.trycloudflare.com`，特点是：
+
+- 链接每次会变；
+- 需要你本机和终端窗口保持存活。
+
+> Stable 模式更稳，Quick Tunnel 仅作为备用/应急使用。
+
+## 开发说明
+
+This project uses React + TypeScript + Vite.
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

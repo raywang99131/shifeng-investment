@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
-import { Layout, Menu, Avatar, Dropdown, Switch, Typography, Space, Button } from 'antd';
+import { Layout, Menu, Avatar, Dropdown, Switch, Typography, Space, Button, Grid } from 'antd';
 import {
-  FundOutlined,
   LineChartOutlined,
-  FileTextOutlined,
   PieChartOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -13,44 +11,63 @@ import {
   SettingOutlined,
   LogoutOutlined,
   FileProtectOutlined,
+  RiseOutlined,
+  HomeOutlined,
+  FundProjectionScreenOutlined,
+  CalendarOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useTheme } from '../../hooks/useTheme';
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
+const { useBreakpoint } = Grid;
+const LOGO_SRC = '/shifeng-logo.jpg';
 
 const MainLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
+  const effectiveCollapsed = isMobile || collapsed;
 
   const menuItems = [
+    {
+      key: '/home',
+      icon: <HomeOutlined />,
+      label: '首页',
+    },
     {
       key: '/news',
       icon: <FileProtectOutlined />,
       label: '新闻资讯',
     },
     {
-      key: '/market',
-      icon: <LineChartOutlined />,
-      label: '行情监控',
-    },
-    {
-      key: '/research',
-      icon: <FileTextOutlined />,
-      label: '投资研究',
+      key: '/calendar',
+      icon: <CalendarOutlined />,
+      label: '日历',
     },
     {
       key: '/portfolio',
       icon: <PieChartOutlined />,
-      label: '投资组合',
+      label: '子集',
     },
     {
-      key: '/alternative',
-      icon: <FundOutlined />,
-      label: '另类数据',
+      key: '/macd',
+      icon: <LineChartOutlined />,
+      label: 'MACD选股',
+    },
+    {
+      key: '/tmt-margin',
+      icon: <RiseOutlined />,
+      label: '拥挤度追踪',
+    },
+    {
+      key: '/research',
+      icon: <FundProjectionScreenOutlined />,
+      label: '公告监控',
     },
   ];
 
@@ -84,11 +101,13 @@ const MainLayout: React.FC = () => {
       <Sider
         trigger={null}
         collapsible
-        collapsed={collapsed}
+        collapsed={effectiveCollapsed}
         width={220}
+        collapsedWidth={isMobile ? 64 : 80}
         style={{
           background: theme === 'dark' ? '#1f1f1f' : '#ffffff',
           borderRight: theme === 'dark' ? '1px solid #303030' : '1px solid #f0f0f0',
+          flexShrink: 0,
         }}
       >
         <div
@@ -96,18 +115,47 @@ const MainLayout: React.FC = () => {
             height: 64,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: collapsed ? 'center' : 'flex-start',
-            padding: collapsed ? 0 : '0 20px',
+            justifyContent: effectiveCollapsed ? 'center' : 'flex-start',
+            padding: effectiveCollapsed ? 0 : '0 20px',
             borderBottom: theme === 'dark' ? '1px solid #303030' : '1px solid #f0f0f0',
           }}
         >
-          {collapsed ? (
-            <Button type="text" onClick={() => navigate('/')} style={{ fontSize: 18, color: '#ff4d4f', height: 'auto', padding: 0 }}>
-              <Text strong style={{ fontSize: 18, color: '#ff4d4f' }}>SF</Text>
+          {effectiveCollapsed ? (
+            <Button type="text" onClick={() => navigate('/home')} style={{ height: 'auto', padding: 0 }}>
+              <img
+                src={LOGO_SRC}
+                alt="石锋资产"
+                style={{
+                  width: 38,
+                  height: 38,
+                  display: 'block',
+                  objectFit: 'contain',
+                  borderRadius: 8,
+                  background: '#fff',
+                  padding: 3,
+                  border: theme === 'dark' ? '1px solid #303030' : '1px solid #f0f0f0',
+                }}
+              />
             </Button>
           ) : (
-            <Button type="text" onClick={() => navigate('/')} style={{ fontSize: 20, color: '#ff4d4f', height: 'auto', padding: 0 }}>
-              <Text strong style={{ fontSize: 20, color: '#ff4d4f' }}>石锋资产</Text>
+            <Button type="text" onClick={() => navigate('/home')} style={{ height: 'auto', padding: 0 }}>
+              <Space size={10}>
+                <img
+                  src={LOGO_SRC}
+                  alt="石锋资产"
+                  style={{
+                    width: 34,
+                    height: 34,
+                    display: 'block',
+                    objectFit: 'contain',
+                    borderRadius: 8,
+                    background: '#fff',
+                    padding: 3,
+                    border: theme === 'dark' ? '1px solid #303030' : '1px solid #f0f0f0',
+                  }}
+                />
+                <Text strong style={{ fontSize: 20, color: '#ff4d4f' }}>石锋资产</Text>
+              </Space>
             </Button>
           )}
         </div>
@@ -125,7 +173,7 @@ const MainLayout: React.FC = () => {
       <Layout>
         <Header
           style={{
-            padding: '0 24px',
+            padding: isMobile ? '0 12px' : '0 24px',
             background: theme === 'dark' ? '#1f1f1f' : '#ffffff',
             borderBottom: theme === 'dark' ? '1px solid #303030' : '1px solid #f0f0f0',
             display: 'flex',
@@ -137,8 +185,9 @@ const MainLayout: React.FC = () => {
             type="text"
             icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
             onClick={() => setCollapsed(!collapsed)}
+            style={{ visibility: isMobile ? 'hidden' : 'visible' }}
           />
-          <Space size={16}>
+          <Space size={isMobile ? 10 : 16}>
             <Space size={8}>
               <SunOutlined style={{ color: theme === 'light' ? '#faad14' : '#666' }} />
               <Switch
@@ -155,8 +204,8 @@ const MainLayout: React.FC = () => {
         </Header>
         <Content
           style={{
-            margin: 24,
-            padding: 24,
+            margin: isMobile ? 12 : 24,
+            padding: isMobile ? 12 : 24,
             background: theme === 'dark' ? '#141414' : '#f5f7fa',
             borderRadius: 8,
             minHeight: 280,

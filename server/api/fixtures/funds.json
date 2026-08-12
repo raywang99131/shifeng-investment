@@ -1,0 +1,36 @@
+{
+  "funds": [
+    {
+      "id": "north-america-seven-fixture",
+      "name": "北美7大",
+      "market": "us",
+      "positions": [
+        { "code": "AAPL", "name": "Apple", "shares": 1, "currentPrice": 1 },
+        { "code": "MSFT", "name": "Microsoft", "shares": 1, "currentPrice": 1 },
+        { "code": "GOOGL", "name": "Alphabet", "shares": 1, "currentPrice": 1 },
+        { "code": "AMZN", "name": "Amazon", "shares": 1, "currentPrice": 1 },
+        { "code": "NVDA", "name": "NVIDIA", "shares": 1, "currentPrice": 1 },
+        { "code": "META", "name": "Meta", "shares": 1, "currentPrice": 1 },
+        { "code": "TSLA", "name": "Tesla", "shares": 1, "currentPrice": 1 }
+      ]
+    },
+    {
+      "id": "us-semiconductor-fixture",
+      "name": "美股半导体",
+      "market": "us",
+      "positions": [
+        { "code": "ASML", "name": "ASML", "shares": 1, "currentPrice": 1 },
+        { "code": "TSM", "name": "TSMC", "shares": 1, "currentPrice": 1 }
+      ]
+    },
+    {
+      "id": "us-semiconductor-equipment-fixture",
+      "name": "美股半导体设备",
+      "market": "us",
+      "positions": [
+        { "code": "ASML", "name": "ASML", "shares": 1, "currentPrice": 1 }
+      ]
+    }
+  ],
+  "lastUpdated": "2026-07-13T06:00:00.000Z"
+}

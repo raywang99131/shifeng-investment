@@ -1,15 +1,17 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Row, Col, Statistic, Spin, Empty, Typography, Space, Button, List, Tag } from 'antd';
+import { Card, Row, Col, Statistic, Spin, Empty, Typography, Space, Button, List, Tag, Segmented } from 'antd';
 import { ArrowLeftOutlined, RiseOutlined, FallOutlined } from '@ant-design/icons';
 import ReactECharts from 'echarts-for-react';
 import dayjs from 'dayjs';
 import { fetchKline } from '../../services/quoteApi';
-import { STOCK_LIST } from '../../data/stocks';
+import { STOCK_LIST, HK_STOCK_LIST, US_STOCK_LIST } from '../../data/stocks';
 import { useNewsFeed } from '../../hooks/useNewsFeed';
 import { useTheme } from '../../hooks/useTheme';
 
 const { Text } = Typography;
+
+type Period = 'daily' | '15min' | '30min' | '60min';
 
 interface KlineBar {
   date: string;
@@ -30,35 +32,113 @@ const StockDetailPanel: React.FC = () => {
   const [klineData, setKlineData] = useState<KlineBar[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [period, setPeriod] = useState<Period>('daily');
+  const [realtimeQuote, setRealtimeQuote] = useState<{ open: number; close: number; high: number; low: number; volume: number; pre_close: number; pct_chg: number } | null>(null);
 
-  // 股票名称
+  // 股票名称：从A股/港股/美股列表中查找
   const stockInfo = useMemo(() => {
-    return STOCK_LIST.find(s => s.code === code) || { code, name: code };
+    const upperCode = code?.toUpperCase();
+    const aShare = STOCK_LIST.find(s => s.code === code);
+    if (aShare) return { code, name: aShare.name };
+    const hkStock = HK_STOCK_LIST.find(s => s.code === upperCode);
+    if (hkStock) return { code, name: hkStock.name };
+    const usStock = US_STOCK_LIST.find(s => s.code === upperCode);
+    if (usStock) return { code, name: usStock.name };
+    return { code, name: code };
   }, [code]);
 
   useEffect(() => {
     if (!code) return;
-    setLoading(true);
-    setError(null);
-    fetchKline(code, 90)
-      .then(data => {
+    let cancelled = false;
+    const loadKline = async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+      setLoading(true);
+      setError(null);
+      setRealtimeQuote(null);
+      try {
+        const data = await fetchKline(code, 300, period);
+        if (cancelled) return;
         if (data.success && data.data) {
           setKlineData(data.data);
+          // 日K且当天非最新K线时，获取今日实时报价拼入图表
+          if (period === 'daily') {
+            const today = dayjs().format('YYYY-MM-DD');
+            const latestDate = data.data[0]?.date;
+            if (latestDate !== today && dayjs().day() >= 1 && dayjs().day() <= 5) {
+              try {
+                const response = await fetch(`/api/quote?code=${code}`);
+                const quote = await response.json();
+                if (!cancelled && quote.trade_date === today) {
+                  setRealtimeQuote({
+                    open: quote.open,
+                    close: quote.close,
+                    high: quote.high,
+                    low: quote.low,
+                    volume: quote.volume,
+                    pre_close: quote.pre_close,
+                    pct_chg: quote.pct_chg,
+                  });
+                }
+              } catch {
+                // The historical chart remains usable when a realtime quote is unavailable.
+              }
+            }
+          }
         } else {
           setError(data.error || '获取K线数据失败');
         }
-      })
-      .catch(err => {
-        setError(err.message || '网络错误');
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, [code]);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : '网络错误');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    void loadKline();
+    return () => {
+      cancelled = true;
+    };
+  }, [code, period]);
 
-  // 最新一条K线
-  const latest = klineData.length > 0 ? klineData[klineData.length - 1] : null;
-  const prevClose = klineData.length > 1 ? klineData[klineData.length - 2].close : latest?.open;
+  // 拼接今日实时K线（日K模式下，若当日未收盘则插入实时K线）
+  const displayData = useMemo(() => {
+    const today = dayjs().format('YYYY-MM-DD');
+    // klineData 永远是倒序（ newest first）。detect：如果第一条 < 最后一条，说明原始数据就是正序（分钟数据）
+    const isAscending = klineData.length >= 2 && klineData[0].date < klineData[klineData.length - 1].date;
+    const ordered = isAscending ? klineData : [...klineData].reverse();
+    if (realtimeQuote && ordered[ordered.length - 1]?.date !== today) {
+      return [...ordered, {
+        date: today,
+        open: realtimeQuote.open,
+        close: realtimeQuote.close,
+        high: realtimeQuote.high,
+        low: realtimeQuote.low,
+        volume: realtimeQuote.volume,
+        pct_chg: realtimeQuote.pct_chg,
+      }];
+    }
+    return ordered;
+  }, [klineData, realtimeQuote]);
+
+  // 最新一条K线（displayData 是正序，最新在最后）
+  const latest = useMemo(() => {
+    if (displayData.length === 0) return null;
+    return displayData[displayData.length - 1] || null;
+  }, [displayData]);
+
+  const prevClose = useMemo(() => {
+    // 如果今日实时K线已插入，昨收取 realtimeQuote.pre_close；否则从 displayData 倒数第二个获取
+    if (realtimeQuote && displayData.length > 0 && displayData[displayData.length - 1].date === dayjs().format('YYYY-MM-DD')) {
+      return realtimeQuote.pre_close;
+    }
+    return displayData.length >= 2 ? displayData[displayData.length - 2].close : null;
+  }, [displayData, realtimeQuote]);
+
+  // 根据前收盘计算真实涨跌幅
+  const latestPctChg = useMemo(() => {
+    if (!latest || prevClose == null || prevClose <= 0) return latest?.pct_chg ?? 0;
+    return (latest.close - prevClose) / prevClose * 100;
+  }, [latest, prevClose]);
 
   // 相关新闻（按股票名称过滤）
   const relatedNews = useMemo(() => {
@@ -69,10 +149,10 @@ const StockDetailPanel: React.FC = () => {
     ).slice(0, 10);
   }, [news, stockInfo, code]);
 
-  // ---------- 技术指标计算 ----------
+  // ---------- 技术指标计算（基于 displayData，正序）----------
   const indicators = useMemo(() => {
-    if (klineData.length < 26) return { ma5: [], ma10: [], ma20: [], macd: [] };
-    const closes = klineData.map(d => d.close);
+    if (displayData.length < 26) return { ma5: [], ma10: [], ma20: [], macd: [], dif: [], dea: [] };
+    const closes = displayData.map(d => d.close);
 
     const calcEMA = (data: number[], period: number): number[] => {
       const k = 2 / (period + 1);
@@ -95,19 +175,25 @@ const StockDetailPanel: React.FC = () => {
       ma5: calcMA(closes, 5),
       ma10: calcMA(closes, 10),
       ma20: calcMA(closes, 20),
+      dif,
+      dea,
       macd,
     };
-  }, [klineData]);
+  }, [displayData]);
 
   // K线图 ECharts 配置
   const klineOption = useMemo(() => {
-    if (klineData.length === 0) return {};
-    const rev = [...klineData].reverse();
-    const dates = rev.map(d => d.date);
-    const ohlc = rev.map(d => [d.open, d.close, d.low, d.high]);
-    const volumes = rev.map(d => ({ value: d.volume, itemStyle: { color: d.close >= d.open ? '#ef5350' : '#26a69a' } }));
-    const { ma5, ma10, ma20, macd } = indicators;
-    const revI = (arr: number[]) => [...arr].reverse();
+    if (displayData.length === 0) return {};
+    const dates = displayData.map(d => d.date);
+    const ohlc = displayData.map(d => [d.open, d.close, d.low, d.high]);
+    const volumes = displayData.map(d => ({ value: d.volume, itemStyle: { color: d.close >= d.open ? '#ef5350' : '#26a69a' } }));
+    const orderedMa5 = indicators.ma5;
+    const orderedMa10 = indicators.ma10;
+    const orderedMa20 = indicators.ma20;
+    // MACD 数据已经是基于正序计算，直接用
+    const macdData = indicators.macd;
+    const difData = indicators.dif;
+    const deaData = indicators.dea;
 
     const upColor = '#ef5350';
     const downColor = '#26a69a';
@@ -124,25 +210,40 @@ const StockDetailPanel: React.FC = () => {
           const arr = (params as { seriesName: string; dataIndex: number; value: number | number[] }[]);
           if (!arr || arr.length === 0) return '';
           const idx = arr[0].dataIndex;
-          const d = rev[idx];
+          const d = displayData[idx];
           if (!d) return '';
-          const maVals = arr.filter(p => ['MA5','MA10','MA20'].includes(p.seriesName)).map(p => `${p.seriesName}:${(p.value as number).toFixed(2)}`).join(' &nbsp; ');
+          const today = dayjs().format('YYYY-MM-DD');
+          const isToday = d.date === today;
+          // 今日动态K线用 realtimeQuote.pre_close 作为昨收，其他用前一根收盘价
+          const prevCloseVal = isToday && realtimeQuote
+            ? realtimeQuote.pre_close
+            : (idx > 0 ? displayData[idx - 1].close : d.open);
+          const pctChgCalc = prevCloseVal > 0 ? ((d.close - prevCloseVal) / prevCloseVal * 100) : 0;
+          const volItem = arr.find(p => p.seriesName === 'VOLUME');
+          const difItem = arr.find(p => p.seriesName === 'DIF');
+          const deaItem = arr.find(p => p.seriesName === 'DEA');
           const macdItem = arr.find(p => p.seriesName === 'MACD');
           return `<div style="font-size:12px">
             <div>${d.date}</div>
             <div>开: ${d.open} &nbsp; 收: ${d.close} &nbsp; 高: ${d.high} &nbsp; 低: ${d.low}</div>
-            <div>涨跌: ${d.pct_chg >= 0 ? '+' : ''}${d.pct_chg.toFixed(2)}%</div>
-            <div>成交量: ${(d.volume / 10000).toFixed(0)}万手</div>
-            ${maVals ? `<div>${maVals}</div>` : ''}
-            ${macdItem ? `<div>MACD:${(macdItem.value as number).toFixed(3)}</div>` : ''}
+            <div>涨跌: ${pctChgCalc >= 0 ? '+' : ''}${pctChgCalc.toFixed(2)}%</div>
+            ${volItem ? `<div>VOLUME: ${(d.volume / 100).toFixed(2)}万手</div>` : ''}
+            ${difItem ? `<div>DIF: ${(difItem.value as number).toFixed(3)}</div>` : ''}
+            ${deaItem ? `<div>DEA: ${(deaItem.value as number).toFixed(3)}</div>` : ''}
+            ${macdItem ? `<div>MACD: ${(macdItem.value as number).toFixed(3)}</div>` : ''}
           </div>`;
         }
       },
-      legend: { show: true, top: 0, textStyle: { color: textColor, fontSize: 11 }, inactiveColor: '#666' },
+      legend: { show: true, top: 0, textStyle: { color: textColor, fontSize: 11 }, inactiveColor: '#666', data: ['MA5', 'MA10', 'MA20'] },
+      title: [
+        {},
+        { text: 'VOLUME', textStyle: { color: textColor, fontSize: 10 }, left: 60, top: '60%', z: 10 },
+        { text: 'MACD', textStyle: { color: textColor, fontSize: 10 }, left: 60, top: '77%', z: 10 },
+      ],
       grid: [
-        { left: 60, right: 20, top: 30, height: '40%' },
-        { left: 60, right: 20, top: '66%', height: '12%' },
-        { left: 60, right: 20, top: '80%', height: '16%' },
+        { left: 60, right: 20, top: 30, height: '38%' },
+        { left: 60, right: 20, top: '60%', height: '15%' },
+        { left: 60, right: 20, top: '77%', height: '20%' },
       ],
       xAxis: [
         { type: 'category', data: dates, gridIndex: 0, boundaryGap: true, axisLine: { lineStyle: { color: axisLineColor } }, axisLabel: { color: textColor, fontSize: 10 }, splitLine: { show: false }, axisTick: { show: false } },
@@ -155,22 +256,24 @@ const StockDetailPanel: React.FC = () => {
         { scale: true, gridIndex: 2, axisLine: { show: false }, axisLabel: { color: textColor, fontSize: 10 }, splitLine: { lineStyle: { color: gridLineColor } }, axisTick: { show: false } },
       ],
       series: [
-        { name: 'MA5', type: 'line', data: revI(ma5), smooth: true, lineStyle: { color: '#f39c12', width: 1 }, symbol: 'none', xAxisIndex: 0, yAxisIndex: 0 },
-        { name: 'MA10', type: 'line', data: revI(ma10), smooth: true, lineStyle: { color: '#e74c3c', width: 1 }, symbol: 'none', xAxisIndex: 0, yAxisIndex: 0 },
-        { name: 'MA20', type: 'line', data: revI(ma20), smooth: true, lineStyle: { color: '#3498db', width: 1 }, symbol: 'none', xAxisIndex: 0, yAxisIndex: 0 },
+        { name: 'MA5', type: 'line', data: orderedMa5, smooth: true, lineStyle: { color: '#f39c12', width: 1 }, symbol: 'none', xAxisIndex: 0, yAxisIndex: 0 },
+        { name: 'MA10', type: 'line', data: orderedMa10, smooth: true, lineStyle: { color: '#e74c3c', width: 1 }, symbol: 'none', xAxisIndex: 0, yAxisIndex: 0 },
+        { name: 'MA20', type: 'line', data: orderedMa20, smooth: true, lineStyle: { color: '#3498db', width: 1 }, symbol: 'none', xAxisIndex: 0, yAxisIndex: 0 },
         { type: 'candlestick', data: ohlc, xAxisIndex: 0, yAxisIndex: 0, itemStyle: { color: upColor, color0: downColor, borderColor: upColor, borderColor0: downColor } },
-        { type: 'bar', data: volumes, xAxisIndex: 1, yAxisIndex: 1, barWidth: '60%' },
+        { name: 'VOLUME', type: 'bar', data: volumes, xAxisIndex: 1, yAxisIndex: 1, barWidth: '60%' },
+        { name: 'DIF', type: 'line', data: difData, smooth: true, lineStyle: { color: '#9966ff', width: 1 }, symbol: 'none', xAxisIndex: 2, yAxisIndex: 2 },
+        { name: 'DEA', type: 'line', data: deaData, smooth: true, lineStyle: { color: '#ffcc00', width: 1 }, symbol: 'none', xAxisIndex: 2, yAxisIndex: 2 },
         {
-          name: 'MACD', type: 'bar', data: revI(macd).map(v => ({ value: v, itemStyle: { color: v >= 0 ? upColor : downColor } })),
+          name: 'MACD', type: 'bar', data: macdData.map(v => ({ value: v, itemStyle: { color: v >= 0 ? upColor : downColor } })),
           xAxisIndex: 2, yAxisIndex: 2, barWidth: '60%',
         },
       ],
       dataZoom: [
-        { type: 'inside', start: 50, end: 100, xAxisIndex: [0, 1, 2] },
-        { type: 'slider', start: 50, end: 100, xAxisIndex: [0, 1, 2], height: 18, bottom: 2, borderColor: 'transparent', backgroundColor: theme === 'dark' ? '#1f1f1f' : '#f0f0f0', fillerColor: 'rgba(100,149,237,0.2)', handleStyle: { color: '#6495ed' } },
+        { type: 'inside', start: 85, end: 100, xAxisIndex: [0, 1, 2] },
+        { type: 'slider', start: 85, end: 100, xAxisIndex: [0, 1, 2], height: 18, bottom: 2, borderColor: 'transparent', backgroundColor: theme === 'dark' ? '#1f1f1f' : '#f0f0f0', fillerColor: 'rgba(100,149,237,0.2)', handleStyle: { color: '#6495ed' } },
       ],
     };
-  }, [klineData, indicators, theme]);
+  }, [displayData, indicators, realtimeQuote, theme]);
 
   if (!code) {
     return <Empty description="无效的股票代码" />;
@@ -205,32 +308,33 @@ const StockDetailPanel: React.FC = () => {
                 title={<span style={{ color: theme === 'dark' ? '#888' : '#666' }}>最新价</span>}
                 value={latest.close}
                 precision={2}
-                valueStyle={{ color: latest.close >= (prevClose || 0) ? '#ff4d4f' : '#52c41a', fontSize: 22 }}
+                valueStyle={{ color: latestPctChg >= 0 ? '#ff4d4f' : '#52c41a', fontSize: 22 }}
                 suffix="元"
               />
             </Col>
             <Col span={6}>
               <Statistic
                 title={<span style={{ color: theme === 'dark' ? '#888' : '#666' }}>涨跌幅</span>}
-                value={latest.pct_chg}
+                value={latestPctChg}
                 precision={2}
-                prefix={latest.pct_chg >= 0 ? <RiseOutlined /> : <FallOutlined />}
-                valueStyle={{ color: latest.pct_chg >= 0 ? '#ff4d4f' : '#52c41a' }}
+                prefix={latestPctChg >= 0 ? <RiseOutlined /> : <FallOutlined />}
+                valueStyle={{ color: latestPctChg >= 0 ? '#ff4d4f' : '#52c41a' }}
                 suffix="%"
               />
             </Col>
             <Col span={6}>
               <Statistic
-                title={<span style={{ color: theme === 'dark' ? '#888' : '#666' }}>今开</span>}
-                value={latest.open}
+                title={<span style={{ color: theme === 'dark' ? '#888' : '#666' }}>昨收</span>}
+                value={prevClose ?? latest.open}
                 precision={2}
                 valueStyle={{ color: theme === 'dark' ? '#fff' : '#333' }}
+                suffix="元"
               />
             </Col>
             <Col span={6}>
               <Statistic
                 title={<span style={{ color: theme === 'dark' ? '#888' : '#666' }}>成交量</span>}
-                value={(latest.volume / 10000).toFixed(0)}
+                value={(latest.volume / 10000).toFixed(2)}
                 valueStyle={{ color: theme === 'dark' ? '#fff' : '#333' }}
                 suffix="万手"
               />
@@ -241,7 +345,24 @@ const StockDetailPanel: React.FC = () => {
 
       <Card
         size="small"
-        title="日K线"
+        title={
+          <Space>
+            <Text strong style={{ fontSize: 18 }}>
+              {period === 'daily' ? '日K' : period === '15min' ? '15分钟K' : period === '30min' ? '30分钟K' : '60分钟K'}
+            </Text>
+            <Segmented
+              size="small"
+              value={period}
+              onChange={(v) => setPeriod(v as Period)}
+              options={[
+                { label: '日K', value: 'daily' },
+                { label: '15分', value: '15min' },
+                { label: '30分', value: '30min' },
+                { label: '60分', value: '60min' },
+              ]}
+            />
+          </Space>
+        }
         style={{ marginBottom: 16, background: theme === 'dark' ? '#1f1f1f' : '#fff' }}
         styles={{ body: { height: 560 } }}
       >

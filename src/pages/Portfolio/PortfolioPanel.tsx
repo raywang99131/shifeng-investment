@@ -1,26 +1,100 @@
 import React, { useState, useMemo } from 'react';
+import * as XLSX from 'xlsx-js-style';
 import { useNavigate } from 'react-router-dom';
-import { Card, Row, Col, Statistic, Table, Space, DatePicker, Button, Modal, Form, InputNumber, Popconfirm, message, Empty, AutoComplete } from 'antd';
+import { Card, Row, Col, Statistic, Table, Space, Button, Modal, Form, InputNumber, Popconfirm, message, Empty, AutoComplete, Segmented, DatePicker } from 'antd';
 import { RiseOutlined, FallOutlined, SyncOutlined, PlusOutlined, EditOutlined, DeleteOutlined, ArrowLeftOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
 import ReactECharts from 'echarts-for-react';
 import { useTheme } from '../../hooks/useTheme';
-import { syncPrices } from '../../services/quoteApi';
+import { syncPrices, syncHKPrices, syncUSPrices, syncJPQuotes, syncKRQuotes } from '../../services/quoteApi';
 import { useFundPortfolio } from '../../hooks/useFundPortfolio';
 import { FundDashboard, FundSwitcher, AddFundModal, ContributionModal } from '../../components/Fund';
+import MarketTemperature from '../../components/Fund/MarketTemperature';
 import { type Position } from '../../types/fund';
 import { searchStocks } from '../../data/stocks';
+import type { SorterResult, SortOrder } from 'antd/es/table/interface';
 
-const { RangePicker } = DatePicker;
 const { useForm } = Form;
+type PositionSortKey = 'nameCode' | 'price' | 'shares' | 'profit' | 'dailyReturn' | 'weight' | null;
+type PositionSortOrder = 'asc' | 'desc' | null;
+type PositionSortState = {
+  key: PositionSortKey;
+  order: PositionSortOrder;
+};
+const toSortOrder = (order: PositionSortOrder): SortOrder | undefined => {
+  if (order === 'asc') return 'ascend';
+  if (order === 'desc') return 'descend';
+  return undefined;
+};
+type PositionRow = Position & { currentPrice: number; marketValue: number; profit: number; profitPercent: number; dailyReturn: number; contribution: number; contributionPercent: number; weight: number };
+
+type QuoteSyncResult = Awaited<ReturnType<typeof syncPrices>>;
+
+const syncFundQuotes = async (fund: { id: string; market: 'a' | 'hk' | 'us' | 'jp' | 'kr'; positions: Position[] }): Promise<QuoteSyncResult> => {
+  const codes = fund.positions.map((position) => position.code);
+  if (fund.market === 'hk') return syncHKPrices(codes);
+  if (fund.market === 'us') return syncUSPrices(codes);
+  if (fund.market === 'jp') return syncJPQuotes(codes);
+  if (fund.market === 'kr') return syncKRQuotes(codes);
+
+  const hkCodes = codes.filter((code) => code.toUpperCase().endsWith('.HK'));
+  const aShareCodes = codes.filter((code) => !code.toUpperCase().endsWith('.HK'));
+  const [aShareResult, hkResult] = await Promise.all([
+    aShareCodes.length > 0
+      ? syncPrices({ fundId: fund.id, codes: aShareCodes })
+      : Promise.resolve<QuoteSyncResult>({ success: true, prices: {} }),
+    hkCodes.length > 0
+      ? syncHKPrices(hkCodes)
+      : Promise.resolve<QuoteSyncResult>({ success: true, prices: {} }),
+  ]);
+
+  return {
+    success: aShareResult.success || hkResult.success,
+    tradeDate: aShareResult.tradeDate || hkResult.tradeDate,
+    prices: { ...(aShareResult.prices || {}), ...(hkResult.prices || {}) },
+    error: aShareResult.error || hkResult.error,
+  };
+};
+
+const handleExportPositions = (fund: { positions: Position[]; name: string; initialCapital?: number }) => {
+  const totalMarketValue = fund.positions.reduce((sum, position) => sum + position.shares * (position.currentPrice ?? position.avgCost), 0);
+  const data = fund.positions.map((p) => {
+    const currentPrice = p.currentPrice ?? p.avgCost;
+    const mv = p.shares * currentPrice;
+    const cost = p.shares * p.avgCost;
+    const weight = totalMarketValue > 0 ? (mv / totalMarketValue * 100) : 0;
+    return {
+      '股票代码': p.code,
+      '股票名称': p.name,
+      '持仓数量': p.shares,
+      '平均成本': p.avgCost,
+      '现价': currentPrice,
+      '前收': p.prevClose,
+      '涨跌幅%': currentPrice && p.prevClose ? (((currentPrice - p.prevClose) / p.prevClose) * 100).toFixed(2) + '%' : '-',
+      '持仓市值': mv,
+      '仓位%': weight.toFixed(2) + '%',
+      '浮盈亏': mv - cost,
+      '盈亏%': p.avgCost ? (((currentPrice - p.avgCost) / p.avgCost) * 100).toFixed(2) + '%' : '-',
+    };
+  });
+  const ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [
+    { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 10 },
+    { wch: 8 }, { wch: 8 }, { wch: 10 }, { wch: 12 }, { wch: 8 }, { wch: 12 }, { wch: 10 }, { wch: 8 },
+  ];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '持仓明细');
+  XLSX.writeFile(wb, `${fund.name}_持仓_${new Date().toISOString().slice(0, 10)}.xlsx`);
+};
 
 const PositionModal: React.FC<{
   open: boolean;
   position?: Position;
   initialCapital: number;
+  currentFund?: { market: 'a' | 'hk' | 'us' | 'jp' | 'kr' };
   otherPositions: { code: string; marketValue: number }[];
   onClose: () => void;
   onSave: (data: Position) => void;
-}> = ({ open, position, initialCapital, otherPositions, onClose, onSave }) => {
+}> = ({ open, position, initialCapital, currentFund, otherPositions, onClose, onSave }) => {
   const [form] = useForm();
   const [inputMode, setInputMode] = useState<'shares' | 'weight'>('shares');
   const [codeOptions, setCodeOptions] = useState<{ value: string; label: string; name: string; code: string }[]>([]);
@@ -49,11 +123,13 @@ const PositionModal: React.FC<{
   const handleCodeSelect = (val: string, opt: { name: string; code: string }) => {
     form.setFieldsValue({ code: val, name: opt.name });
     setNameOptions([]);
-    // fetch current price immediately
-    fetch(`http://localhost:3000/api/sync`, {
+    // fetch current price based on market
+    const market = currentFund?.market || 'a';
+    const endpoint = market === 'hk' ? '/api/sync/hk' : market === 'us' ? '/api/sync/us' : market === 'jp' ? '/api/sync/jp' : '/api/sync';
+    fetch(`http://localhost:3000${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fundId: '', codes: [val] }),
+      body: JSON.stringify({ codes: [val] }),
     })
       .then(r => r.json())
       .then(data => {
@@ -130,8 +206,18 @@ const PositionModal: React.FC<{
         <Form.Item name="code" label="股票代码" rules={[{ required: true, message: '请输入股票代码' }]}>
           <AutoComplete
             options={codeOptions}
-            onSearch={(val) => setCodeOptions(searchStocks(val).slice(0, 10))}
+            onSearch={(val) => {
+              const market = currentFund?.market || 'a';
+              setCodeOptions(searchStocks(val, market).slice(0, 10));
+            }}
             onSelect={(val, opt) => handleCodeSelect(val, opt)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && codeOptions.length > 0) {
+                const first = codeOptions[0];
+                handleCodeSelect(first.value, { name: first.name || '', code: first.value });
+                form.setFieldsValue({ code: first.value, name: first.name || '' });
+              }
+            }}
             placeholder="如 000001"
             disabled={!!position}
           />
@@ -139,7 +225,10 @@ const PositionModal: React.FC<{
         <Form.Item name="name" label="股票名称" rules={[{ required: true, message: '请输入股票名称' }]}>
           <AutoComplete
             options={nameOptions}
-            onSearch={(val) => setNameOptions(searchStocks(val).slice(0, 10))}
+            onSearch={(val) => {
+              const market = currentFund?.market || 'a';
+              setNameOptions(searchStocks(val, market).slice(0, 10));
+            }}
             onSelect={(_val, opt) => { form.setFieldsValue({ name: opt.name, code: opt.code }); setCodeOptions([]); handleCodeSelect(opt.code, opt); }}
             placeholder="如 平安银行"
           />
@@ -187,7 +276,6 @@ const PortfolioPanel: React.FC = () => {
     addPosition,
     updatePosition,
     deletePosition,
-    addNAVRecord,
     persistFunds,
   } = useFundPortfolio();
 
@@ -200,16 +288,24 @@ const PortfolioPanel: React.FC = () => {
   const [syncing, setSyncing] = useState(false);
   const [contributionModalOpen, setContributionModalOpen] = useState(false);
   const [navDateRange, setNavDateRange] = useState<[string | null, string | null]>([null, null]);
-
-  // 根据日期范围过滤净值历史
+  const [marketTemperatureRefreshKey, setMarketTemperatureRefreshKey] = useState(0);
+  const [marketFilter, setMarketFilter] = useState<'a' | 'hk' | 'us' | 'jp' | 'kr'>('a');
+  const [positionSortState, setPositionSortState] = useState<PositionSortState>({ key: null, order: null });
+  const positionSortKey = positionSortState.key;
+  const positionSortOrder = positionSortState.order;
   const filteredNavHistory = useMemo(() => {
     if (!currentFund || !navDateRange[0] || !navDateRange[1]) {
       return currentFund?.navHistory ?? [];
     }
     return currentFund.navHistory.filter(
-      (n) => n.date >= navDateRange[0]! && n.date <= navDateRange[1]!
+      (record) => record.date >= navDateRange[0]! && record.date <= navDateRange[1]!
     );
   }, [currentFund, navDateRange]);
+
+  // 按市场过滤基金
+  const filteredFunds = useMemo(() => {
+    return funds.filter((f) => f.market === marketFilter);
+  }, [funds, marketFilter]);
 
   // 计算当前基金的统计数据
   const stats = useMemo(() => {
@@ -257,7 +353,84 @@ const PortfolioPanel: React.FC = () => {
     return { totalMarketValue, totalCost, totalProfit, profitPercent, dailyReturn, cash, initialCapital, positions };
   }, [currentFund]);
 
-const handleFundSelect = (fundId: string) => {
+  const sortedPositions = useMemo(() => {
+    const positions = [...stats.positions];
+    if (positionSortKey === null || positionSortOrder === null) {
+      return positions;
+    }
+    positions.sort((a, b) => {
+      if (positionSortKey === 'nameCode') {
+        const byName = a.name.localeCompare(b.name);
+        if (byName !== 0) return positionSortOrder === 'asc' ? byName : -byName;
+        return positionSortOrder === 'asc'
+          ? a.code.localeCompare(b.code)
+          : b.code.localeCompare(a.code);
+      }
+      if (positionSortKey === 'price') {
+        return positionSortOrder === 'asc'
+          ? a.currentPrice - b.currentPrice
+          : b.currentPrice - a.currentPrice;
+      }
+      if (positionSortKey === 'shares') {
+        return positionSortOrder === 'asc'
+          ? a.shares - b.shares
+          : b.shares - a.shares;
+      }
+      if (positionSortKey === 'profit') {
+        return positionSortOrder === 'asc'
+          ? a.profit - b.profit
+          : b.profit - a.profit;
+      }
+      if (positionSortKey === 'dailyReturn') {
+        return positionSortOrder === 'asc'
+          ? a.dailyReturn - b.dailyReturn
+          : b.dailyReturn - a.dailyReturn;
+      }
+      return positionSortOrder === 'asc'
+        ? a.weight - b.weight
+        : b.weight - a.weight;
+    });
+    return positions;
+  }, [stats.positions, positionSortKey, positionSortOrder]);
+
+  const handlePositionTableChange = (
+    _pagination: unknown,
+    _filters: unknown,
+    sorter: SorterResult<PositionRow> | SorterResult<PositionRow>[]
+  ) => {
+    const current = Array.isArray(sorter) ? sorter[0] : sorter;
+    const rawColumnKey = current?.column?.key
+      ?? current?.columnKey
+      ?? current?.field
+      ?? (current?.column?.dataIndex as string | string[] | undefined);
+    const rawOrder = current?.order;
+    const resolvedColumnKey = Array.isArray(rawColumnKey) ? rawColumnKey[rawColumnKey.length - 1] : rawColumnKey;
+    const resolvedOrder: PositionSortOrder = rawOrder === 'ascend' ? 'asc' : rawOrder === 'descend' ? 'desc' : null;
+
+    if (!resolvedColumnKey) {
+      setPositionSortState({ key: null, order: null });
+      return;
+    }
+
+    const key = resolvedColumnKey;
+    if (key !== 'nameCode' && key !== 'price' && key !== 'shares' && key !== 'profit' && key !== 'dailyReturn' && key !== 'weight') {
+      return;
+    }
+
+    if (key === positionSortKey) {
+      if (resolvedOrder === null) {
+        setPositionSortState({ key: null, order: null });
+        return;
+      }
+    }
+
+    setPositionSortState({
+      key,
+      order: resolvedOrder || 'asc',
+    });
+  };
+
+  const handleFundSelect = (fundId: string) => {
     selectFund(fundId);
     setIsViewingDashboard(false);
   };
@@ -266,8 +439,8 @@ const handleFundSelect = (fundId: string) => {
     setIsViewingDashboard(true);
   };
 
-  const handleAddFund = (name: string, initialCapital: number) => {
-    addFund(name, initialCapital);
+  const handleAddFund = (name: string, initialCapital: number, market?: 'a' | 'hk' | 'us' | 'jp' | 'kr') => {
+    addFund(name, initialCapital, market);
   };
 
   const handleSave = (values: Position) => {
@@ -296,57 +469,61 @@ const handleFundSelect = (fundId: string) => {
   const handleSyncAll = async () => {
     if (syncing) return;
     setSyncing(true);
-    let successCount = 0;
-    for (const fund of funds) {
-      if (fund.positions.length > 0) {
-        const codes = fund.positions.map((p) => p.code);
-        const res = await syncPrices({ fundId: fund.id, codes });
-        if (res.success && res.prices) {
-          const today = res.tradeDate!;
-          const newFunds = funds.map((f) => {
-            if (f.id !== fund.id) return f;
-            const newPositions = f.positions.map((p) => {
-              const pd = res.prices![p.code];
-              if (!pd) return p;
-              return { ...p, currentPrice: pd.currentPrice, prevClose: pd.prevClose };
-            });
-            const totalMV = newPositions.reduce((sum, p) => {
-              const pd = res.prices![p.code];
-              const price = pd ? pd.currentPrice : (p.currentPrice ?? p.avgCost);
-              return sum + p.shares * price;
-            }, 0);
-            const nav = f.initialCapital > 0 ? totalMV / f.initialCapital : 1;
-            let newNavHistory = f.navHistory;
-            const exists = f.navHistory.some((n) => n.date === today);
-            if (exists) {
-              newNavHistory = f.navHistory.map((n) => n.date === today ? { ...n, nav, cumulativeNav: nav, marketValue: totalMV } : n);
-            } else {
-              newNavHistory = [...f.navHistory, { date: today, nav, cumulativeNav: nav, marketValue: totalMV }].sort((a, b) => a.date.localeCompare(b.date));
-            }
-            return { ...f, positions: newPositions, navHistory: newNavHistory, lastSyncDate: today };
-          });
-          persistFunds(newFunds);
-          successCount++;
-        }
-      }
-    }
+
+    // 闭包问题：fund 在 for 循环中是 var，会被后续异步回调修改，所以每个迭代都要 capture
+    const updatedFunds = await Promise.all(funds.map(async (fundSnapshot) => {
+      if (fundSnapshot.positions.length === 0) return fundSnapshot;
+      const res = await syncFundQuotes(fundSnapshot);
+      if (!res.success || !res.prices) return fundSnapshot;
+
+      const today = res.tradeDate!;
+      const newPositions = fundSnapshot.positions.map((p) => {
+        const pd = res.prices![p.code];
+        if (!pd) return p;
+        return { ...p, currentPrice: pd.currentPrice, prevClose: pd.prevClose };
+      });
+      const totalMV = newPositions.reduce((sum, p) => {
+        const pd = res.prices![p.code];
+        return sum + p.shares * (pd ? pd.currentPrice : (p.currentPrice ?? p.avgCost));
+      }, 0);
+      const activePositions = fundSnapshot.positions.filter((p) => Number(p.shares) > 0);
+      const freshQuoteCount = activePositions.filter((p) => {
+        const pd = res.prices![p.code];
+        return pd && Number(pd.currentPrice) > 0 && Number(pd.prevClose) > 0;
+      }).length;
+      const hasReliableNAV = activePositions.length > 0 &&
+        freshQuoteCount >= Math.max(1, Math.ceil(activePositions.length * 0.8)) &&
+        Number.isFinite(totalMV) && totalMV > 0;
+      const nav = fundSnapshot.initialCapital > 0 ? totalMV / fundSnapshot.initialCapital : 1;
+      const exists = fundSnapshot.navHistory.some((n) => n.date === today);
+      const newNavHistory = !hasReliableNAV
+        ? fundSnapshot.navHistory
+        : exists
+        ? fundSnapshot.navHistory.map((n) => n.date === today ? { ...n, nav, cumulativeNav: nav, marketValue: totalMV } : n)
+        : [...fundSnapshot.navHistory, { date: today, nav, cumulativeNav: nav, marketValue: totalMV }].sort((a, b) => a.date.localeCompare(b.date));
+      return {
+        ...fundSnapshot,
+        positions: newPositions,
+        navHistory: newNavHistory,
+        lastSyncDate: hasReliableNAV ? today : fundSnapshot.lastSyncDate,
+      };
+    }));
+
+    // API success=true means we got fresh data (even if price unchanged today)
+    persistFunds(updatedFunds);
+    setMarketTemperatureRefreshKey((key) => key + 1);
     setSyncing(false);
-    if (successCount > 0) {
-      message.success(`已刷新 ${successCount} 个基金的行情并记录净值`);
-    } else {
-      message.error('刷新失败，请检查服务');
-    }
+    message.success(`已刷新 ${updatedFunds.length} 个基金的行情`);
   };
 
   const handleSyncCurrent = async () => {
     if (!currentFund) return;
     setSyncing(true);
     try {
-      const codes = currentFund.positions.map((p) => p.code);
-      const res = await syncPrices({ fundId: currentFund.id, codes });
+      const res = await syncFundQuotes(currentFund);
       if (res.success && res.prices) {
         const today = res.tradeDate!;
-        const shouldRecordNAV = currentFund.lastSyncDate !== today;
+        const needsNAVRecord = currentFund.lastSyncDate !== today;
         const fundId = currentFund.id;
 
         // 构建完整的更新后基金对象，单次 persist 避免多次 setState 时序问题
@@ -366,6 +543,15 @@ const handleFundSelect = (fundId: string) => {
             const price = pd ? pd.currentPrice : (p.currentPrice ?? p.avgCost);
             return sum + p.shares * price;
           }, 0);
+          const activePositions = f.positions.filter((p) => Number(p.shares) > 0);
+          const freshQuoteCount = activePositions.filter((p) => {
+            const pd = res.prices![p.code];
+            return pd && Number(pd.currentPrice) > 0 && Number(pd.prevClose) > 0;
+          }).length;
+          const hasReliableNAV = activePositions.length > 0 &&
+            freshQuoteCount >= Math.max(1, Math.ceil(activePositions.length * 0.8)) &&
+            Number.isFinite(totalMV) && totalMV > 0;
+          const shouldRecordNAV = needsNAVRecord && hasReliableNAV;
           const nav = f.initialCapital > 0 ? totalMV / f.initialCapital : 1;
 
           // 更新 navHistory
@@ -405,7 +591,6 @@ const handleFundSelect = (fundId: string) => {
     setEditingPosition(undefined);
     setModalOpen(true);
   };
-
   const curveChartOption = useMemo(() => {
     const navData = filteredNavHistory.length > 0 ? filteredNavHistory : [];
     return {
@@ -414,12 +599,12 @@ const handleFundSelect = (fundId: string) => {
         trigger: 'axis',
         formatter: (params: unknown) => {
           const data = (params as { axisValue: string; value: number }[])[0];
-          return `${data.axisValue}<br/>净值: ${data.value.toFixed(4)}`;
+          return data ? `${data.axisValue}<br/>净值: ${data.value.toFixed(3)}` : '';
         },
       },
       xAxis: {
         type: 'category',
-        data: navData.map((n) => n.date.slice(5)),
+        data: navData.map((record) => record.date.slice(5)),
         axisLine: { lineStyle: { color: theme === 'dark' ? '#444' : '#ddd' } },
         axisLabel: { color: theme === 'dark' ? '#888' : '#666', rotate: 45 },
       },
@@ -434,7 +619,7 @@ const handleFundSelect = (fundId: string) => {
       },
       series: [
         {
-          data: navData.map((n) => n.nav),
+          data: navData.map((record) => record.nav),
           type: 'line',
           smooth: true,
           lineStyle: {
@@ -497,9 +682,23 @@ const handleFundSelect = (fundId: string) => {
 
   const columns = [
     {
+      title: '序号',
+      key: 'rank',
+      width: 64,
+      align: 'center' as const,
+      render: (_: unknown, __: Position, index: number) => index + 1,
+    },
+    {
       title: '名称/代码',
       key: 'nameCode',
       width: 130,
+      sorter: (a: Position & { profit: number; dailyReturn: number; weight: number; code: string }, b: Position & { profit: number; dailyReturn: number; weight: number; code: string }) => {
+        const n = a.name.localeCompare(b.name);
+        if (n !== 0) return n;
+        return a.code.localeCompare(b.code);
+      },
+      sortDirections: ['ascend', 'descend'] as ('ascend' | 'descend')[],
+      sortOrder: positionSortKey === 'nameCode' ? toSortOrder(positionSortOrder) : undefined,
       render: (_: unknown, record: Position) => (
         <div style={{ lineHeight: 1.4 }}>
           <div style={{ fontWeight: 500, fontSize: 13 }}>{record.name}</div>
@@ -509,7 +708,10 @@ const handleFundSelect = (fundId: string) => {
     },
     {
       title: '成本/现价',
-      key: 'costPrice',
+      key: 'price',
+      sorter: (a: Position & { profit: number; dailyReturn: number; weight: number; profitPercent: number; currentPrice: number }, b: Position & { profit: number; dailyReturn: number; weight: number; profitPercent: number; currentPrice: number }) => a.currentPrice - b.currentPrice,
+      sortDirections: ['ascend', 'descend'] as ('ascend' | 'descend')[],
+      sortOrder: positionSortKey === 'price' ? toSortOrder(positionSortOrder) : undefined,
       width: 144,
       align: 'right' as const,
       render: (_: unknown, record: Position & { currentPrice: number; profitPercent: number }) => {
@@ -531,6 +733,9 @@ const handleFundSelect = (fundId: string) => {
     {
       title: '持仓',
       key: 'shares',
+      sorter: (a: Position, b: Position) => a.shares - b.shares,
+      sortDirections: ['ascend', 'descend'] as ('ascend' | 'descend')[],
+      sortOrder: positionSortKey === 'shares' ? toSortOrder(positionSortOrder) : undefined,
       width: 104,
       align: 'right' as const,
       render: (_: unknown, record: Position) => (
@@ -543,6 +748,9 @@ const handleFundSelect = (fundId: string) => {
     {
       title: '持仓盈亏',
       key: 'profit',
+      sorter: (a: Position & { profit: number; profitPercent: number }, b: Position & { profit: number; profitPercent: number }) => a.profit - b.profit,
+      sortDirections: ['ascend', 'descend'] as ('ascend' | 'descend')[],
+      sortOrder: positionSortKey === 'profit' ? toSortOrder(positionSortOrder) : undefined,
       width: 120,
       align: 'right' as const,
       render: (_: unknown, record: Position & { profit: number; profitPercent: number }) => {
@@ -556,8 +764,11 @@ const handleFundSelect = (fundId: string) => {
       },
     },
     {
-      title: '当日盈亏',
+      title: '今日涨跌',
       key: 'dailyReturn',
+      sorter: (a: Position & { dailyReturn: number }, b: Position & { dailyReturn: number }) => a.dailyReturn - b.dailyReturn,
+      sortDirections: ['ascend', 'descend'] as ('ascend' | 'descend')[],
+      sortOrder: positionSortKey === 'dailyReturn' ? toSortOrder(positionSortOrder) : undefined,
       width: 96,
       align: 'right' as const,
       render: (_: unknown, record: Position & { dailyReturn: number; prevClose?: number; currentPrice: number }) => {
@@ -580,6 +791,9 @@ const handleFundSelect = (fundId: string) => {
     {
       title: '仓位',
       key: 'weight',
+      sorter: (a: Position & { weight: number }, b: Position & { weight: number }) => a.weight - b.weight,
+      sortDirections: ['ascend', 'descend'] as ('ascend' | 'descend')[],
+      sortOrder: positionSortKey === 'weight' ? toSortOrder(positionSortOrder) : undefined,
       width: 88,
       align: 'right' as const,
       render: (_: unknown, record: Position & { weight: number }) => (
@@ -608,8 +822,25 @@ const handleFundSelect = (fundId: string) => {
   if (isViewingDashboard) {
     return (
       <>
+        <div style={{ marginBottom: 16 }}>
+          <Segmented
+            value={marketFilter}
+            onChange={(v) => setMarketFilter(v as typeof marketFilter)}
+            options={[
+              { label: 'A股', value: 'a' },
+              { label: '港股', value: 'hk' },
+              { label: '美股', value: 'us' },
+              { label: '日股', value: 'jp' },
+              { label: '韩股', value: 'kr' },
+            ]}
+          />
+        </div>
+        <MarketTemperature market={marketFilter} refreshKey={marketTemperatureRefreshKey} />
         <FundDashboard
-          funds={funds}
+              funds={filteredFunds}
+              exportLabel={marketFilter === 'a' ? 'A股' : marketFilter === 'hk' ? '港股' : marketFilter === 'us' ? '美股' : marketFilter === 'jp' ? '日股' : '韩股'}
+              showMarketBadge={false}
+          onOpenAnomaly={(fundId, code) => navigate(`/portfolio/anomaly/${fundId}${code ? `?code=${encodeURIComponent(code)}` : ''}`)}
           onSelectFund={handleFundSelect}
           onAddFund={() => setAddFundModalOpen(true)}
           onSyncAll={handleSyncAll}
@@ -707,33 +938,14 @@ const handleFundSelect = (fundId: string) => {
         <Col span={12}>
           <Card
             size="small"
-            title="净值曲线"
+            title="净值趋势"
             extra={
-              <Space size="small">
-                <RangePicker
-                  size="small"
-                  onChange={(_dates, dateStrings) => {
-                    setNavDateRange(dateStrings as [string | null, string | null]);
-                  }}
-                />
-                <Button
-                  size="small"
-                  onClick={() => {
-                    if (!currentFund) return;
-                    const today = new Date().toISOString().slice(0, 10);
-                    const nav = stats.initialCapital > 0 ? stats.totalMarketValue / stats.initialCapital : 1;
-                    addNAVRecord(currentFund.id, {
-                      date: today,
-                      nav,
-                      cumulativeNav: nav,
-                      marketValue: stats.totalMarketValue,
-                    });
-                    message.success(`净值 ${nav.toFixed(4)} 已记录 (${today})`);
-                  }}
-                >
-                  记录今日
-                </Button>
-              </Space>
+              <DatePicker.RangePicker
+                size="small"
+                onChange={(_dates: unknown, dateStrings: [string, string]) => {
+                  setNavDateRange(dateStrings as [string | null, string | null]);
+                }}
+              />
             }
             style={{ background: theme === 'dark' ? '#1f1f1f' : '#fff', height: 320 }}
           >
@@ -760,6 +972,11 @@ const handleFundSelect = (fundId: string) => {
               同步数据
             </Button>
             {stats.positions.length > 0 && (
+              <Button onClick={() => handleExportPositions(currentFund)}>
+                导出持仓
+              </Button>
+            )}
+            {stats.positions.length > 0 && (
               <Button onClick={() => setContributionModalOpen(true)}>
                 贡献分析
               </Button>
@@ -772,27 +989,32 @@ const handleFundSelect = (fundId: string) => {
         style={{ background: theme === 'dark' ? '#1f1f1f' : '#fff' }}
       >
         {stats.positions.length > 0 ? (
-          <Table
+      <Table
             columns={columns}
-            dataSource={stats.positions}
+            dataSource={sortedPositions}
             rowKey="code"
             pagination={false}
             size="small"
             style={{ width: '100%' }}
-            onRow={(_, index) => ({ onClick: () => navigate(`/stock/${stats.positions[index!].code}`), style: { cursor: 'pointer' } })}
+            onChange={handlePositionTableChange}
+            onRow={(record) => ({ onClick: () => navigate(`/stock/${record.code}`), style: { cursor: 'pointer' } })}
+            showSorterTooltip={false}
             summary={() => (
               <Table.Summary>
                 <Table.Summary.Row>
                   <Table.Summary.Cell index={0}>
+                    <strong />
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={1}>
                     <strong>股票合计</strong>
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={1} align="right">
+                  <Table.Summary.Cell index={2} align="right">
                     <strong>¥{stats.totalMarketValue.toLocaleString()}</strong>
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={2} align="right">
+                  <Table.Summary.Cell index={3} align="right">
                     <strong>{stats.positions.reduce((s, p) => s + p.shares, 0).toLocaleString()}</strong>
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={3} align="right">
+                  <Table.Summary.Cell index={4} align="right">
                     <div style={{ lineHeight: 1.4, textAlign: 'right' }}>
                       <div style={{ fontSize: 11, color: stats.totalProfit >= 0 ? '#ff4d4f' : '#52c41a' }}>
                         {stats.profitPercent >= 0 ? '+' : ''}{stats.profitPercent.toFixed(1)}%
@@ -802,7 +1024,7 @@ const handleFundSelect = (fundId: string) => {
                       </div>
                     </div>
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={4} align="right">
+                  <Table.Summary.Cell index={5} align="right">
                     <div style={{ lineHeight: 1.4, textAlign: 'right' }}>
                       <div style={{ fontSize: 11, color: stats.dailyReturn > 0 ? '#ff4d4f' : stats.dailyReturn < 0 ? '#52c41a' : '#888' }}>
                         {stats.dailyReturn !== 0 ? `${stats.dailyReturn > 0 ? '+' : ''}${stats.dailyReturn.toFixed(2)}%` : '0.00%'}
@@ -819,21 +1041,21 @@ const handleFundSelect = (fundId: string) => {
                       </div>
                     </div>
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={5} align="right">
+                  <Table.Summary.Cell index={6} align="right">
                     <strong>{(stats.totalMarketValue / stats.initialCapital * 100).toFixed(1)}%</strong>
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={6} />
+                  <Table.Summary.Cell index={7} />
                 </Table.Summary.Row>
                 {stats.cash > 0 ? (
                   <Table.Summary.Row>
                     <Table.Summary.Cell index={0}>
+                      <span />
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={1}>
                       <span style={{ color: '#888' }}>现金</span>
                     </Table.Summary.Cell>
-                    <Table.Summary.Cell index={1} align="right">
-                      <span style={{ color: '#888' }}>¥{(stats.cash || 0).toLocaleString()}</span>
-                    </Table.Summary.Cell>
                     <Table.Summary.Cell index={2} align="right">
-                      <span style={{ color: '#888' }}>—</span>
+                      <span style={{ color: '#888' }}>¥{(stats.cash || 0).toLocaleString()}</span>
                     </Table.Summary.Cell>
                     <Table.Summary.Cell index={3} align="right">
                       <span style={{ color: '#888' }}>—</span>
@@ -842,9 +1064,12 @@ const handleFundSelect = (fundId: string) => {
                       <span style={{ color: '#888' }}>—</span>
                     </Table.Summary.Cell>
                     <Table.Summary.Cell index={5} align="right">
+                      <span style={{ color: '#888' }}>—</span>
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={6} align="right">
                       <span style={{ color: '#888' }}>{((stats.cash || 0) / (stats.initialCapital || 1) * 100).toFixed(1)}%</span>
                     </Table.Summary.Cell>
-                    <Table.Summary.Cell index={6} />
+                    <Table.Summary.Cell index={7} />
                   </Table.Summary.Row>
                 ) : null}
               </Table.Summary>
@@ -855,53 +1080,11 @@ const handleFundSelect = (fundId: string) => {
         )}
       </Card>
 
-      {currentFund && currentFund.navHistory.length > 0 && (
-        <Card
-          size="small"
-          title="净值历史"
-          extra={
-            <span style={{ color: '#888', fontSize: 12 }}>
-              共 {currentFund.navHistory.length} 条记录
-            </span>
-          }
-          style={{ marginBottom: 16, background: theme === 'dark' ? '#1f1f1f' : '#fff' }}
-        >
-          <Table
-            dataSource={[...currentFund.navHistory].reverse().map((r) => ({ ...r, key: r.date }))}
-            columns={[
-              { title: '日期', dataIndex: 'date', width: 120 },
-              { title: '净值', dataIndex: 'nav', width: 100, align: 'right' as const, render: (v: number) => v.toFixed(4) },
-              { title: '市值（元）', dataIndex: 'marketValue', width: 150, align: 'right' as const, render: (v: number) => v.toLocaleString('zh-CN', { maximumFractionDigits: 0 }) },
-              {
-                title: '操作',
-                width: 80,
-                render: (_: unknown, record: { date: string }) => (
-                  <Popconfirm
-                    title="删除该条记录？"
-                    onConfirm={() => {
-                      if (!currentFund) return;
-                      const newHistory = currentFund.navHistory.filter((n) => n.date !== record.date);
-                      updateFund(currentFund.id, { navHistory: newHistory } as unknown as { name?: string; initialCapital?: number });
-                      message.success('已删除');
-                    }}
-                    okText="删除"
-                    cancelText="取消"
-                  >
-                    <Button type="link" size="small" danger>删除</Button>
-                  </Popconfirm>
-                ),
-              },
-            ]}
-            pagination={false}
-            size="small"
-          />
-        </Card>
-      )}
-
       <PositionModal
         open={modalOpen}
         position={editingPosition}
         initialCapital={stats.initialCapital}
+        currentFund={currentFund}
         otherPositions={stats.positions.map((p) => ({ code: p.code, marketValue: p.marketValue }))}
         onClose={() => { setModalOpen(false); setEditingPosition(undefined); }}
         onSave={handleSave}
