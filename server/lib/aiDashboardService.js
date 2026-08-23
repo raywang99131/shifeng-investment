@@ -95,8 +95,6 @@ async function readSnapshotFile(dataFile, now) {
     return {
       ...empty,
       ...parsed,
-      sources: { ...empty.sources, ...(parsed.sources || {}) },
-      benchmarks: { ...empty.benchmarks, ...(parsed.benchmarks || {}) },
       creditRisk: {
         ...empty.creditRisk,
         ...(parsed.creditRisk || {}),
