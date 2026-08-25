@@ -1,8 +1,13 @@
+// LOCAL TEST ONLY — NEVER DEPLOY.
+// The reserved all-zero account ID prevents this config from targeting a Cloudflare account.
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
+  "account_id": "00000000000000000000000000000000",
   "name": "ice-cds-collector-test",
   "main": "src/index.ts",
   "compatibility_date": "2026-08-25",
+  "workers_dev": false,
+  "preview_urls": false,
   "vars": { "ENVIRONMENT": "test" },
   "d1_databases": [{
     "binding": "DB",
