@@ -1,0 +1,20 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "ice-cds-collector-test",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-25",
+  "vars": { "ENVIRONMENT": "test" },
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "ice-cds-history-test",
+    "database_id": "00000000-0000-0000-0000-000000000000",
+    "migrations_dir": "migrations"
+  }],
+  "durable_objects": {
+    "bindings": [{ "name": "CDS_COLLECTOR", "class_name": "CdsCollector" }]
+  },
+  "exports": {
+    "CdsCollector": { "type": "durable-object", "storage": "sqlite" }
+  },
+  "triggers": { "crons": ["17 * * * *"] }
+}

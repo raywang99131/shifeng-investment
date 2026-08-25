@@ -2,6 +2,8 @@
 .env
 .env.local
 .env.*.local
+cloudflare/ice-cds-collector/.dev.vars
+cloudflare/ice-cds-collector/.wrangler/
 
 # Logs
 logs

@@ -14,6 +14,10 @@
     "backfill:ice-cds-screenshot": "node server/scripts/backfill_ice_cds_screenshot.mjs",
     "init:ice-cds-workbook": "node server/scripts/init_ice_cds_workbook.mjs",
     "verify:ice-cds-workbook": "node server/scripts/verify_ice_cds_workbook.mjs",
+    "test:ice-cds-worker": "vitest run --config cloudflare/ice-cds-collector/vitest.config.ts",
+    "typecheck:ice-cds-worker": "tsc -p cloudflare/ice-cds-collector/tsconfig.json --noEmit",
+    "cf:ice-cds:types": "wrangler types --config cloudflare/ice-cds-collector/wrangler.test.jsonc --env-interface Env cloudflare/ice-cds-collector/worker-configuration.d.ts",
+    "cf:ice-cds:migrate:local": "wrangler d1 migrations apply DB --local --config cloudflare/ice-cds-collector/wrangler.test.jsonc",
     "check:earnings-copy": "node scripts/check-earnings-copy.mjs",
     "sync:online": "bash scripts/sync-online.sh",
     "lint": "eslint .",
@@ -40,6 +44,7 @@
     "xlsx-js-style": "^1.2.0"
   },
   "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.0.0",
     "@eslint/js": "^9.39.4",
     "@types/node": "^24.12.2",
     "@types/react": "^19.2.14",
@@ -51,6 +56,8 @@
     "globals": "^17.4.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.0",
-    "vite": "^8.0.4"
+    "vite": "^8.0.4",
+    "vitest": "^4.1.11",
+    "wrangler": "^4.125.0"
   }
 }
