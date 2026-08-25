@@ -104,6 +104,24 @@ const toPublishedBatch = (row: BatchRow): PublishedBatch => ({
   qualityStatus: row.quality_status,
 });
 
+const encodeHistoryCursor = (batch: PublishedBatch): string => (
+  `${batch.clearingDate}|${batch.revision}`
+);
+
+const decodeHistoryCursor = (cursor: string | null | undefined): {
+  clearingDate: string;
+  revision: number;
+} | null => {
+  if (cursor === null || cursor === undefined) return null;
+  const separator = cursor.lastIndexOf('|');
+  const clearingDate = cursor.slice(0, separator);
+  const revision = Number(cursor.slice(separator + 1));
+  if (separator <= 0 || !Number.isInteger(revision) || revision < 0) {
+    throw new Error('Invalid history cursor');
+  }
+  return { clearingDate, revision };
+};
+
 export class CollectorRepository {
   constructor(private readonly db: D1Database) {}
 
@@ -301,25 +319,32 @@ export class CollectorRepository {
   }
 
   async publishBatch(input: PublishBatchInput): Promise<PublishedBatch> {
-    const statements = [
-      this.db.prepare(`
-        INSERT INTO published_batches (
-          batch_id, clearing_date, revision, published_at, source_kind, quality_status
-        ) VALUES (?, ?, ?, ?, ?, ?)
-        ON CONFLICT(clearing_date, revision) DO NOTHING
-      `).bind(
-        input.batchId,
-        input.clearingDate,
-        input.revision,
-        input.publishedAt,
-        input.sourceKind,
-        input.qualityStatus,
-      ),
+    await this.db.prepare(`
+      INSERT INTO published_batches (
+        batch_id, clearing_date, revision, published_at, source_kind, quality_status
+      ) VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(clearing_date, revision) DO NOTHING
+    `).bind(
+      input.batchId,
+      input.clearingDate,
+      input.revision,
+      input.publishedAt,
+      input.sourceKind,
+      input.qualityStatus,
+    ).run();
+    const stored = await this.db.prepare(`
+      SELECT batch_id, clearing_date, revision, published_at, source_kind, quality_status
+      FROM published_batches
+      WHERE clearing_date = ? AND revision = ?
+    `).bind(input.clearingDate, input.revision).first<BatchRow>();
+    if (!stored) throw new Error('Published batch was not available after insertion');
+
+    await this.db.batch([
       ...input.rows.map((row) => this.db.prepare(`
         INSERT INTO published_batch_rows (batch_id, company, spread_revision_id)
         VALUES (?, ?, ?)
         ON CONFLICT(batch_id, company) DO NOTHING
-      `).bind(input.batchId, row.company, row.spreadRevisionId)),
+      `).bind(stored.batch_id, row.company, row.spreadRevisionId)),
       this.db.prepare(`
         INSERT INTO published_batch_current (clearing_date, batch_id)
         VALUES (?, ?)
@@ -327,44 +352,51 @@ export class CollectorRepository {
         WHERE
           (SELECT revision FROM published_batches WHERE batch_id = excluded.batch_id)
             >= (SELECT revision FROM published_batches WHERE batch_id = published_batch_current.batch_id)
-      `).bind(input.clearingDate, input.batchId),
-    ];
-    await this.db.batch(statements);
-    return {
-      batchId: input.batchId,
-      clearingDate: input.clearingDate,
-      revision: input.revision,
-      publishedAt: input.publishedAt,
-      sourceKind: input.sourceKind,
-      qualityStatus: input.qualityStatus,
-    };
+      `).bind(input.clearingDate, stored.batch_id),
+    ]);
+    return toPublishedBatch(stored);
   }
 
   async latestBatch(): Promise<PublishedBatch | null> {
     const batch = await this.db.prepare(`
-      SELECT batch_id, clearing_date, revision, published_at, source_kind, quality_status
-      FROM published_batch_current
-      JOIN published_batches USING (batch_id)
-      ORDER BY clearing_date DESC, revision DESC
+      SELECT batches.batch_id, batches.clearing_date, batches.revision,
+             batches.published_at, batches.source_kind, batches.quality_status
+      FROM published_batch_current AS current
+      JOIN published_batches AS batches USING (batch_id)
+      ORDER BY batches.clearing_date DESC, batches.revision DESC
       LIMIT 1
     `).first<BatchRow>();
     return batch ? toPublishedBatch(batch) : null;
   }
 
   async history(query: HistoryQuery): Promise<HistoryPage> {
+    const cursor = decodeHistoryCursor(query.cursor);
     const result = await this.db.prepare(`
       SELECT batch_id, clearing_date, revision, published_at, source_kind, quality_status
       FROM published_batches
-      WHERE clearing_date >= ? AND clearing_date <= ? AND (? IS NULL OR clearing_date > ?)
+      WHERE clearing_date >= ? AND clearing_date <= ?
+        AND (
+          ? IS NULL
+          OR clearing_date > ?
+          OR (clearing_date = ? AND revision > ?)
+        )
       ORDER BY clearing_date ASC, revision ASC
       LIMIT ?
-    `).bind(query.from, query.to, query.cursor ?? null, query.cursor ?? null, query.limit + 1)
+    `).bind(
+      query.from,
+      query.to,
+      cursor?.clearingDate ?? null,
+      cursor?.clearingDate ?? null,
+      cursor?.clearingDate ?? null,
+      cursor?.revision ?? null,
+      query.limit + 1,
+    )
       .all<BatchRow>();
     const rows = result.results.map(toPublishedBatch);
     const data = rows.slice(0, query.limit);
     return {
       data,
-      nextCursor: rows.length > query.limit ? data.at(-1)?.clearingDate ?? null : null,
+      nextCursor: rows.length > query.limit && data.length > 0 ? encodeHistoryCursor(data.at(-1)!) : null,
     };
   }
 

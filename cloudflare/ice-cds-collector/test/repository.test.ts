@@ -76,4 +76,66 @@ describe('CollectorRepository', () => {
       { run_id: 'run-2', status: 'running', finished_at: null },
     ]);
   });
+
+  it('replays a logical batch with its canonical batch ID without moving a newer pointer backward', async () => {
+    const repository = new CollectorRepository(env.DB);
+    const first = await repository.publishBatch({
+      batchId: 'batch-1-original',
+      clearingDate: '2026-08-20',
+      revision: 1,
+      publishedAt: '2026-08-25T00:00:00.000Z',
+      sourceKind: 'ice_eod_isda',
+      qualityStatus: 'model-derived',
+      rows: [],
+    });
+    await repository.publishBatch({
+      batchId: 'batch-2',
+      clearingDate: '2026-08-20',
+      revision: 2,
+      publishedAt: '2026-08-25T01:00:00.000Z',
+      sourceKind: 'ice_eod_isda',
+      qualityStatus: 'model-derived',
+      rows: [],
+    });
+
+    const replay = await repository.publishBatch({
+      ...first,
+      batchId: 'batch-1-replay-id',
+      rows: [],
+    });
+
+    expect(replay).toEqual(first);
+    expect(await repository.latestBatch()).toMatchObject({ batchId: 'batch-2', revision: 2 });
+    const stored = await env.DB.prepare(
+      'SELECT batch_id FROM published_batches WHERE clearing_date = ? AND revision = ?',
+    ).bind('2026-08-20', 1).all<{ batch_id: string }>();
+    expect(stored.results).toEqual([{ batch_id: 'batch-1-original' }]);
+  });
+
+  it('paginates every same-date batch revision with a composite cursor', async () => {
+    const repository = new CollectorRepository(env.DB);
+    for (const revision of [1, 2, 3]) {
+      await repository.publishBatch({
+        batchId: `history-batch-${revision}`,
+        clearingDate: '2026-08-19',
+        revision,
+        publishedAt: `2026-08-25T0${revision}:00:00.000Z`,
+        sourceKind: 'ice_eod_isda',
+        qualityStatus: 'model-derived',
+        rows: [],
+      });
+    }
+
+    const firstPage = await repository.history({
+      from: '2026-08-19', to: '2026-08-19', limit: 2,
+    });
+    const secondPage = await repository.history({
+      from: '2026-08-19', to: '2026-08-19', limit: 2, cursor: firstPage.nextCursor,
+    });
+
+    expect(firstPage.data.map((batch) => batch.revision)).toEqual([1, 2]);
+    expect(firstPage.nextCursor).not.toBeNull();
+    expect(secondPage.data.map((batch) => batch.revision)).toEqual([3]);
+    expect(secondPage.nextCursor).toBeNull();
+  });
 });
