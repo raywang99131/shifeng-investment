@@ -158,14 +158,24 @@ export class CollectorRepository {
     ).run();
   }
 
+  async updateRunCandidates(runId: string, candidateDates: string[]): Promise<void> {
+    await this.db.prepare(`
+      UPDATE collector_runs
+      SET candidate_dates_json = ?
+      WHERE run_id = ?
+    `).bind(JSON.stringify(candidateDates), runId).run();
+  }
+
   async recordCollectionSuccess(input: {
     at: string;
     lastPublishedDate: string | null;
     nextAlarmAt?: string | null;
+    recordAlarmAt: boolean;
   }): Promise<void> {
     await this.db.prepare(`
       UPDATE collector_state
-      SET last_alarm_at = ?, last_source_success_at = ?,
+      SET last_alarm_at = CASE WHEN ? THEN ? ELSE last_alarm_at END,
+          last_source_success_at = ?,
           last_published_date = CASE
             WHEN ? IS NULL THEN last_published_date
             WHEN last_published_date IS NULL OR ? > last_published_date THEN ?
@@ -176,6 +186,7 @@ export class CollectorRepository {
           updated_at = ?
       WHERE state_key = 'singleton'
     `).bind(
+      input.recordAlarmAt ? 1 : 0,
       input.at,
       input.at,
       input.lastPublishedDate,
@@ -186,13 +197,18 @@ export class CollectorRepository {
     ).run();
   }
 
-  async recordCollectionFailure(input: { at: string; nextAlarmAt?: string | null }): Promise<void> {
+  async recordCollectionFailure(input: {
+    at: string;
+    nextAlarmAt?: string | null;
+    recordAlarmAt: boolean;
+  }): Promise<void> {
     await this.db.prepare(`
       UPDATE collector_state
-      SET last_alarm_at = ?, consecutive_failures = consecutive_failures + 1,
+      SET last_alarm_at = CASE WHEN ? THEN ? ELSE last_alarm_at END,
+          consecutive_failures = consecutive_failures + 1,
           next_alarm_at = COALESCE(?, next_alarm_at), updated_at = ?
       WHERE state_key = 'singleton'
-    `).bind(input.at, input.nextAlarmAt ?? null, input.at).run();
+    `).bind(input.recordAlarmAt ? 1 : 0, input.at, input.nextAlarmAt ?? null, input.at).run();
   }
 
   async setNextAlarm(nextAlarmAt: string, updatedAt: string): Promise<void> {
@@ -204,11 +220,9 @@ export class CollectorRepository {
   }
 
   async upsertIceObservations(rows: IceObservation[]): Promise<{ inserted: number; current: number }> {
-    let inserted = 0;
-    let current = 0;
-
-    for (const row of rows) {
-      const write = await this.db.prepare(`
+    if (rows.length === 0) return { inserted: 0, current: 0 };
+    const statements = rows.flatMap((row) => [
+      this.db.prepare(`
         INSERT INTO ice_eod_revisions (
           clearing_date, company, ice_name, instrument_name, eod_price, coupon_bp,
           payload_hash, retrieved_at, source_url
@@ -224,24 +238,12 @@ export class CollectorRepository {
         row.payloadHash,
         row.retrievedAt,
         row.sourceUrl,
-      ).run();
-      inserted += write.meta.changes;
-
-      const revision = await this.db.prepare(`
-        SELECT revision_id
+      ),
+      this.db.prepare(`
+        INSERT INTO ice_eod_current (clearing_date, company, revision_id)
+        SELECT ?, ?, revision_id
         FROM ice_eod_revisions
         WHERE clearing_date = ? AND company = ? AND instrument_name = ? AND payload_hash = ?
-      `).bind(
-        row.clearingDate,
-        row.company,
-        row.instrumentName,
-        row.payloadHash,
-      ).first<{ revision_id: number }>();
-      if (!revision) throw new Error('ICE revision was not available after insertion');
-
-      const pointer = await this.db.prepare(`
-        INSERT INTO ice_eod_current (clearing_date, company, revision_id)
-        VALUES (?, ?, ?)
         ON CONFLICT(clearing_date, company) DO UPDATE SET revision_id = excluded.revision_id
         WHERE
           (SELECT retrieved_at FROM ice_eod_revisions WHERE revision_id = excluded.revision_id)
@@ -251,11 +253,20 @@ export class CollectorRepository {
               = (SELECT retrieved_at FROM ice_eod_revisions WHERE revision_id = ice_eod_current.revision_id)
             AND excluded.revision_id > ice_eod_current.revision_id
           )
-      `).bind(row.clearingDate, row.company, revision.revision_id).run();
-      current += pointer.meta.changes;
-    }
-
-    return { inserted, current };
+      `).bind(
+        row.clearingDate,
+        row.company,
+        row.clearingDate,
+        row.company,
+        row.instrumentName,
+        row.payloadHash,
+      ),
+    ]);
+    const result = await this.db.batch(statements);
+    return rows.reduce((counts, _row, index) => ({
+      inserted: counts.inserted + result[index * 2].meta.changes,
+      current: counts.current + result[index * 2 + 1].meta.changes,
+    }), { inserted: 0, current: 0 });
   }
 
   async upsertTreasuryCurve(curve: TreasuryCurve): Promise<void> {

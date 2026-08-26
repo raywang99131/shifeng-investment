@@ -45,4 +45,14 @@ describe('US federal business-day freshness', () => {
     expect(completedUsBusinessDaysBetween('2026-11-25', new Date('2026-11-27T03:00:00.000Z'))).toBe(0);
     expect(completedUsBusinessDaysBetween('2026-11-25', new Date('2026-11-28T05:00:00.000Z'))).toBe(1);
   });
+
+  it('recognizes New Year observed across the calendar-year boundary', () => {
+    expect(isUsFederalBusinessDay('2021-12-31')).toBe(false);
+    expect(isUsFederalBusinessDay('2022-01-03')).toBe(true);
+  });
+
+  it('does not shift completed-day counting across the 2026 New York DST boundary', () => {
+    expect(completedUsBusinessDaysBetween('2026-03-06', new Date('2026-03-09T03:59:00.000Z'))).toBe(0);
+    expect(completedUsBusinessDaysBetween('2026-03-06', new Date('2026-03-10T04:01:00.000Z'))).toBe(1);
+  });
 });

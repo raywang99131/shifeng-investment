@@ -22,16 +22,15 @@ export class CdsCollector extends DurableObject<Env> {
     }
     if (url.pathname === '/collect-now') {
       const nextAlarmAt = await this.ensureAlarm(now);
-      try {
-        const result = await collectOnce({
-          env: this.env, triggerKind: 'manual', now, fetchImpl: this.fetchImpl, nextAlarmAt,
-        });
-        return Response.json(result);
-      } catch (error) {
-        const retryAlarmAt = await this.scheduleAlarm(now, FAILURE_INTERVAL_MS);
-        await new CollectorRepository(this.env.DB).setNextAlarm(retryAlarmAt, now.toISOString());
-        throw error;
-      }
+      const result = await collectOnce({
+        env: this.env,
+        triggerKind: 'manual',
+        now,
+        fetchImpl: this.fetchImpl,
+        nextAlarmAt,
+        scheduleRetry: () => this.scheduleAlarm(now, FAILURE_INTERVAL_MS),
+      });
+      return Response.json(result);
     }
     return Response.json({ error: { code: 'NOT_FOUND', message: 'Not found' } }, { status: 404 });
   }
@@ -39,15 +38,14 @@ export class CdsCollector extends DurableObject<Env> {
   async alarm(): Promise<void> {
     const now = new Date();
     const nextAlarmAt = await this.scheduleAlarm(now, REGULAR_INTERVAL_MS);
-    try {
-      await collectOnce({
-        env: this.env, triggerKind: 'alarm', now, fetchImpl: this.fetchImpl, nextAlarmAt,
-      });
-    } catch (error) {
-      const retryAlarmAt = await this.scheduleAlarm(now, FAILURE_INTERVAL_MS);
-      await new CollectorRepository(this.env.DB).setNextAlarm(retryAlarmAt, now.toISOString());
-      throw error;
-    }
+    await collectOnce({
+      env: this.env,
+      triggerKind: 'alarm',
+      now,
+      fetchImpl: this.fetchImpl,
+      nextAlarmAt,
+      scheduleRetry: () => this.scheduleAlarm(now, FAILURE_INTERVAL_MS),
+    });
   }
 
   private async ensureAlarm(now: Date, delayMs = REGULAR_INTERVAL_MS): Promise<string> {

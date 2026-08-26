@@ -47,6 +47,22 @@ describe('CollectorRepository', () => {
     expect(revisions?.count).toBe(2);
   });
 
+  it('atomically rolls back a source batch when its third raw revision fails validation', async () => {
+    const repository = new CollectorRepository(env.DB);
+    const rows = [
+      observation({ clearingDate: '2026-08-16', payloadHash: 'atomic-a' }),
+      observation({ clearingDate: '2026-08-16', payloadHash: 'atomic-b', eodPrice: 101.5 }),
+      observation({ clearingDate: '2026-08-16', payloadHash: 'atomic-c', eodPrice: -1 }),
+    ];
+
+    await expect(repository.upsertIceObservations(rows)).rejects.toThrow();
+    const revisions = await env.DB.prepare(`
+      SELECT COUNT(*) AS count FROM ice_eod_revisions WHERE clearing_date = ?
+    `).bind('2026-08-16').first<{ count: number }>();
+    expect(revisions?.count).toBe(0);
+    expect(await repository.getCurrentObservations('2026-08-16')).toEqual([]);
+  });
+
   it('appends run records instead of replacing earlier audit entries', async () => {
     const repository = new CollectorRepository(env.DB);
     await repository.startRun({
