@@ -29,6 +29,12 @@ const fixtureFetch = (rows = completeFixture, treasury = treasuryFixture): typeo
 
 const request = (path: string, init?: RequestInit) => exports.default.fetch(`https://collector.test${path}`, init);
 
+const decodeExportCursor = (cursor: string): Record<string, unknown> => {
+  const value = cursor.slice(3).replace(/-/g, '+').replace(/_/g, '/');
+  return JSON.parse(atob(value.padEnd(value.length + (4 - value.length % 4) % 4, '='))) as Record<string, unknown>;
+};
+const encodeExportCursor = (value: unknown): string => `v1.${btoa(JSON.stringify(value)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')}`;
+
 const seed = async () => {
   await collectOnce({ env: env as unknown as Env, triggerKind: 'manual', now: NOW, fetchImpl: fixtureFetch() });
 };
@@ -164,6 +170,27 @@ describe('collector HTTP API', () => {
     expect(await response.json()).toEqual({ error: { code: 'INVALID_REQUEST', message: 'Invalid request' } });
   });
 
+  it('requires exact typed export cursor objects and rejects keys beyond their snapshot watermark', async () => {
+    await seed();
+    const initial = await request('/v1/cds/export-source?limit=1', { headers: authorise(READ_TOKEN) });
+    const { nextCursor } = await initial.json<{ nextCursor: string }>();
+    const valid = decodeExportCursor(nextCursor);
+    const watermarks = valid.watermarks as Record<string, number>;
+    const section = valid.section as string;
+    const malformed = [
+      { ...valid, extra: true },
+      { ...valid, pointers: { ...(valid.pointers as Record<string, unknown>), extra: true } },
+      { ...valid, watermarks: { ...watermarks, extra: 0 } },
+      { ...valid, key: watermarks[section] + 1 },
+      { ...valid, key: '1' },
+    ];
+    for (const cursor of malformed) {
+      const response = await request(`/v1/cds/export-source?cursor=${encodeURIComponent(encodeExportCursor(cursor))}`, { headers: authorise(READ_TOKEN) });
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: { code: 'INVALID_REQUEST', message: 'Invalid request' } });
+    }
+  });
+
   it('keeps an export page sequence pinned to its first-page append-only watermark', async () => {
     await seed();
     const first = await request('/v1/cds/export-source?limit=1', { headers: authorise(READ_TOKEN) });
@@ -279,7 +306,7 @@ describe('collector HTTP API', () => {
     expect(await response.json()).toEqual({ error: { code: 'SERVICE_UNAVAILABLE', message: 'Service unavailable' } });
   });
 
-  it('rejects cross-date or non-model-derived linked rows in both latest and history snapshots', async () => {
+  it('rejects a cross-date linked spread in both latest and history snapshots', async () => {
     await seedTwoRevisions();
     const batch = await env.DB.prepare(`
       SELECT batches.batch_id, batches.clearing_date FROM published_batch_current AS current
@@ -287,9 +314,23 @@ describe('collector HTTP API', () => {
       ORDER BY batches.clearing_date DESC, batches.revision DESC LIMIT 1
     `).first<{ batch_id: string; clearing_date: string }>();
     await env.DB.prepare(`
-      UPDATE cds_spread_revisions SET clearing_date = '1900-01-01', quality_status = 'other'
+      UPDATE cds_spread_revisions SET clearing_date = '1900-01-01'
       WHERE spread_revision_id = (SELECT spread_revision_id FROM published_batch_rows WHERE batch_id = ? LIMIT 1)
     `).bind(batch!.batch_id).run();
+    expect((await request('/v1/cds/latest', { headers: authorise(READ_TOKEN) })).status).toBe(503);
+    const history = await request(`/v1/cds/history?from=${batch!.clearing_date}&to=${batch!.clearing_date}&limit=10`, { headers: authorise(READ_TOKEN) });
+    expect(history.status).toBe(503);
+  });
+
+  it('rejects a non-model-derived linked batch in both latest and history snapshots', async () => {
+    await seedTwoRevisions();
+    const batch = await env.DB.prepare(`
+      SELECT batches.batch_id, batches.clearing_date FROM published_batch_current AS current
+      JOIN published_batches AS batches USING (batch_id)
+      ORDER BY batches.clearing_date DESC, batches.revision DESC LIMIT 1
+    `).first<{ batch_id: string; clearing_date: string }>();
+    await env.DB.prepare('UPDATE published_batches SET quality_status = ? WHERE batch_id = ?')
+      .bind('other', batch!.batch_id).run();
     expect((await request('/v1/cds/latest', { headers: authorise(READ_TOKEN) })).status).toBe(503);
     const history = await request(`/v1/cds/history?from=${batch!.clearing_date}&to=${batch!.clearing_date}&limit=10`, { headers: authorise(READ_TOKEN) });
     expect(history.status).toBe(503);

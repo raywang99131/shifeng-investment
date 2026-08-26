@@ -151,9 +151,14 @@ export class InvalidExportCursorError extends Error {}
 export class ExportSnapshotChangedError extends Error {}
 
 const cursorNumber = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
-const cursorKeys = (value: unknown): value is Record<AuditExportSection, unknown> => typeof value === 'object' && value !== null
-  && Object.keys(value).length === AUDIT_SECTIONS.length && AUDIT_SECTIONS.every((section) => cursorNumber((value as Record<string, unknown>)[section]));
-const cursorPointers = (value: unknown): value is ExportPointers => typeof value === 'object' && value !== null
+const exactObjectKeys = (value: unknown, keys: readonly string[]): value is Record<string, unknown> => {
+  if (typeof value !== 'object' || value === null) return false;
+  const actual = Object.keys(value).sort(); const expected = [...keys].sort();
+  return actual.length === expected.length && actual.every((key, index) => key === expected[index]);
+};
+const cursorKeys = (value: unknown): value is Record<AuditExportSection, unknown> => exactObjectKeys(value, AUDIT_SECTIONS)
+  && AUDIT_SECTIONS.every((section) => cursorNumber((value as Record<string, unknown>)[section]));
+const cursorPointers = (value: unknown): value is ExportPointers => exactObjectKeys(value, ['iceCurrent', 'batchCurrent'])
   && typeof (value as Record<string, unknown>).iceCurrent === 'string' && /^[a-f0-9]{64}$/.test((value as Record<string, unknown>).iceCurrent as string)
   && typeof (value as Record<string, unknown>).batchCurrent === 'string' && /^[a-f0-9]{64}$/.test((value as Record<string, unknown>).batchCurrent as string);
 const encodeAuditCursor = (cursor: AuditCursor): string => `v1.${btoa(JSON.stringify(cursor)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')}`;
@@ -162,11 +167,14 @@ const decodeAuditCursor = (cursor: string): AuditCursor => {
   try {
     const encoded = cursor.slice(3).replace(/-/g, '+').replace(/_/g, '/');
     const parsed = JSON.parse(atob(encoded.padEnd(encoded.length + (4 - encoded.length % 4) % 4, '='))) as Partial<AuditCursor>;
-    if (parsed.v !== 2 || !AUDIT_SECTIONS.includes(parsed.section as AuditExportSection)
+    if (!exactObjectKeys(parsed, ['v', 'section', 'key', 'watermarks', 'pointers'])
+      || parsed.v !== 2 || !AUDIT_SECTIONS.includes(parsed.section as AuditExportSection)
       || (parsed.key !== null && !cursorNumber(parsed.key)) || !cursorKeys(parsed.watermarks) || !cursorPointers(parsed.pointers)) {
       throw new Error('invalid');
     }
-    return parsed as AuditCursor;
+    const decoded = parsed as AuditCursor;
+    if (decoded.key !== null && decoded.key > decoded.watermarks[decoded.section]) throw new Error('invalid');
+    return decoded;
   } catch { throw new InvalidExportCursorError('Invalid export cursor'); }
 };
 
@@ -696,25 +704,42 @@ export class CollectorRepository {
   }
 
   private async startExportSnapshot(): Promise<AuditCursor> {
-    const max = async (table: string): Promise<number> => (await this.db.prepare(`SELECT COALESCE(MAX(rowid), 0) AS value FROM ${table}`).first<{ value: number }>())?.value ?? 0;
-    const watermarks = Object.fromEntries(await Promise.all(AUDIT_SECTIONS.map(async (section) => [section, await max({
-      ice_eod_revisions: 'ice_eod_revisions', ice_eod_current: 'ice_eod_current', treasury_curves: 'treasury_curves',
-      cds_spread_revisions: 'cds_spread_revisions', published_batches: 'published_batches', published_batch_current: 'published_batch_current', seed_history: 'seed_history',
-    }[section])]))) as ExportWatermarks;
-    const pointers = await this.currentPointerHashes();
+    // D1 executes a batch against one read snapshot.  The watermarks and both
+    // mutable pointer maps must be captured together; otherwise a publication
+    // between separate reads could make an export cursor permanently mixed.
+    const snapshot = await this.db.batch([
+      this.db.prepare('SELECT COALESCE(MAX(rowid), 0) AS value FROM ice_eod_revisions'),
+      this.db.prepare('SELECT COALESCE(MAX(rowid), 0) AS value FROM ice_eod_current'),
+      this.db.prepare('SELECT COALESCE(MAX(rowid), 0) AS value FROM treasury_curves'),
+      this.db.prepare('SELECT COALESCE(MAX(rowid), 0) AS value FROM cds_spread_revisions'),
+      this.db.prepare('SELECT COALESCE(MAX(rowid), 0) AS value FROM published_batches'),
+      this.db.prepare('SELECT COALESCE(MAX(rowid), 0) AS value FROM published_batch_current'),
+      this.db.prepare('SELECT COALESCE(MAX(rowid), 0) AS value FROM seed_history'),
+      this.db.prepare('SELECT clearing_date, company, revision_id FROM ice_eod_current ORDER BY clearing_date ASC, company ASC'),
+      this.db.prepare('SELECT clearing_date, batch_id FROM published_batch_current ORDER BY clearing_date ASC'),
+    ]);
+    const watermarks = Object.fromEntries(AUDIT_SECTIONS.map((section, index) => [
+      section,
+      ((snapshot[index]?.results[0] as { value?: number } | undefined)?.value ?? 0),
+    ])) as ExportWatermarks;
+    const pointers = await this.pointerHashes(snapshot[7]?.results ?? [], snapshot[8]?.results ?? []);
     return { v: 2, section: AUDIT_SECTIONS[0], key: null, watermarks, pointers };
   }
 
   private async currentPointerHashes(): Promise<ExportPointers> {
+    const pointers = await this.db.batch([
+      this.db.prepare('SELECT clearing_date, company, revision_id FROM ice_eod_current ORDER BY clearing_date ASC, company ASC'),
+      this.db.prepare('SELECT clearing_date, batch_id FROM published_batch_current ORDER BY clearing_date ASC'),
+    ]);
+    return this.pointerHashes(pointers[0]?.results ?? [], pointers[1]?.results ?? []);
+  }
+
+  private async pointerHashes(iceRows: unknown[], batchRows: unknown[]): Promise<ExportPointers> {
     const digest = async (value: unknown): Promise<string> => {
       const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(value)));
       return [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
     };
-    const [ice, batches] = await Promise.all([
-      this.db.prepare(`SELECT clearing_date, company, revision_id FROM ice_eod_current ORDER BY clearing_date ASC, company ASC`).all(),
-      this.db.prepare(`SELECT clearing_date, batch_id FROM published_batch_current ORDER BY clearing_date ASC`).all(),
-    ]);
-    return { iceCurrent: await digest(ice.results), batchCurrent: await digest(batches.results) };
+    return { iceCurrent: await digest(iceRows), batchCurrent: await digest(batchRows) };
   }
 
   private async assertExportSnapshot(cursor: AuditCursor): Promise<void> {

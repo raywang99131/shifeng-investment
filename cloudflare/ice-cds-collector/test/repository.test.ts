@@ -1,9 +1,38 @@
 import { env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 import { CollectorRepository } from '../src/repository';
-import type { IceObservation } from '../src/types';
+import { collectOnce } from '../src/collector';
+import type { Env, IceObservation } from '../src/types';
+import completeFixture from './fixtures/ice-complete.json';
 import treasuryFixture from './fixtures/treasury-2026.csv?raw';
 import { fetchTreasuryCurve } from '../src/sources/treasury';
+
+const collectorFixtureFetch = (rows = completeFixture): typeof fetch => async (input) => {
+  const url = String(input);
+  if (url.startsWith('https://www.ice.com/api/cds-settlement-prices/icc-single-names')) {
+    return new Response(JSON.stringify(rows), { headers: { 'content-type': 'application/json' } });
+  }
+  if (url.startsWith('https://home.treasury.gov/resource-center/data-chart-center/interest-rates/')) {
+    return new Response(treasuryFixture, { headers: { 'content-type': 'text/csv' } });
+  }
+  throw new Error(`Unexpected fixture URL: ${url}`);
+};
+
+const exportWatermarks = async (): Promise<Record<string, number>> => {
+  const tables = [
+    ['ice_eod_revisions', 'ice_eod_revisions'], ['ice_eod_current', 'ice_eod_current'],
+    ['treasury_curves', 'treasury_curves'], ['cds_spread_revisions', 'cds_spread_revisions'],
+    ['published_batches', 'published_batches'], ['published_batch_current', 'published_batch_current'],
+    ['seed_history', 'seed_history'],
+  ] as const;
+  const rows = await env.DB.batch(tables.map(([, table]) => env.DB.prepare(`SELECT COALESCE(MAX(rowid), 0) AS value FROM ${table}`)));
+  return Object.fromEntries(tables.map(([name], index) => [name, (rows[index].results[0] as { value: number }).value]));
+};
+
+const decodeExportCursor = (cursor: string): { watermarks: Record<string, number> } => {
+  const encoded = cursor.slice(3).replace(/-/g, '+').replace(/_/g, '/');
+  return JSON.parse(atob(encoded.padEnd(encoded.length + (4 - encoded.length % 4) % 4, '='))) as { watermarks: Record<string, number> };
+};
 
 const observation = (overrides: Partial<IceObservation> = {}): IceObservation => ({
   clearingDate: '2026-08-24',
@@ -171,6 +200,66 @@ describe('CollectorRepository', () => {
     expect(firstPage.nextCursor).not.toBeNull();
     expect(secondPage.data.map((batch) => batch.revision)).toEqual([3]);
     expect(secondPage.nextCursor).toBeNull();
+  });
+
+  it('captures an export baseline as one complete old-or-new snapshot during a concurrent publication', async () => {
+    await collectOnce({
+      env: env as unknown as Env,
+      triggerKind: 'manual',
+      now: new Date('2026-08-25T12:00:00.000Z'),
+      fetchImpl: collectorFixtureFetch(),
+    });
+    const before = await exportWatermarks();
+    const corrected = completeFixture.map((row) => row.name === 'Oracle Cop' ? { ...row, eodPrice: '95.1309' } : row);
+    let published = false;
+    let initialSnapshot: D1Result[] | null = null;
+    const realDb = env.DB;
+    const database = new Proxy(realDb, {
+      get(target, property) {
+        if (property === 'prepare') {
+          return target.prepare.bind(target);
+        }
+        if (property === 'batch') {
+          return async (statements: Parameters<D1Database['batch']>[0]) => {
+            const result = await target.batch(statements);
+            if (!published && statements.length === 9) {
+              initialSnapshot = result;
+              published = true;
+              await collectOnce({
+                env: env as unknown as Env,
+                triggerKind: 'manual',
+                now: new Date('2026-08-25T13:00:00.000Z'),
+                fetchImpl: collectorFixtureFetch(corrected),
+              });
+            }
+            // Keep the controlled reader on its initial pointer view.  This
+            // lets the test inspect the initial cursor after the writer has
+            // committed; production instead detects this and returns 409.
+            if (published && statements.length === 2 && initialSnapshot) {
+              return [initialSnapshot[7], initialSnapshot[8]];
+            }
+            return result;
+          };
+        }
+        const value = Reflect.get(target, property, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    }) as unknown as D1Database;
+
+    const page = await new CollectorRepository(database).exportSource({ limit: 1 });
+    expect(published).toBe(true);
+    const after = await exportWatermarks();
+    expect(after).not.toEqual(before);
+    const cursor = decodeExportCursor(page.nextCursor!);
+    // The first cursor is the entire old snapshot, never a hybrid of the old
+    // raw rows and the newly-published spread/batch rows.
+    expect(cursor.watermarks).toEqual(before);
+    for (const [table, watermark] of Object.entries(cursor.watermarks)) {
+      const physicalTable = table;
+      const row = await env.DB.prepare(`SELECT COUNT(*) AS count FROM ${physicalTable} WHERE rowid <= ?`)
+        .bind(watermark).first<{ count: number }>();
+      expect(row?.count).toBeGreaterThanOrEqual(0);
+    }
   });
 
   it('rolls back a new batch when a child row cannot be written', async () => {
