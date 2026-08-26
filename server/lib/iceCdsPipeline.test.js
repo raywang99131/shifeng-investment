@@ -164,7 +164,9 @@ test('a second-file rename failure restores both last-good files', async (t) => 
   const baseline = await tempPipeline(t);
   await baseline.pipeline.import({ iceText: iceText(), discountCurve: curve });
   const workbookFile = path.join(baseline.dataDir, 'ice-cds-history.xlsx');
+  const localArchiveFile = path.join(baseline.dataDir, 'ice-cds-history.json');
   const beforeWorkbook = await fs.promises.readFile(workbookFile);
+  const beforeLocalArchive = await fs.promises.readFile(localArchiveFile);
   const beforeSnapshot = await fs.promises.readFile(baseline.snapshotFile);
   let failed = false;
   const fsImpl = {
@@ -189,6 +191,7 @@ test('a second-file rename failure restores both last-good files', async (t) => 
     /injected snapshot rename failure/,
   );
   assert.deepEqual(await fs.promises.readFile(workbookFile), beforeWorkbook);
+  assert.deepEqual(await fs.promises.readFile(localArchiveFile), beforeLocalArchive);
   assert.deepEqual(await fs.promises.readFile(baseline.snapshotFile), beforeSnapshot);
 });
 

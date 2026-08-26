@@ -14,6 +14,7 @@ const ICE_CDS_EOD_URL = 'https://www.ice.com/cds-settlement-prices/icc/single-na
 const DEFAULT_DATA_DIR = path.join(__dirname, '../data/ai-dashboard/ice-cds');
 const DEFAULT_SNAPSHOT_FILE = path.join(__dirname, '../data/ai-dashboard/snapshot.json');
 const WORKBOOK_NAME = 'ice-cds-history.xlsx';
+const LOCAL_ARCHIVE_NAME = 'ice-cds-history.json';
 const MODEL_VERSION = 'ice-isda-compatible-v1';
 const PRICE_TOLERANCE = 0.005;
 const RELATIVE_BENCHMARK_TOLERANCE = 0.01;
@@ -364,13 +365,13 @@ async function readSnapshot(fsImpl, snapshotFile, generatedAt) {
   }
 }
 
-async function rotateBackups(fsImpl, dataDir, workbookFile, snapshotFile, batchId) {
+async function rotateBackups(fsImpl, dataDir, workbookFile, localArchiveFile, batchId) {
   const backupsDir = path.join(dataDir, 'backups');
   const archiveDir = path.join(dataDir, 'archive');
   await fsImpl.mkdir(backupsDir, { recursive: true });
   await fsImpl.mkdir(archiveDir, { recursive: true });
   await fsImpl.copyFile(workbookFile, path.join(backupsDir, `${batchId}.xlsx`));
-  await fsImpl.copyFile(snapshotFile, path.join(backupsDir, `${batchId}.json`));
+  await fsImpl.copyFile(localArchiveFile, path.join(backupsDir, `${batchId}.json`));
   const names = await fsImpl.readdir(backupsDir);
   const xlsxIds = new Set(names.filter((name) => name.endsWith('.xlsx')).map((name) => name.slice(0, -5)));
   const jsonIds = new Set(names.filter((name) => name.endsWith('.json')).map((name) => name.slice(0, -5)));
@@ -391,53 +392,96 @@ async function rotateBackups(fsImpl, dataDir, workbookFile, snapshotFile, batchI
   }
 }
 
-async function commitAtomically({ fsImpl, dataDir, snapshotFile, workbookFile, state, snapshot, snapshotBatchId = state.batchId }) {
+function localArchiveSource(cds5y, generatedAt, batchId) {
+  return {
+    status: 'ready',
+    stale: false,
+    asOf: cds5y.asOf,
+    syncedAt: generatedAt,
+    url: ICE_CDS_EOD_URL,
+    message: `ICE EOD Price 导入成功；${batchId}`,
+  };
+}
+
+function createLocalArchiveSnapshot(cds5y, generatedAt, batchId) {
+  return {
+    schemaVersion: 2,
+    generatedAt,
+    sources: { creditRisk: localArchiveSource(cds5y, generatedAt, batchId) },
+    creditRisk: { cds5y },
+  };
+}
+
+function assertMatchingLocalArchive(state, archiveSnapshot) {
+  const cds5y = archiveSnapshot?.creditRisk?.cds5y;
+  if (cds5y?.batchId !== state.batchId || cds5y?.sourceKind !== 'ice_eod_isda'
+    || cds5y?.sourceUrl !== ICE_CDS_EOD_URL || cds5y?.asOf !== state.derivedRows.map((row) => row.clearingDate).sort().at(-1)) {
+    throw new IceCdsPipelineError('Staged Excel and local archive JSON batch IDs do not match', 'batch-mismatch');
+  }
+}
+
+async function commitAtomically({ fsImpl, dataDir, snapshotFile, workbookFile, localArchiveFile, state, dashboardSnapshot, localArchiveSnapshot }) {
   await fsImpl.mkdir(dataDir, { recursive: true });
   const stagedWorkbook = path.join(dataDir, `ice-cds-history.${state.batchId}.tmp.xlsx`);
-  const stagedSnapshot = path.join(dataDir, `snapshot.${state.batchId}.tmp.json`);
+  const stagedLocalArchive = path.join(dataDir, `ice-cds-history.${state.batchId}.tmp.json`);
+  const stagedDashboard = path.join(dataDir, `snapshot.${state.batchId}.tmp.json`);
   const lastGoodWorkbook = path.join(dataDir, 'ice-cds-history.last-good.xlsx');
-  const lastGoodSnapshot = path.join(dataDir, 'snapshot.last-good.json');
+  const lastGoodLocalArchive = path.join(dataDir, 'ice-cds-history.last-good.json');
+  const lastGoodDashboard = path.join(dataDir, 'snapshot.last-good.json');
   const workbookBuffer = await buildIceCdsWorkbook(state);
   await fsImpl.writeFile(stagedWorkbook, workbookBuffer);
-  await fsImpl.writeFile(stagedSnapshot, `${JSON.stringify(snapshot, null, 2)}\n`, 'utf8');
+  await fsImpl.writeFile(stagedLocalArchive, `${JSON.stringify(localArchiveSnapshot, null, 2)}\n`, 'utf8');
+  await fsImpl.writeFile(stagedDashboard, `${JSON.stringify(dashboardSnapshot, null, 2)}\n`, 'utf8');
   const stagedState = await readIceCdsWorkbook(await fsImpl.readFile(stagedWorkbook));
-  const stagedSnapshotValue = JSON.parse(await fsImpl.readFile(stagedSnapshot, 'utf8'));
-  if (stagedState.batchId !== state.batchId || stagedSnapshotValue.creditRisk?.cds5y?.batchId !== snapshotBatchId) {
-    throw new IceCdsPipelineError('Staged Excel and JSON batch IDs do not match', 'batch-mismatch');
-  }
+  const stagedArchiveValue = JSON.parse(await fsImpl.readFile(stagedLocalArchive, 'utf8'));
+  if (stagedState.batchId !== state.batchId) throw new IceCdsPipelineError('Staged Excel batch ID does not match', 'batch-mismatch');
+  assertMatchingLocalArchive(state, stagedArchiveValue);
 
   const hadWorkbook = await exists(fsImpl, workbookFile);
-  const hadSnapshot = await exists(fsImpl, snapshotFile);
+  const hadLocalArchive = await exists(fsImpl, localArchiveFile);
+  const hadDashboard = await exists(fsImpl, snapshotFile);
   let oldWorkbookMoved = false;
-  let oldSnapshotMoved = false;
+  let oldLocalArchiveMoved = false;
+  let oldDashboardMoved = false;
   let newWorkbookInstalled = false;
-  let newSnapshotInstalled = false;
+  let newLocalArchiveInstalled = false;
+  let newDashboardInstalled = false;
   try {
     await fsImpl.rm(lastGoodWorkbook, { force: true });
-    await fsImpl.rm(lastGoodSnapshot, { force: true });
+    await fsImpl.rm(lastGoodLocalArchive, { force: true });
+    await fsImpl.rm(lastGoodDashboard, { force: true });
     if (hadWorkbook) {
       await fsImpl.rename(workbookFile, lastGoodWorkbook);
       oldWorkbookMoved = true;
     }
-    if (hadSnapshot) {
-      await fsImpl.rename(snapshotFile, lastGoodSnapshot);
-      oldSnapshotMoved = true;
+    if (hadLocalArchive) {
+      await fsImpl.rename(localArchiveFile, lastGoodLocalArchive);
+      oldLocalArchiveMoved = true;
+    }
+    if (hadDashboard) {
+      await fsImpl.rename(snapshotFile, lastGoodDashboard);
+      oldDashboardMoved = true;
     }
     await fsImpl.rename(stagedWorkbook, workbookFile);
     newWorkbookInstalled = true;
-    await fsImpl.rename(stagedSnapshot, snapshotFile);
-    newSnapshotInstalled = true;
+    await fsImpl.rename(stagedLocalArchive, localArchiveFile);
+    newLocalArchiveInstalled = true;
+    await fsImpl.rename(stagedDashboard, snapshotFile);
+    newDashboardInstalled = true;
   } catch (error) {
-    if (newSnapshotInstalled) await fsImpl.rm(snapshotFile, { force: true });
-    if (oldSnapshotMoved) await fsImpl.rename(lastGoodSnapshot, snapshotFile);
+    if (newDashboardInstalled) await fsImpl.rm(snapshotFile, { force: true });
+    if (oldDashboardMoved) await fsImpl.rename(lastGoodDashboard, snapshotFile);
+    if (newLocalArchiveInstalled) await fsImpl.rm(localArchiveFile, { force: true });
+    if (oldLocalArchiveMoved) await fsImpl.rename(lastGoodLocalArchive, localArchiveFile);
     if (newWorkbookInstalled) await fsImpl.rm(workbookFile, { force: true });
     if (oldWorkbookMoved) await fsImpl.rename(lastGoodWorkbook, workbookFile);
     throw error;
   } finally {
     await fsImpl.rm(stagedWorkbook, { force: true });
-    await fsImpl.rm(stagedSnapshot, { force: true });
+    await fsImpl.rm(stagedLocalArchive, { force: true });
+    await fsImpl.rm(stagedDashboard, { force: true });
   }
-  await rotateBackups(fsImpl, dataDir, workbookFile, snapshotFile, state.batchId);
+  await rotateBackups(fsImpl, dataDir, workbookFile, localArchiveFile, state.batchId);
 }
 
 export function createIceCdsPipeline({
@@ -449,6 +493,7 @@ export function createIceCdsPipeline({
   cloudAuthoritative = false,
 } = {}) {
   const workbookFile = path.join(dataDir, WORKBOOK_NAME);
+  const localArchiveFile = path.join(dataDir, LOCAL_ARCHIVE_NAME);
   let importQueue = Promise.resolve();
 
   const preview = async (input) => previewInput(input);
@@ -480,25 +525,20 @@ export function createIceCdsPipeline({
       && existingCds5y.collection
       && existingCds5y.asOf >= cds5y.asOf;
     const visibleCds5y = retainCloudSnapshot ? existingCds5y : cds5y;
+    const localArchiveSnapshot = createLocalArchiveSnapshot(cds5y, generatedAt, state.batchId);
+    const localSource = localArchiveSnapshot.sources.creditRisk;
     const snapshot = {
       ...previousSnapshot,
       sources: {
         ...(previousSnapshot.sources || {}),
-        creditRisk: retainCloudSnapshot && previousSnapshot.sources?.creditRisk ? previousSnapshot.sources.creditRisk : {
-          status: 'ready',
-          stale: false,
-          asOf: cds5y.asOf,
-          syncedAt: generatedAt,
-          url: ICE_CDS_EOD_URL,
-          message: `ICE EOD Price 导入成功；${state.batchId}`,
-        },
+        creditRisk: retainCloudSnapshot && previousSnapshot.sources?.creditRisk ? previousSnapshot.sources.creditRisk : localSource,
       },
       creditRisk: {
         ...(previousSnapshot.creditRisk || {}),
         cds5y: visibleCds5y,
       },
     };
-    await commitAtomically({ fsImpl, dataDir, snapshotFile, workbookFile, state, snapshot, snapshotBatchId: visibleCds5y.batchId });
+    await commitAtomically({ fsImpl, dataDir, snapshotFile, workbookFile, localArchiveFile, state, dashboardSnapshot: snapshot, localArchiveSnapshot });
     return { snapshot, batchId: state.batchId, workbookPath: workbookFile };
   };
   const performImport = (input) => enqueueIceCdsSnapshotWrite(() => performImportUnlocked(input));

@@ -13,6 +13,7 @@ import {
 } from './aiDashboardService.js';
 import { createIceCdsPipeline } from './iceCdsPipeline.js';
 import { enqueueIceCdsSnapshotWrite } from './iceCdsSnapshotWriteQueue.js';
+import { readIceCdsWorkbook } from './iceCdsWorkbook.js';
 
 const ALL_PUBLIC_SLICES = [
   'growth',
@@ -379,17 +380,35 @@ test('shared writer queue preserves a newer cloud CDS batch and unrelated snapsh
   assert.equal(snapshot.creditRisk.cds5y.asOf, '2026-08-25');
   assert.equal(snapshot.arrAndValuation.companies[0].company, 'Anthropic');
 
-  await pipeline.import({ iceText, discountCurve: curve });
+  const olderLocalImport = await pipeline.import({ iceText, discountCurve: curve });
   const afterOlderLocalImport = await service.getSnapshot();
   assert.equal(afterOlderLocalImport.creditRisk.cds5y.batchId, 'cloud-20260825');
   assert.equal(afterOlderLocalImport.creditRisk.cds5y.asOf, '2026-08-25');
   assert.equal(afterOlderLocalImport.arrAndValuation.companies[0].company, 'Anthropic');
 
-  await pipeline.import({ iceText: iceText.replaceAll('2026-08-24', '2026-08-25'), discountCurve: curve });
+  const localArchivePath = path.join(dataDir, 'ice-cds-history.json');
+  const backupDir = path.join(dataDir, 'backups');
+  const currentWorkbook = await readIceCdsWorkbook(await fs.promises.readFile(path.join(dataDir, 'ice-cds-history.xlsx')));
+  const currentLocalArchive = JSON.parse(await fs.promises.readFile(localArchivePath, 'utf8'));
+  const archivedWorkbook = await readIceCdsWorkbook(await fs.promises.readFile(path.join(backupDir, `${olderLocalImport.batchId}.xlsx`)));
+  const archivedLocalArchive = JSON.parse(await fs.promises.readFile(path.join(backupDir, `${olderLocalImport.batchId}.json`), 'utf8'));
+  for (const localArchive of [currentLocalArchive, archivedLocalArchive]) {
+    assert.equal(localArchive.creditRisk.cds5y.batchId, olderLocalImport.batchId);
+    assert.equal(localArchive.creditRisk.cds5y.asOf, '2026-08-24');
+    assert.equal(localArchive.creditRisk.cds5y.sourceKind, 'ice_eod_isda');
+    assert.equal(localArchive.creditRisk.cds5y.sourceUrl, 'https://www.ice.com/cds-settlement-prices/icc/single-name-instruments');
+  }
+  assert.equal(currentWorkbook.batchId, olderLocalImport.batchId);
+  assert.equal(archivedWorkbook.batchId, olderLocalImport.batchId);
+
+  const sameDateLocalImport = await pipeline.import({ iceText: iceText.replaceAll('2026-08-24', '2026-08-25'), discountCurve: curve });
   const afterSameDateLocalImport = await service.getSnapshot();
   assert.equal(afterSameDateLocalImport.creditRisk.cds5y.batchId, 'cloud-20260825');
   assert.equal(afterSameDateLocalImport.creditRisk.cds5y.asOf, '2026-08-25');
   assert.equal(afterSameDateLocalImport.arrAndValuation.companies[0].company, 'Anthropic');
+  const sameDateArchive = JSON.parse(await fs.promises.readFile(path.join(backupDir, `${sameDateLocalImport.batchId}.json`), 'utf8'));
+  assert.equal(sameDateArchive.creditRisk.cds5y.batchId, sameDateLocalImport.batchId);
+  assert.equal(sameDateArchive.creditRisk.cds5y.asOf, '2026-08-25');
 });
 
 test('environment service ignores legacy Feishu exports and accepts public collectors', async (t) => {
