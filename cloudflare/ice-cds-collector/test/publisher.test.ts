@@ -40,6 +40,23 @@ const deferred = () => {
   return { promise: new Promise<void>((done) => { resolve = done; }), resolve };
 };
 
+const pauseNextRevision = (repository: CollectorRepository, clearingDate: string) => {
+  const original = repository.nextBatchRevision.bind(repository);
+  const reached = deferred();
+  const release = deferred();
+  let paused = false;
+  repository.nextBatchRevision = async (date) => {
+    const revision = await original(date);
+    if (date === clearingDate && !paused) {
+      paused = true;
+      reached.resolve();
+      await release.promise;
+    }
+    return revision;
+  };
+  return { reached, release };
+};
+
 describe('publishReadyDates', () => {
   it('keeps three ICE arrivals partial until all seven companies can publish as one batch', async () => {
     const repository = new CollectorRepository(env.DB);
@@ -80,41 +97,34 @@ describe('publishReadyDates', () => {
     expect((await publish(repository)).published).toEqual([]);
   });
 
-  it('keeps competing original and corrected inputs as complete immutable revisions and points current to the correction', async () => {
+  it('marks a true same-revision ICE conflict for retry, then a fresh cycle appends the correction', async () => {
     const date = '2026-12-01';
     const originalRepository = new CollectorRepository(env.DB);
     const correctedRepository = new CollectorRepository(env.DB);
     await originalRepository.upsertIceObservations(observations(date));
-
-    const originalSaved = originalRepository.saveSpreadRevisions.bind(originalRepository);
-    const correctedSaved = correctedRepository.saveSpreadRevisions.bind(correctedRepository);
-    const originalReached = deferred();
-    const correctedReached = deferred();
-    const releaseOriginal = deferred();
-    const releaseCorrected = deferred();
-    originalRepository.saveSpreadRevisions = async (rows) => {
-      const saved = await originalSaved(rows);
-      if (rows[0]?.clearingDate === date) { originalReached.resolve(); await releaseOriginal.promise; }
-      return saved;
-    };
-    correctedRepository.saveSpreadRevisions = async (rows) => {
-      const saved = await correctedSaved(rows);
-      if (rows[0]?.clearingDate === date) { correctedReached.resolve(); await releaseCorrected.promise; }
-      return saved;
-    };
+    const originalGate = pauseNextRevision(originalRepository, date);
+    const correctedGate = pauseNextRevision(correctedRepository, date);
 
     const originalPublish = publish(originalRepository);
-    await originalReached.promise;
+    await originalGate.reached.promise;
     await correctedRepository.upsertIceObservations(observations(date, '2026-08-25T13:00:00.000Z').map((row) => row.company === 'Oracle'
       ? { ...row, eodPrice: 95.1309, payloadHash: 'competing-corrected-oracle' }
       : row));
     const correctedPublish = publish(correctedRepository);
-    await correctedReached.promise;
-    releaseOriginal.resolve();
-    await originalPublish;
-    releaseCorrected.resolve();
-    await correctedPublish;
+    await correctedGate.reached.promise;
+    originalGate.release.resolve();
+    const originalResult = await originalPublish;
+    correctedGate.release.resolve();
+    const correctedResult = await correctedPublish;
 
+    expect(originalResult.published).toContainEqual(expect.objectContaining({ clearingDate: date, revision: 1 }));
+    expect(correctedResult.published.some((batch) => batch.clearingDate === date)).toBe(false);
+    expect(correctedResult.partial).toContainEqual({ clearingDate: date, missingCompanies: [], reason: 'publish-race-retry' });
+    const beforeFresh = await env.DB.prepare('SELECT revision FROM published_batches WHERE clearing_date = ?').bind(date).all<{ revision: number }>();
+    expect(beforeFresh.results).toEqual([{ revision: 1 }]);
+
+    const freshResult = await publish(new CollectorRepository(env.DB));
+    expect(freshResult.published).toContainEqual(expect.objectContaining({ clearingDate: date, revision: 2 }));
     const batches = await env.DB.prepare(`
       SELECT batches.revision, rows.company, spreads.ice_revision_id, spreads.eod_price
       FROM published_batches AS batches
@@ -128,11 +138,52 @@ describe('publishReadyDates', () => {
     expect([...new Set(batches.results.map((row) => row.revision))]).toEqual([1, 2]);
     expect(firstRevision).toHaveLength(7);
     expect(secondRevision).toHaveLength(7);
-    expect(firstRevision.filter((row) => row.company === 'Oracle')[0].eod_price).toBe(95.0309);
-    expect(secondRevision.filter((row) => row.company === 'Oracle')[0].eod_price).toBe(95.1309);
+    expect(firstRevision.find((row) => row.company === 'Oracle')?.eod_price).toBe(95.0309);
+    expect(secondRevision.find((row) => row.company === 'Oracle')?.eod_price).toBe(95.1309);
     expect(secondRevision.filter((row) => row.company !== 'Oracle').map((row) => row.ice_revision_id))
       .toEqual(firstRevision.filter((row) => row.company !== 'Oracle').map((row) => row.ice_revision_id));
-    expect(await originalRepository.latestBatch()).toMatchObject({ clearingDate: date, revision: 2 });
+  });
+
+  it.each([
+    ['old', 'new', '2026-12-02'],
+    ['new', 'old', '2026-12-03'],
+  ] as const)('never auto-republishes the losing %s Treasury curve after %s wins revision one', async (winner, loser, date) => {
+    const winnerRepository = new CollectorRepository(env.DB);
+    const loserRepository = new CollectorRepository(env.DB);
+    await winnerRepository.upsertIceObservations(observations(date));
+    const baseCurve = await curve(date);
+    const oldCurve = { ...baseCurve, curveId: `curve-old-${date}`, payloadHash: `old-${date}` };
+    const newCurve = {
+      ...baseCurve,
+      curveId: `curve-new-${date}`,
+      payloadHash: `new-${date}`,
+      nodes: baseCurve.nodes.map((node, index) => index === 0 ? { ...node, zeroRate: node.zeroRate + 0.0001 } : node),
+    };
+    const curves = { old: oldCurve, new: newCurve };
+    const winnerGate = pauseNextRevision(winnerRepository, date);
+    const loserGate = pauseNextRevision(loserRepository, date);
+    const winnerRun = publish(winnerRepository, async (clearingDate) => clearingDate === date ? curves[winner] : curve(clearingDate));
+    const loserRun = publish(loserRepository, async (clearingDate) => clearingDate === date ? curves[loser] : curve(clearingDate));
+    await Promise.all([winnerGate.reached.promise, loserGate.reached.promise]);
+    winnerGate.release.resolve();
+    const winnerResult = await winnerRun;
+    loserGate.release.resolve();
+    const loserResult = await loserRun;
+
+    expect(winnerResult.published).toContainEqual(expect.objectContaining({ clearingDate: date, revision: 1 }));
+    expect(loserResult.published.some((batch) => batch.clearingDate === date)).toBe(false);
+    expect(loserResult.partial).toContainEqual({ clearingDate: date, missingCompanies: [], reason: 'publish-race-retry' });
+    const batches = await env.DB.prepare(`
+      SELECT batches.revision, rows.company, spreads.curve_id
+      FROM published_batches AS batches
+      JOIN published_batch_rows AS rows USING (batch_id)
+      JOIN cds_spread_revisions AS spreads USING (spread_revision_id)
+      WHERE batches.clearing_date = ?
+      ORDER BY rows.company ASC
+    `).bind(date).all<{ revision: number; company: string; curve_id: string }>();
+    expect(batches.results).toHaveLength(7);
+    expect([...new Set(batches.results.map((row) => row.revision))]).toEqual([1]);
+    expect([...new Set(batches.results.map((row) => row.curve_id))]).toEqual([curves[winner].curveId]);
   });
 
   it('derives batch IDs only from canonical date, revision, and registry-ordered spread revisions', async () => {
@@ -153,6 +204,15 @@ describe('publishReadyDates', () => {
     expect(result.partial).toContainEqual({ clearingDate: date, missingCompanies: [], reason: 'treasury-curve-after-clearing-date' });
     const count = await env.DB.prepare('SELECT COUNT(*) AS count FROM published_batches WHERE clearing_date = ?').bind(date).first<{ count: number }>();
     expect(count?.count).toBe(0);
+  });
+
+  it('rethrows source transport failures so the collector can retry them', async () => {
+    const repository = new CollectorRepository(env.DB);
+    const date = '2026-08-31';
+    await repository.upsertIceObservations(observations(date));
+    await expect(publish(repository, async () => {
+      throw new FixedSourceError('SOURCE_TIMEOUT', 'Source request timed out');
+    })).rejects.toMatchObject({ code: 'SOURCE_TIMEOUT' });
   });
 
   it('rejects the complete batch when any calculated price residual exceeds the threshold', async () => {

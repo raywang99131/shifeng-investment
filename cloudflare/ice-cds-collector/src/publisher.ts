@@ -23,13 +23,6 @@ const sameInputSet = (stored: StoredDerivedSpread[], published: Map<string, numb
   && TRACKED_COMPANIES.every((company) => published.get(company) === stored.find((row) => row.company === company)?.spreadRevisionId)
 );
 
-const stillCurrentIceInputSet = async (repository: CollectorRepository, clearingDate: string, stored: StoredDerivedSpread[]): Promise<boolean> => {
-  const current = await repository.getCurrentObservations(clearingDate);
-  const inputIds = new Map(stored.map((row) => [row.company, row.iceRevisionId]));
-  return current.length === TRACKED_COMPANIES.length
-    && TRACKED_COMPANIES.every((company) => current.find((row) => row.company === company)?.revisionId === inputIds.get(company));
-};
-
 const partial = (clearingDate: string, missingCompanies: PartialDate['missingCompanies'], reason?: PartialDate['reason']): PartialDate => (
   reason === undefined ? { clearingDate, missingCompanies } : { clearingDate, missingCompanies, reason }
 );
@@ -110,28 +103,25 @@ export async function publishReadyDates(input: {
 
     const stored = await input.repository.saveSpreadRevisions(derived);
     const spreadRevisionIds = TRACKED_COMPANIES.map((company) => stored.find((row) => row.company === company)!.spreadRevisionId);
-    while (true) {
-      const current = await input.repository.currentPublishedSpreadRevisionIds(clearingDate);
-      if (sameInputSet(stored, current)) break;
+    const current = await input.repository.currentPublishedSpreadRevisionIds(clearingDate);
+    if (sameInputSet(stored, current)) continue;
 
-      const revision = await input.repository.nextBatchRevision(clearingDate);
-      const batch = await input.repository.publishBatch({
-        batchId: await createBatchId(clearingDate, revision, spreadRevisionIds),
-        clearingDate,
-        revision,
-        publishedAt: input.now.toISOString(),
-        sourceKind: 'ice_eod_isda',
-        qualityStatus: 'model-derived',
-        rows: TRACKED_COMPANIES.map((company, index) => ({ company, spreadRevisionId: spreadRevisionIds[index] })),
-      });
-      const after = await input.repository.currentPublishedSpreadRevisionIds(clearingDate);
-      if (sameInputSet(stored, after)) {
-        published.push(batch);
-        break;
-      }
-      // Another input won this logical revision. A stale ICE snapshot must never be
-      // re-published as a newer revision; a still-current one retries at the next revision.
-      if (!await stillCurrentIceInputSet(input.repository, clearingDate, stored)) break;
+    const revision = await input.repository.nextBatchRevision(clearingDate);
+    const batch = await input.repository.publishBatch({
+      batchId: await createBatchId(clearingDate, revision, spreadRevisionIds),
+      clearingDate,
+      revision,
+      publishedAt: input.now.toISOString(),
+      sourceKind: 'ice_eod_isda',
+      qualityStatus: 'model-derived',
+      rows: TRACKED_COMPANIES.map((company, index) => ({ company, spreadRevisionId: spreadRevisionIds[index] })),
+    });
+    if (sameInputSet(stored, await input.repository.currentPublishedSpreadRevisionIds(clearingDate))) {
+      published.push(batch);
+    } else {
+      // Do not retry with the in-memory ICE/curve snapshot: another input won this
+      // revision and the next collection cycle must re-read both authoritative sources.
+      partialDates.push(partial(clearingDate, [], 'publish-race-retry'));
     }
   }
 

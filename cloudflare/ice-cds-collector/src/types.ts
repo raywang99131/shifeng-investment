@@ -128,7 +128,7 @@ export interface PublishedBatch {
 export interface PartialDate {
   clearingDate: string;
   missingCompanies: Company[];
-  reason?: 'treasury-curve-after-clearing-date' | 'treasury-curve-unavailable' | 'price-residual-exceeded' | 'model-calculation-failed';
+  reason?: 'treasury-curve-after-clearing-date' | 'treasury-curve-unavailable' | 'price-residual-exceeded' | 'model-calculation-failed' | 'publish-race-retry';
 }
 
 export interface HistoryQuery {
