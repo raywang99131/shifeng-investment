@@ -2,6 +2,8 @@ import { env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 import { CollectorRepository } from '../src/repository';
 import type { IceObservation } from '../src/types';
+import treasuryFixture from './fixtures/treasury-2026.csv?raw';
+import { fetchTreasuryCurve } from '../src/sources/treasury';
 
 const observation = (overrides: Partial<IceObservation> = {}): IceObservation => ({
   clearingDate: '2026-08-24',
@@ -160,5 +162,24 @@ describe('CollectorRepository', () => {
     ).bind('2026-08-18').first<{ batch_id: string }>();
     expect(batchCount?.count).toBe(0);
     expect(current).toBeNull();
+  });
+
+  it('retains content-addressed same-day Treasury curve revisions for reproducible spreads', async () => {
+    const repository = new CollectorRepository(env.DB);
+    const fetchCurve = async (csv: string) => fetchTreasuryCurve(
+      async () => new Response(csv, { headers: { 'content-type': 'text/csv' } }),
+      '2026-08-24', new Date('2026-08-25T00:00:00.000Z'),
+    );
+    const first = await fetchCurve(treasuryFixture);
+    const revised = await fetchCurve(treasuryFixture.replace('08/24/2026,3.79,3.78,3.80,3.87,3.90,3.96,4.04,4.24,4.31,4.41', '08/24/2026,3.79,3.78,3.80,3.87,3.90,3.96,4.04,4.24,4.31,4.99'));
+    await repository.upsertTreasuryCurve(first);
+    await repository.upsertTreasuryCurve(revised);
+
+    const curves = await env.DB.prepare('SELECT curve_id, payload_hash FROM treasury_curves WHERE as_of = ? ORDER BY curve_id').bind('2026-08-24').all<{ curve_id: string; payload_hash: string }>();
+    const nodeCount = await env.DB.prepare('SELECT COUNT(*) AS count FROM treasury_curve_nodes WHERE curve_id IN (?, ?)').bind(first.curveId, revised.curveId).first<{ count: number }>();
+    expect(first.curveId).not.toBe(revised.curveId);
+    expect(curves.results).toHaveLength(2);
+    expect(curves.results.map((curve) => curve.payload_hash)).toEqual(expect.arrayContaining([first.payloadHash, revised.payloadHash]));
+    expect(nodeCount?.count).toBe(first.nodes.length + revised.nodes.length);
   });
 });

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import completeFixture from './fixtures/ice-complete.json';
 import partialFixture from './fixtures/ice-partial.json';
 import treasuryFixture from './fixtures/treasury-2026.csv?raw';
+import incompleteTreasuryFixture from './fixtures/treasury-incomplete.csv?raw';
 import { fetchIceObservations } from '../src/sources/ice';
 import { fetchTreasuryCurve } from '../src/sources/treasury';
 import { FixedSourceError, fetchFixedSource } from '../src/sources/http';
@@ -60,6 +61,20 @@ describe('fixed source boundary', () => {
     expect(calls[0].init?.redirect).toBe('error');
     expect(calls[0].init?.signal).toBeInstanceOf(AbortSignal);
   });
+
+  it('aborts a source request at its deadline and returns the stable timeout code', async () => {
+    let observedAbort = false;
+    const neverResponds: typeof fetch = async (_input, init) => new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener('abort', () => {
+        observedAbort = true;
+        reject(new DOMException('aborted', 'AbortError'));
+      }, { once: true });
+    });
+    await expect(fetchFixedSource(neverResponds, 'https://www.ice.com/path', {
+      acceptedContentTypes: ['application/json'], maxBytes: 100, timeoutMs: 1,
+    })).rejects.toMatchObject({ code: 'SOURCE_TIMEOUT' });
+    expect(observedAbort).toBe(true);
+  });
 });
 
 describe('ICE and Treasury sources', () => {
@@ -84,7 +99,7 @@ describe('ICE and Treasury sources', () => {
   });
 
   it('rejects malformed ICE payload fields and reports selection ambiguity', () => {
-    expect(() => normalizeIcePayload([{ clearingDate: '2026-02-30' }], '2026-08-25T00:00:00.000Z')).toThrow(/valid/i);
+    expect(() => normalizeIcePayload([{ ...completeFixture[0], clearingDate: '2026-02-30' }], '2026-08-25T00:00:00.000Z')).toThrow(/invalid/i);
     const rows = normalizeIcePayload([
       ...completeFixture.slice(0, 1),
       { ...completeFixture[0], instrumentName: 'ORCLE.SNRFOR.USD.XR14.100.2031-06-21' },
@@ -109,5 +124,23 @@ describe('ICE and Treasury sources', () => {
     const hugeCsv = `${treasuryFixture}\n${'x'.repeat(2 * 1024 * 1024)}`;
     await expect(fetchTreasuryCurve(fetchFixture(JSON.stringify(completeFixture), hugeCsv).fetchImpl, '2026-08-24', new Date()))
       .rejects.toMatchObject({ code: 'SOURCE_RESPONSE_TOO_LARGE' });
+  });
+
+  it('does not turn blank required Treasury maturity cells into zero-rate nodes', async () => {
+    await expect(fetchTreasuryCurve(
+      fetchFixture(JSON.stringify(completeFixture), incompleteTreasuryFixture).fetchImpl,
+      '2026-08-24', new Date(),
+    )).rejects.toMatchObject({ code: 'TREASURY_CURVE_UNAVAILABLE' });
+  });
+
+  it('makes Treasury curve identity reproducible by full same-day content', async () => {
+    const first = await fetchTreasuryCurve(fetchFixture().fetchImpl, '2026-08-24', new Date('2026-08-25T00:00:00.000Z'));
+    const replay = await fetchTreasuryCurve(fetchFixture().fetchImpl, '2026-08-24', new Date('2026-08-25T01:00:00.000Z'));
+    const revisedCsv = treasuryFixture.replace('08/24/2026,3.79,3.78,3.80,3.87,3.90,3.96,4.04,4.24,4.31,4.41', '08/24/2026,3.79,3.78,3.80,3.87,3.90,3.96,4.04,4.24,4.31,4.99');
+    const revised = await fetchTreasuryCurve(fetchFixture(JSON.stringify(completeFixture), revisedCsv).fetchImpl, '2026-08-24', new Date('2026-08-25T02:00:00.000Z'));
+    expect(replay.curveId).toBe(first.curveId);
+    expect(revised.asOf).toBe(first.asOf);
+    expect(revised.curveId).not.toBe(first.curveId);
+    expect(revised.payloadHash).not.toBe(first.payloadHash);
   });
 });
