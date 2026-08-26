@@ -122,6 +122,10 @@ describe('cloud history seed', () => {
     await expect(applySeedPackage(env.DB, await parseSeedPackage(changedDerived))).rejects.toThrow('Seed package is invalid');
     const changedBatch = structuredClone(existing); changedBatch.publishedBatches[0].batchId = 'different-batch-id';
     await expect(applySeedPackage(env.DB, await parseSeedPackage(changedBatch))).rejects.toThrow('Seed package is invalid');
+    const beforeReuse = await env.DB.prepare(`SELECT COUNT(*) AS count FROM ice_eod_revisions WHERE retrieved_at = '2026-08-25T01:00:00.000Z'`).first<{ count: number }>();
+    const reusedBatchId = await correctedSeed(); reusedBatchId.publishedBatches[0].batchId = 'seed-20260824-v1';
+    await expect(applySeedPackage(env.DB, await parseSeedPackage(reusedBatchId))).rejects.toThrow('Seed package is invalid');
+    expect(await env.DB.prepare(`SELECT COUNT(*) AS count FROM ice_eod_revisions WHERE retrieved_at = '2026-08-25T01:00:00.000Z'`).first<{ count: number }>()).toEqual(beforeReuse);
   });
 
   it('requires WRITE_TOKEN and routes seeds through the fixed Durable Object', async () => {
@@ -135,14 +139,31 @@ describe('cloud history seed', () => {
   });
 
   it('reconstructs every seeded audit section through full export pagination', async () => {
-    await applySeedPackage(env.DB, await parseSeedPackage(await liveSeed()));
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM published_batch_current'), env.DB.prepare('DELETE FROM published_batch_rows'), env.DB.prepare('DELETE FROM published_batches'),
+      env.DB.prepare('DELETE FROM cds_spread_revisions'), env.DB.prepare('DELETE FROM ice_eod_current'), env.DB.prepare('DELETE FROM ice_eod_revisions'),
+      env.DB.prepare('DELETE FROM treasury_curve_nodes'), env.DB.prepare('DELETE FROM treasury_curves'), env.DB.prepare('DELETE FROM seed_history'),
+    ]);
+    const screenshot = screenshotSeed(); screenshot.screenshotHistory[0].observationDate = '2026-08-23';
+    const live = await liveSeed();
+    await applySeedPackage(env.DB, await parseSeedPackage(screenshot));
+    await applySeedPackage(env.DB, await parseSeedPackage(live));
     const request = (cursor?: string) => exports.default.fetch(`https://collector.test/v1/cds/export-source?limit=3${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`, { headers: { authorization: 'Bearer read-test-token' } });
-    const sections = new Set<string>(); let cursor: string | null = null;
+    const entries: Array<{ section: string; record: any }> = []; let cursor: string | null = null;
     do {
       const response = await request(cursor ?? undefined); expect(response.status).toBe(200);
-      const page = await response.json<{ data: Array<{ section: string }>; nextCursor: string | null }>();
-      page.data.forEach((entry) => sections.add(entry.section)); cursor = page.nextCursor;
+      const page = await response.json<{ data: Array<{ section: string; record: any }>; nextCursor: string | null }>();
+      entries.push(...page.data); cursor = page.nextCursor;
     } while (cursor);
-    expect(sections).toEqual(new Set(['ice_eod_revisions', 'ice_eod_current', 'treasury_curves', 'cds_spread_revisions', 'published_batches', 'published_batch_current', 'seed_history']));
+    const section = (name: string) => entries.filter((entry) => entry.section === name).map((entry) => entry.record);
+    expect(section('seed_history')).toEqual([expect.objectContaining({ observationDate: '2026-08-23', company: 'Oracle', sourceKind: 'screenshot_backfill' })]);
+    const raw = section('ice_eod_revisions'); const current = section('ice_eod_current'); const curves = section('treasury_curves'); const derived = section('cds_spread_revisions'); const batches = section('published_batches'); const batchCurrent = section('published_batch_current');
+    expect([raw.length, current.length, curves.length, derived.length, batches.length, batchCurrent.length]).toEqual([7, 7, 1, 7, 1, 1]);
+    expect(curves[0]).toMatchObject({ curveId: live.treasuryCurves[0].curveId, payloadHash: live.treasuryCurves[0].payloadHash }); expect(curves[0].nodes).toHaveLength(14);
+    expect(current.map((row) => row.revisionId).sort((a, b) => a - b)).toEqual(raw.map((row) => row.revisionId).sort((a, b) => a - b));
+    expect(derived.every((row) => raw.some((source) => source.revisionId === row.iceRevisionId && source.payloadHash === live.iceObservations.find((observation) => observation.company === row.company)!.payloadHash) && row.curveId === curves[0].curveId)).toBe(true);
+    expect(batches[0]).toMatchObject({ batchId: live.publishedBatches[0].batchId, clearingDate: '2026-08-24', revision: 1, sourceKind: 'ice_eod_isda' }); expect(batches[0].rows).toHaveLength(7);
+    expect((batches[0].rows as Array<{ spreadRevisionId: number }>).map((row) => row.spreadRevisionId).sort((a, b) => a - b)).toEqual(derived.map((row) => row.spreadRevisionId).sort((a, b) => a - b));
+    expect(batchCurrent).toEqual([{ clearingDate: '2026-08-24', batchId: batches[0].batchId }]);
   });
 });
