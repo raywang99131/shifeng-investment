@@ -231,10 +231,10 @@ export class CollectorRepository {
       curve.retrievedAt,
       curve.payloadHash,
     ).run();
-    await this.db.prepare('DELETE FROM treasury_curve_nodes WHERE curve_id = ?').bind(curve.curveId).run();
     if (curve.nodes.length > 0) {
       await this.db.batch(curve.nodes.map((node) => this.db.prepare(
-        'INSERT INTO treasury_curve_nodes (curve_id, years, zero_rate) VALUES (?, ?, ?)',
+        `INSERT INTO treasury_curve_nodes (curve_id, years, zero_rate) VALUES (?, ?, ?)
+         ON CONFLICT(curve_id, years) DO UPDATE SET zero_rate = excluded.zero_rate`,
       ).bind(curve.curveId, node.years, node.zeroRate)));
     }
   }
@@ -269,6 +269,36 @@ export class CollectorRepository {
       const missingCompanies = TRACKED_COMPANIES.filter((company) => !companies.has(company));
       return missingCompanies.length === 0 ? [] : [{ clearingDate, missingCompanies }];
     });
+  }
+
+  async listObservedDates(): Promise<string[]> {
+    const result = await this.db.prepare(`
+      SELECT DISTINCT clearing_date
+      FROM ice_eod_current
+      ORDER BY clearing_date ASC
+    `).all<{ clearing_date: string }>();
+    return result.results.map((row) => row.clearing_date);
+  }
+
+  async currentPublishedSpreadRevisionIds(clearingDate: string): Promise<Map<Company, number> | null> {
+    const current = await this.db.prepare(`
+      SELECT rows.company, rows.spread_revision_id
+      FROM published_batch_current AS pointer
+      JOIN published_batch_rows AS rows ON rows.batch_id = pointer.batch_id
+      WHERE pointer.clearing_date = ?
+      ORDER BY rows.company ASC
+    `).bind(clearingDate).all<{ company: Company; spread_revision_id: number }>();
+    if (current.results.length === 0) return null;
+    return new Map(current.results.map((row) => [row.company, row.spread_revision_id]));
+  }
+
+  async nextBatchRevision(clearingDate: string): Promise<number> {
+    const row = await this.db.prepare(`
+      SELECT COALESCE(MAX(revision), 0) AS revision
+      FROM published_batches
+      WHERE clearing_date = ?
+    `).bind(clearingDate).first<{ revision: number }>();
+    return (row?.revision ?? 0) + 1;
   }
 
   async saveSpreadRevisions(rows: DerivedSpread[]): Promise<StoredDerivedSpread[]> {

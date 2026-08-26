@@ -125,6 +125,12 @@ export interface PublishedBatch {
   qualityStatus: string;
 }
 
+export interface PartialDate {
+  clearingDate: string;
+  missingCompanies: Company[];
+  reason?: 'treasury-curve-after-clearing-date' | 'price-residual-exceeded' | 'model-calculation-failed';
+}
+
 export interface HistoryQuery {
   from: string;
   to: string;
