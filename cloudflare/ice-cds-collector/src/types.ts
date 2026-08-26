@@ -133,6 +133,23 @@ export interface PublishedBatch {
   qualityStatus: string;
 }
 
+export interface LatestBatchCompany {
+  company: Company;
+  spreadBp: number;
+  eodPrice: number;
+  instrumentName: string;
+  qualityStatus: 'model-derived';
+}
+
+export interface LatestBatchSnapshot extends PublishedBatch {
+  companies: LatestBatchCompany[];
+}
+
+export interface ManualImportInput {
+  observations: IceObservation[];
+  treasuryCurve: TreasuryCurve;
+}
+
 export interface PartialDate {
   clearingDate: string;
   missingCompanies: Company[];

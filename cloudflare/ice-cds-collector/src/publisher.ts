@@ -31,11 +31,12 @@ export async function publishReadyDates(input: {
   repository: CollectorRepository;
   fetchTreasuryCurve: (clearingDate: string) => Promise<TreasuryCurve>;
   now: Date;
+  clearingDates?: readonly string[];
 }): Promise<{ published: PublishedBatch[]; partial: PartialDate[] }> {
   const published: PublishedBatch[] = [];
   const partialDates: PartialDate[] = [];
 
-  for (const clearingDate of await input.repository.listObservedDates()) {
+  for (const clearingDate of input.clearingDates ?? await input.repository.listObservedDates()) {
     // Capture the CAS baseline before reading any ICE/Treasury input. This makes the
     // expected pointer cover the entire snapshot, calculation, and publication window.
     const expectedCurrentBatchId = await input.repository.currentPublishedBatchId(clearingDate);

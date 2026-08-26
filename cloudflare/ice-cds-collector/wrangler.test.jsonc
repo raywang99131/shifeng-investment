@@ -8,7 +8,11 @@
   "compatibility_date": "2026-08-25",
   "workers_dev": false,
   "preview_urls": false,
-  "vars": { "ENVIRONMENT": "test" },
+  "vars": {
+    "ENVIRONMENT": "test",
+    "READ_TOKEN": "read-test-token",
+    "WRITE_TOKEN": "write-test-token"
+  },
   "d1_databases": [{
     "binding": "DB",
     "database_name": "ice-cds-history-test",

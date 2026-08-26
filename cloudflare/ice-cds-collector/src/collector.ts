@@ -3,11 +3,11 @@ import { CollectorRepository } from './repository';
 import { FixedSourceError } from './sources/http';
 import { fetchIceObservations } from './sources/ice';
 import { fetchTreasuryCurve } from './sources/treasury';
-import type { CollectorRunResult, Env, PartialDate, TriggerKind } from './types';
+import type { CollectorRunResult, Env, ManualImportInput, PartialDate, TriggerKind } from './types';
 
 export const COLLECTOR_OBJECT_NAME = 'ice-cds-global-v1';
 
-const stableError = (error: unknown): { code: string; message: string } => {
+export const stableError = (error: unknown): { code: string; message: string } => {
   if (error instanceof FixedSourceError) return { code: error.code, message: error.message };
   return { code: 'COLLECTION_FAILED', message: 'Collection failed' };
 };
@@ -110,6 +110,55 @@ export async function collectOnce(input: {
     await repository.recordCollectionFailure({
       at, nextAlarmAt: retryAlarmAt, recordAlarmAt: input.triggerKind === 'alarm',
     });
+    throw error;
+  }
+}
+
+export async function importManualInput(input: {
+  env: Env;
+  manual: ManualImportInput;
+  now: Date;
+  nextAlarmAt?: string | null;
+  scheduleRetry?: () => Promise<string>;
+}): Promise<CollectorRunResult> {
+  const repository = new CollectorRepository(input.env.DB);
+  const runId = createRunId(input.now);
+  const at = input.now.toISOString();
+  const clearingDate = input.manual.observations[0].clearingDate;
+  await repository.startRun({
+    runId, triggerKind: 'manual', startedAt: at, candidateDates: [clearingDate], nextAlarmAt: input.nextAlarmAt,
+  });
+  let rawWriteCount = 0;
+  try {
+    const raw = await repository.upsertIceObservations(input.manual.observations);
+    rawWriteCount = raw.inserted;
+    const publication = await publishReadyDates({
+      repository,
+      clearingDates: [clearingDate],
+      fetchTreasuryCurve: async () => input.manual.treasuryCurve,
+      now: input.now,
+    });
+    const publishedDates = publication.published.map((batch) => batch.clearingDate);
+    const status = publication.partial.length === 0 ? 'success' : 'partial';
+    await repository.finishRun({
+      runId, finishedAt: at, status, sourceStatus: 'manual', rawWriteCount, publishedDates,
+      nextAlarmAt: input.nextAlarmAt,
+    });
+    await repository.recordCollectionSuccess({
+      at, lastPublishedDate: publishedDates.at(-1) ?? null, nextAlarmAt: input.nextAlarmAt, recordAlarmAt: false,
+    });
+    return { runId, rawWriteCount, publishedDates, partialDates: publication.partial };
+  } catch (error) {
+    let retryAlarmAt = input.nextAlarmAt;
+    if (input.scheduleRetry) {
+      try { retryAlarmAt = await input.scheduleRetry(); } catch { /* Preserve the original import error. */ }
+    }
+    const safeError = stableError(error);
+    await repository.finishRun({
+      runId, finishedAt: at, status: 'failed', sourceStatus: 'manual', rawWriteCount, publishedDates: [],
+      errorCode: safeError.code, errorMessage: safeError.message, nextAlarmAt: retryAlarmAt,
+    });
+    await repository.recordCollectionFailure({ at, nextAlarmAt: retryAlarmAt, recordAlarmAt: false });
     throw error;
   }
 }

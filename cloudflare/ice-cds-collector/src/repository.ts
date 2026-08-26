@@ -8,7 +8,9 @@ import type {
   ExportQuery,
   HistoryPage,
   HistoryQuery,
+  LatestBatchSnapshot,
   IceObservation,
+  LatestBatchCompany,
   PublishedBatch,
   PublishBatchInput,
   RunFinish,
@@ -59,6 +61,14 @@ type BatchRow = {
   revision: number;
   published_at: string;
   source_kind: string;
+  quality_status: string;
+};
+
+type LatestCompanyRow = {
+  company: Company;
+  spread_bp: number;
+  eod_price: number;
+  instrument_name: string;
   quality_status: string;
 };
 
@@ -541,6 +551,36 @@ export class CollectorRepository {
       LIMIT 1
     `).first<BatchRow>();
     return batch ? toPublishedBatch(batch) : null;
+  }
+
+  async latestBatchSnapshot(): Promise<LatestBatchSnapshot | null> {
+    const batch = await this.latestBatch();
+    if (!batch) return null;
+    const rows = await this.db.prepare(`
+      SELECT rows.company, spreads.spread_bp, spreads.eod_price,
+             spreads.instrument_name, spreads.quality_status
+      FROM published_batch_rows AS rows
+      JOIN cds_spread_revisions AS spreads USING (spread_revision_id)
+      WHERE rows.batch_id = ?
+      ORDER BY CASE rows.company
+        WHEN 'Oracle' THEN 1 WHEN 'CoreWeave' THEN 2 WHEN 'NVIDIA' THEN 3
+        WHEN 'Amazon' THEN 4 WHEN 'Google' THEN 5 WHEN 'Microsoft' THEN 6 WHEN 'Meta' THEN 7
+        ELSE 999 END
+    `).bind(batch.batchId).all<LatestCompanyRow>();
+    if (rows.results.length !== TRACKED_COMPANIES.length || batch.sourceKind !== 'ice_eod_isda') {
+      throw new Error('Latest batch is incomplete');
+    }
+    const companies: LatestBatchCompany[] = rows.results.map((row) => {
+      if (row.quality_status !== 'model-derived') throw new Error('Latest batch quality is invalid');
+      return {
+        company: row.company,
+        spreadBp: row.spread_bp,
+        eodPrice: row.eod_price,
+        instrumentName: row.instrument_name,
+        qualityStatus: 'model-derived',
+      };
+    });
+    return { ...batch, companies };
   }
 
   async history(query: HistoryQuery): Promise<HistoryPage> {

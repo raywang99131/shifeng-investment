@@ -1,6 +1,8 @@
 import { DurableObject } from 'cloudflare:workers';
-import { COLLECTOR_OBJECT_NAME, collectOnce } from './collector';
+import { COLLECTOR_OBJECT_NAME, collectOnce, importManualInput } from './collector';
+import { parseManualImport } from './manualImport';
 import { CollectorRepository } from './repository';
+import { handleApiRequest } from './api';
 import type { Env } from './types';
 
 const REGULAR_INTERVAL_MS = 30 * 60 * 1000;
@@ -27,6 +29,23 @@ export class CdsCollector extends DurableObject<Env> {
         triggerKind: 'manual',
         now,
         fetchImpl: this.fetchImpl,
+        nextAlarmAt,
+        scheduleRetry: () => this.scheduleAlarm(now, FAILURE_INTERVAL_MS),
+      });
+      return Response.json(result);
+    }
+    if (url.pathname === '/import') {
+      let payload: unknown;
+      try { payload = JSON.parse(await request.text()); } catch {
+        return Response.json({ error: { code: 'INVALID_REQUEST', message: 'Invalid request' } }, { status: 400 });
+      }
+      const manual = parseManualImport(payload);
+      const nextAlarmAt = await this.ensureAlarm(now);
+      await new CollectorRepository(this.env.DB).setNextAlarm(nextAlarmAt, now.toISOString());
+      const result = await importManualInput({
+        env: this.env,
+        manual,
+        now,
         nextAlarmAt,
         scheduleRetry: () => this.scheduleAlarm(now, FAILURE_INTERVAL_MS),
       });
@@ -62,12 +81,8 @@ export class CdsCollector extends DurableObject<Env> {
 }
 
 const worker: ExportedHandler<Env> = {
-  async fetch(request) {
-    const url = new URL(request.url);
-    if (request.method === 'GET' && url.pathname === '/healthz') {
-      return Response.json({ ok: true, service: 'ice-cds-collector' });
-    }
-    return Response.json({ error: { code: 'NOT_FOUND', message: 'Not found' } }, { status: 404 });
+  async fetch(request, env) {
+    return handleApiRequest(request, env);
   },
   async scheduled(_controller, env, ctx) {
     const id = env.CDS_COLLECTOR.idFromName(COLLECTOR_OBJECT_NAME);
