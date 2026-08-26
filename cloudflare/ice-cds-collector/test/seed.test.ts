@@ -37,7 +37,27 @@ const liveSeed = async () => {
       hazardRate: result.hazardRate, recoveryRate: result.recoveryRate, modelVersion: result.modelVersion, qualityStatus: 'model-derived', createdAt: generatedAt };
   });
   return { schemaVersion: 1 as const, generatedAt, screenshotHistory: [], iceObservations: observations, treasuryCurves: [curve], derivedSpreads,
-    publishedBatches: [{ batchId: 'seed-20260824-v1', clearingDate: '2026-08-24', revision: 1, publishedAt: generatedAt, sourceKind: 'ice_eod_isda', qualityStatus: 'model-derived', rows: observations.map((row) => ({ company: row.company, icePayloadHash: row.payloadHash })) }] };
+    publishedBatches: [{ batchId: 'seed-20260824-v1', clearingDate: '2026-08-24', revision: 1, publishedAt: generatedAt, sourceKind: 'ice_eod_isda', qualityStatus: 'model-derived', rows: observations.map((row) => ({ company: row.company, icePayloadHash: row.payloadHash, curveId: curve.curveId, modelVersion: derivedSpreads.find((spread) => spread.company === row.company)!.modelVersion, instrumentName: row.instrumentName })) }] };
+};
+
+const hashObservation = async (row: { clearingDate: string; company: string; iceName: string; instrumentName: string; eodPrice: number; couponBp: number }) => {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify({ clearingDate: row.clearingDate, company: row.company, name: row.iceName.trim(), instrumentName: row.instrumentName.trim().toUpperCase(), eodPrice: row.eodPrice, couponBp: row.couponBp })));
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+};
+
+const correctedSeed = async () => {
+  const seed = await liveSeed();
+  seed.iceObservations = await Promise.all(seed.iceObservations.map(async (row) => {
+    if (row.company !== 'Oracle') return row;
+    const corrected = { ...row, eodPrice: row.eodPrice - 0.01, retrievedAt: '2026-08-25T01:00:00.000Z' };
+    return { ...corrected, payloadHash: await hashObservation(corrected) };
+  }));
+  const oracle = seed.iceObservations.find((row) => row.company === 'Oracle')!;
+  const curve = seed.treasuryCurves[0];
+  const result = cleanPriceToParSpread({ couponBp: oracle.couponBp, cleanPrice: oracle.eodPrice, clearingDate: oracle.clearingDate, maturityDate: parseIceInstrumentName(oracle.instrumentName).maturityDate, recoveryRate: 0.4, discountCurve: curve });
+  seed.derivedSpreads = seed.derivedSpreads.map((row) => row.company === 'Oracle' ? { ...row, icePayloadHash: oracle.payloadHash, eodPrice: oracle.eodPrice, spreadBp: result.spreadBp, roundTripPrice: result.roundTripPrice, priceResidual: result.priceResidual, hazardRate: result.hazardRate, createdAt: '2026-08-25T01:00:00.000Z' } : row);
+  seed.publishedBatches[0] = { ...seed.publishedBatches[0], batchId: 'seed-20260824-v2', revision: 2, publishedAt: '2026-08-25T01:00:00.000Z', rows: seed.publishedBatches[0].rows.map((row) => row.company === 'Oracle' ? { ...row, icePayloadHash: oracle.payloadHash } : row) };
+  return seed;
 };
 
 describe('cloud history seed', () => {
@@ -71,6 +91,39 @@ describe('cloud history seed', () => {
     expect(await applySeedPackage(env.DB, seed)).toMatchObject({ iceObservations: { inserted: 0, existing: 7 }, derivedSpreads: { inserted: 0, existing: 7 }, publishedBatches: { inserted: 0, existing: 1 } });
   });
 
+  it('rejects tampered model provenance before D1 writes', async () => {
+    const invalid = await liveSeed(); invalid.publishedBatches[0].batchId = 'bad-provenance-v1'; invalid.derivedSpreads[0].spreadBp += 1;
+    const badHash = await liveSeed(); badHash.treasuryCurves[0].payloadHash = '0'.repeat(64);
+    const missingNode = await liveSeed(); missingNode.treasuryCurves[0].nodes.pop();
+    const badResidual = await liveSeed(); badResidual.derivedSpreads[0].priceResidual = 0.006;
+    for (const candidate of [invalid, badHash, missingNode, badResidual]) await expect(parseSeedPackage(candidate)).rejects.toThrow('Seed package is invalid');
+    expect(await env.DB.prepare(`SELECT COUNT(*) AS count FROM published_batches WHERE batch_id = 'bad-provenance-v1'`).first<{ count: number }>()).toEqual({ count: 0 });
+  });
+
+  it('does not rewind current pointers when an old seed replays after a newer batch', async () => {
+    const first = await parseSeedPackage(await liveSeed());
+    await applySeedPackage(env.DB, first);
+    const newer = await parseSeedPackage(await correctedSeed());
+    await applySeedPackage(env.DB, newer);
+    await applySeedPackage(env.DB, first);
+    expect(await env.DB.prepare(`SELECT revision FROM published_batches AS batches JOIN published_batch_current AS current USING (batch_id) WHERE current.clearing_date = '2026-08-24'`).first<{ revision: number }>()).toEqual({ revision: 2 });
+    expect(await env.DB.prepare(`SELECT revisions.eod_price FROM ice_eod_current AS current JOIN ice_eod_revisions AS revisions USING (revision_id) WHERE current.clearing_date = '2026-08-24' AND current.company = 'Oracle'`).first<{ eod_price: number }>()).toEqual({ eod_price: (await correctedSeed()).iceObservations.find((row) => row.company === 'Oracle')!.eodPrice });
+  });
+
+  it('rejects natural-key conflicts for screenshot, derived and batch records before writes', async () => {
+    const screenshot = screenshotSeed(); screenshot.screenshotHistory[0].observationDate = '2026-08-23';
+    await applySeedPackage(env.DB, await parseSeedPackage(screenshot));
+    const changedScreenshot = structuredClone(screenshot); changedScreenshot.screenshotHistory[0].note = 'changed';
+    await expect(applySeedPackage(env.DB, await parseSeedPackage(changedScreenshot))).rejects.toThrow('Seed package is invalid');
+    const existing = await parseSeedPackage(await liveSeed()); await applySeedPackage(env.DB, existing);
+    const changedCurve = structuredClone(existing); changedCurve.treasuryCurves[0].retrievedAt = '2026-08-25T02:00:00.000Z';
+    await expect(applySeedPackage(env.DB, await parseSeedPackage(changedCurve))).rejects.toThrow('Seed package is invalid');
+    const changedDerived = structuredClone(existing); changedDerived.derivedSpreads[0].createdAt = '2026-08-25T02:00:00.000Z';
+    await expect(applySeedPackage(env.DB, await parseSeedPackage(changedDerived))).rejects.toThrow('Seed package is invalid');
+    const changedBatch = structuredClone(existing); changedBatch.publishedBatches[0].batchId = 'different-batch-id';
+    await expect(applySeedPackage(env.DB, await parseSeedPackage(changedBatch))).rejects.toThrow('Seed package is invalid');
+  });
+
   it('requires WRITE_TOKEN and routes seeds through the fixed Durable Object', async () => {
     const request = (token: string) => exports.default.fetch('https://collector.test/internal/v1/cds/seed', {
       method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify(screenshotSeed()),
@@ -79,5 +132,17 @@ describe('cloud history seed', () => {
     const response = await request('write-test-token');
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ screenshotHistory: { inserted: expect.any(Number), rejected: 0 } });
+  });
+
+  it('reconstructs every seeded audit section through full export pagination', async () => {
+    await applySeedPackage(env.DB, await parseSeedPackage(await liveSeed()));
+    const request = (cursor?: string) => exports.default.fetch(`https://collector.test/v1/cds/export-source?limit=3${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`, { headers: { authorization: 'Bearer read-test-token' } });
+    const sections = new Set<string>(); let cursor: string | null = null;
+    do {
+      const response = await request(cursor ?? undefined); expect(response.status).toBe(200);
+      const page = await response.json<{ data: Array<{ section: string }>; nextCursor: string | null }>();
+      page.data.forEach((entry) => sections.add(entry.section)); cursor = page.nextCursor;
+    } while (cursor);
+    expect(sections).toEqual(new Set(['ice_eod_revisions', 'ice_eod_current', 'treasury_curves', 'cds_spread_revisions', 'published_batches', 'published_batch_current', 'seed_history']));
   });
 });

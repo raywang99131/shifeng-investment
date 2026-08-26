@@ -17,7 +17,7 @@ test('builds a deterministic, source-separated cloud seed from the workbook', as
     schemaVersion: 1, batchId: 'ice-20260824-test', generatedAt: '2026-08-25T00:00:00.000Z', rawRows: [], curves: [{
       curveId: 'ust-par-zero-proxy-2026-08-24', asOf: '2026-08-24', currency: 'USD',
       sourceLabel: 'U.S. Treasury par yields · continuous-zero proxy', sourceUrl: 'https://home.treasury.gov/resource-center/data-chart-center/interest-rates',
-      nodes: [{ years: 1, zeroRate: 0.04 }, { years: 5, zeroRate: 0.04 }],
+      nodes: [1 / 12, 0.125, 1 / 6, 0.25, 1 / 3, 0.5, 1, 2, 3, 5, 7, 10, 20, 30].map((years) => ({ years, zeroRate: 0.04 })),
     }], registry: ICE_CDS_CONTRACT_REGISTRY, validationLog: [], methodology: {},
   });
   const liveRows = ICE_CDS_CONTRACT_REGISTRY.map((definition, index) => ({
@@ -35,8 +35,12 @@ test('builds a deterministic, source-separated cloud seed from the workbook', as
   const workbook = path.join(dataDir, 'ice-cds-history.xlsx');
   await fs.writeFile(workbook, await buildIceCdsWorkbook(state));
 
-  const first = await buildIceCdsCloudSeed({ workbookFile: workbook, generatedAt: '2026-08-25T00:00:00.000Z' });
-  const second = await buildIceCdsCloudSeed({ workbookFile: workbook, generatedAt: '2026-08-25T00:00:00.000Z' });
+  await assert.rejects(buildIceCdsCloudSeed({ workbookFile: workbook, generatedAt: '2026-08-25T00:00:00.000Z' }), /snapshotFile is required/);
+  const snapshot = path.join(dataDir, 'snapshot.last-good.json');
+  await fs.writeFile(snapshot, JSON.stringify({ creditRisk: { cds5y: { batchId: 'ice-20260824-test', asOf: '2026-08-24', companies: liveRows.map((row) => ({ company: row.company, eodPrice: row.eodPrice, spreadBp: row.spreadBp })) } } }));
+
+  const first = await buildIceCdsCloudSeed({ workbookFile: workbook, snapshotFile: snapshot, generatedAt: '2026-08-25T00:00:00.000Z' });
+  const second = await buildIceCdsCloudSeed({ workbookFile: workbook, snapshotFile: snapshot, generatedAt: '2026-08-25T00:00:00.000Z' });
   assert.deepEqual(second, first);
   assert.equal(first.screenshotHistory.length > 0, true);
   assert.equal(first.screenshotHistory.every((row) => row.sourceKind === 'screenshot_backfill'), true);
@@ -44,6 +48,8 @@ test('builds a deterministic, source-separated cloud seed from the workbook', as
   assert.equal(first.derivedSpreads.length, 7);
   assert.equal(first.publishedBatches[0].sourceKind, 'ice_eod_isda');
   assert.equal(first.screenshotHistory.some((row) => row.observationDate === '2026-08-24'), false);
+  await fs.writeFile(snapshot, JSON.stringify({ creditRisk: { cds5y: { batchId: 'wrong', asOf: '2026-08-24', companies: [] } } }));
+  await assert.rejects(buildIceCdsCloudSeed({ workbookFile: workbook, snapshotFile: snapshot, generatedAt: '2026-08-25T00:00:00.000Z' }), /snapshot.*batch/i);
 });
 
 test('chunks only independent screenshot history and retries a failed idempotent upload without logging credentials', async () => {
@@ -54,6 +60,7 @@ test('chunks only independent screenshot history and retries a failed idempotent
   };
   const uploads = prepareIceCdsCloudSeedUploads(seed);
   assert.deepEqual(uploads.map((upload) => upload.screenshotHistory.length), [200, 200, 101]);
+  assert.equal(uploads.every((upload) => upload.screenshotHistory.length <= 500 && Buffer.byteLength(JSON.stringify(upload)) < 128 * 1024), true);
   let attempts = 0;
   const results = await importIceCdsCloudSeed({ seed, baseUrl: 'https://collector.example.test/', writeToken: 'do-not-log', maxAttempts: 2, fetchImpl: async (url, options) => {
     attempts += 1;
@@ -64,6 +71,11 @@ test('chunks only independent screenshot history and retries a failed idempotent
   } });
   assert.equal(attempts, 4);
   assert.equal(results.length, 3);
+  let permanentAttempts = 0;
+  await assert.rejects(importIceCdsCloudSeed({ seed: { ...seed, screenshotHistory: seed.screenshotHistory.slice(0, 1) }, baseUrl: 'https://collector.example.test/', writeToken: 'do-not-log', fetchImpl: async () => {
+    permanentAttempts += 1; return new Response('', { status: 400 });
+  } }), /HTTP 400/);
+  assert.equal(permanentAttempts, 1);
 });
 
 function definitionName(company) {
