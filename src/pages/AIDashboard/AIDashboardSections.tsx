@@ -58,6 +58,7 @@ import {
   formatUsd,
   groupOfficialBenchmarkMetrics,
   methodologyTooltip,
+  mapCdsCollectionState,
   officialWinnerRows,
 } from './viewModel';
 
@@ -192,7 +193,8 @@ function CdsSummaryCard({ metric }: { metric: CdsCompanyMetric }) {
       </Flex>
       <Tooltip title={(
         <Space direction="vertical" size={2}>
-          <Text style={{ color: 'inherit' }}>EOD Price：{metric.latestEodPrice?.toFixed(4) ?? '—'}</Text>
+          <Text style={{ color: 'inherit' }}>ICE EOD Price：{metric.latestEodPrice?.toFixed(4) ?? '—'}</Text>
+          <Text style={{ color: 'inherit' }}>5Y spread 模型换算值：{compactNumber(metric.latestBp)} bp</Text>
           <Text style={{ color: 'inherit' }}>合约：{metric.latestInstrumentName || '—'}</Text>
           <Text style={{ color: 'inherit' }}>状态：{cdsQualityLabel(metric.qualityStatus)}</Text>
         </Space>
@@ -234,7 +236,8 @@ function CdsTrendChart({
         return [
           `<b>${escapeHtml(metric.company)} · ${escapeHtml(point.date)}</b>`,
           `${params[0]?.marker || ''}Spread：${escapeHtml(compactNumber(point.valueBp))} bp`,
-          `EOD Price：${point.eodPrice === undefined ? '—' : escapeHtml(point.eodPrice.toFixed(4))}`,
+          `ICE EOD Price：${point.eodPrice === undefined ? '—' : escapeHtml(point.eodPrice.toFixed(4))}`,
+          `5Y spread 模型换算值：${escapeHtml(compactNumber(point.valueBp))} bp`,
           `来源：${isScreenshotBackfill ? '用户截图曲线回填（近似）' : 'ICE EOD Price · 模型换算'}`,
           `合约：${escapeHtml(point.instrumentName || '—')}`,
           `状态：${isScreenshotBackfill ? '截图历史参考' : escapeHtml(cdsQualityLabel(point.qualityStatus))}`,
@@ -275,7 +278,7 @@ function CdsTrendChart({
   return (
     <Card className="ai-cds-chart-card" variant="outlined">
       <Title level={5}>{metric.company} 5Y CDS 信用违约互换利差（bp）</Title>
-      <Text type="secondary" className="ai-cds-chart-source">截图历史回填 + ICE EOD Price · ISDA 换算值</Text>
+      <Text type="secondary" className="ai-cds-chart-source">截图历史回填 + ICE EOD Price · 模型换算</Text>
       {metric.history.length > 0
         ? <ReactECharts option={option} style={{ height: compact ? 300 : 330 }} notMerge />
         : <NoData description="暂无 CDS 历史数据" />}
@@ -290,6 +293,7 @@ function CdsRiskSection({
 }: DashboardProps & { importStatus?: IceCdsImportStatus | null; onImport?: () => void }) {
   const cds = data.creditRisk?.cds5y;
   const companies = cds?.companies || [];
+  const collection = mapCdsCollectionState(cds?.collection);
   return (
     <section className="ai-cds-section" aria-labelledby="ai-cds-title">
       <Flex className="ai-cds-section-header" justify="space-between" align="flex-start" gap={16} wrap>
@@ -312,6 +316,13 @@ function CdsRiskSection({
             : null}
         </Space>
       </Flex>
+      <div className="ai-cds-collection-state" role="status">
+        <Tag color={collection.color}>{collection.label}</Tag>
+        <Text type="secondary">最后完整结算日 {dateLabel(collection.lastPublishedDate || cds?.asOf)}</Text>
+        <Text type="secondary">最近采集 {collection.lastCollectedAt || '—'}</Text>
+        <Text type="secondary">下次检查 {collection.nextAlarmAt || '—'}</Text>
+        {collection.missingCompanies.length > 0 ? <Text type="warning">待补齐 {collection.missingCompanies.join('、')}</Text> : null}
+      </div>
       {companies.length === 0 ? (
         <Card className="ai-cds-empty-card" variant="outlined"><NoData description="等待导入 ICE EOD Price" /></Card>
       ) : (

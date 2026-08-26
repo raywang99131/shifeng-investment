@@ -8,7 +8,6 @@ import { fetchIceObservations } from '../src/sources/ice';
 import { fetchTreasuryCurve } from '../src/sources/treasury';
 import { cleanPriceToParSpread } from '../src/domain/spread';
 import { parseIceInstrumentName } from '../src/domain/contracts';
-import type { Env } from '../src/types';
 
 const generatedAt = '2026-08-25T00:00:00.000Z';
 const screenshotSeed = () => ({
@@ -149,10 +148,10 @@ describe('cloud history seed', () => {
     await applySeedPackage(env.DB, await parseSeedPackage(screenshot));
     await applySeedPackage(env.DB, await parseSeedPackage(live));
     const request = (cursor?: string) => exports.default.fetch(`https://collector.test/v1/cds/export-source?limit=3${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`, { headers: { authorization: 'Bearer read-test-token' } });
-    const entries: Array<{ section: string; record: any }> = []; let cursor: string | null = null;
+    const entries: Array<{ section: string; record: Record<string, never> }> = []; let cursor: string | null = null;
     do {
       const response = await request(cursor ?? undefined); expect(response.status).toBe(200);
-      const page = await response.json<{ data: Array<{ section: string; record: any }>; nextCursor: string | null }>();
+      const page = await response.json<{ data: Array<{ section: string; record: Record<string, never> }>; nextCursor: string | null }>();
       entries.push(...page.data); cursor = page.nextCursor;
     } while (cursor);
     const section = (name: string) => entries.filter((entry) => entry.section === name).map((entry) => entry.record);

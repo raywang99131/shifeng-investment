@@ -5,7 +5,7 @@ import treasuryFixture from './fixtures/treasury-2026.csv?raw';
 import incompleteTreasuryFixture from './fixtures/treasury-incomplete.csv?raw';
 import { fetchIceObservations } from '../src/sources/ice';
 import { fetchTreasuryCurve } from '../src/sources/treasury';
-import { FixedSourceError, fetchFixedSource } from '../src/sources/http';
+import { fetchFixedSource } from '../src/sources/http';
 import { normalizeIcePayload, selectTrackedFiveYearContracts } from '../src/domain/contracts';
 
 const response = (body: BodyInit, contentType: string, status = 200, headers: HeadersInit = {}) => new Response(body, {

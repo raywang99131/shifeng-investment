@@ -79,6 +79,19 @@ test('local ICE CDS preview, import, status, and Excel export use the pipeline',
   assert.equal(await exported.text(), 'fake-xlsx');
 });
 
+test('cloud Excel export takes precedence and labels a last-good fallback without changing the download name', async (t) => {
+  const cloudExport = { async exportWorkbook() { return { buffer: Buffer.from('cloud-last-good'), dataState: 'stale-last-good' }; } };
+  const { app } = testApp({ cloudExport });
+  const server = await listen(app);
+  t.after(server.close);
+
+  const response = await fetch(`${server.baseUrl}/api/ai-dashboard/cds/export.xlsx`);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('content-disposition'), 'attachment; filename="ice-cds-history.xlsx"');
+  assert.equal(response.headers.get('x-ice-cds-data-state'), 'stale-last-good');
+  assert.equal(await response.text(), 'cloud-last-good');
+});
+
 test('ICE CDS import APIs reject remote writers while status masks write access and export remains readable', async (t) => {
   let writeCalls = 0;
   const cdsPipeline = {

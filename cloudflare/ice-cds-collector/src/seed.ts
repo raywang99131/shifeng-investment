@@ -11,6 +11,7 @@ type ScreenshotHistory = {
 type SeedDerivedSpread = Omit<DerivedSpread, 'iceRevisionId'> & { icePayloadHash: string };
 type SeedBatchRow = { company: Company; icePayloadHash: string; curveId: string; modelVersion: string; instrumentName: string };
 type SeedPublishedBatch = Omit<PublishBatchInput, 'rows'> & { rows: SeedBatchRow[] };
+type LooseRecord = Record<string, unknown>;
 export type SeedPackage = {
   schemaVersion: 1; generatedAt: string; screenshotHistory: ScreenshotHistory[]; iceObservations: IceObservation[];
   treasuryCurves: TreasuryCurve[]; derivedSpreads: SeedDerivedSpread[]; publishedBatches: SeedPublishedBatch[];
@@ -41,7 +42,7 @@ const exactSeven = <T extends { company: Company }>(rows: T[]): boolean => rows.
 
 async function parseObservation(value: unknown): Promise<IceObservation> {
   if (!exactKeys(value, ['clearingDate', 'company', 'iceName', 'instrumentName', 'eodPrice', 'couponBp', 'payloadHash', 'retrievedAt', 'sourceUrl'])) invalid();
-  const row = value as Record<string, any>;
+  const row = value as LooseRecord & IceObservation;
   if (!validDate(row.clearingDate) || !company(row.company) || !nonBlank(row.iceName) || !nonBlank(row.instrumentName)
     || !finite(row.eodPrice) || row.eodPrice < 0 || !finite(row.couponBp) || row.couponBp <= 0 || !nonBlank(row.payloadHash)
     || !validTimestamp(row.retrievedAt) || !nonBlank(row.sourceUrl) || !row.sourceUrl.startsWith('https://www.ice.com/')) invalid();
@@ -57,7 +58,7 @@ async function parseObservation(value: unknown): Promise<IceObservation> {
 
 function parseScreenshot(value: unknown): ScreenshotHistory {
   if (!exactKeys(value, ['observationDate', 'company', 'valueBp', 'sourceKind', 'sourceLabel', 'note', 'importedAt'])) invalid();
-  const row = value as Record<string, any>;
+  const row = value as LooseRecord & ScreenshotHistory;
   if (!validDate(row.observationDate) || !company(row.company) || !finite(row.valueBp) || row.valueBp <= 0
     || row.sourceKind !== 'screenshot_backfill' || !nonBlank(row.sourceLabel) || !nonBlank(row.note) || !validTimestamp(row.importedAt)) invalid();
   return row as ScreenshotHistory;
@@ -65,13 +66,13 @@ function parseScreenshot(value: unknown): ScreenshotHistory {
 
 async function parseCurve(value: unknown): Promise<TreasuryCurve> {
   if (!exactKeys(value, ['curveId', 'asOf', 'currency', 'sourceLabel', 'sourceUrl', 'retrievedAt', 'payloadHash', 'nodes'])) invalid();
-  const row = value as Record<string, any>;
+  const row = value as LooseRecord & TreasuryCurve;
   if (!nonBlank(row.curveId) || !validDate(row.asOf) || row.currency !== 'USD' || row.sourceLabel !== TREASURY_CURVE_SOURCE_LABEL
     || row.sourceUrl !== TREASURY_CURVE_SOURCE_URL || !validTimestamp(row.retrievedAt)
     || !nonBlank(row.payloadHash) || !Array.isArray(row.nodes) || row.nodes.length === 0) invalid();
   const nodes = row.nodes.map((node: unknown) => {
     if (!exactKeys(node, ['years', 'zeroRate']) || !finite(node.years) || node.years <= 0 || !finite(node.zeroRate)) invalid();
-    const parsed = node as Record<string, any>;
+    const parsed = node as LooseRecord & { years: number; zeroRate: number };
     return { years: parsed.years, zeroRate: parsed.zeroRate };
   });
   if (new Set(nodes.map((node: { years: number; zeroRate: number }) => node.years)).size !== nodes.length) invalid();
@@ -87,7 +88,7 @@ function nearlyEqual(left: number, right: number, tolerance = 1e-8): boolean { r
 
 async function parseDerived(value: unknown, observations: IceObservation[], curves: TreasuryCurve[]): Promise<SeedDerivedSpread> {
   const keys = ['clearingDate', 'company', 'icePayloadHash', 'curveId', 'instrumentName', 'maturityDate', 'eodPrice', 'couponBp', 'spreadBp', 'roundTripPrice', 'priceResidual', 'hazardRate', 'recoveryRate', 'modelVersion', 'qualityStatus', 'createdAt'];
-  if (!exactKeys(value, keys)) invalid(); const row = value as Record<string, any>;
+  if (!exactKeys(value, keys)) invalid(); const row = value as LooseRecord & SeedDerivedSpread;
   if (!validDate(row.clearingDate) || !company(row.company) || !nonBlank(row.icePayloadHash)
     || !nonBlank(row.curveId) || !nonBlank(row.instrumentName) || !validDate(row.maturityDate) || !finite(row.eodPrice)
     || !finite(row.couponBp) || !finite(row.spreadBp) || row.spreadBp <= 0 || !finite(row.roundTripPrice)
@@ -112,7 +113,7 @@ async function parseDerived(value: unknown, observations: IceObservation[], curv
 
 function parseBatch(value: unknown, derived: SeedDerivedSpread[]): SeedPublishedBatch {
   if (!exactKeys(value, ['batchId', 'clearingDate', 'revision', 'publishedAt', 'sourceKind', 'qualityStatus', 'rows'])) invalid();
-  const batch = value as Record<string, any>;
+  const batch = value as LooseRecord & SeedPublishedBatch;
   if (!nonBlank(batch.batchId) || !validDate(batch.clearingDate) || !Number.isSafeInteger(batch.revision) || batch.revision < 1
     || !validTimestamp(batch.publishedAt) || batch.sourceKind !== 'ice_eod_isda' || batch.qualityStatus !== 'model-derived' || !Array.isArray(batch.rows)) invalid();
   const rows: SeedBatchRow[] = batch.rows.map((row: unknown) => {
@@ -127,7 +128,7 @@ function parseBatch(value: unknown, derived: SeedDerivedSpread[]): SeedPublished
 /** Validates the entire package before any D1 statement is constructed. */
 export async function parseSeedPackage(value: unknown): Promise<SeedPackage> {
   const keys = ['schemaVersion', 'generatedAt', 'screenshotHistory', 'iceObservations', 'treasuryCurves', 'derivedSpreads', 'publishedBatches'];
-  if (!exactKeys(value, keys)) invalid(); const seed = value as Record<string, any>;
+  if (!exactKeys(value, keys)) invalid(); const seed = value as LooseRecord & SeedPackage;
   if (seed.schemaVersion !== 1 || !validTimestamp(seed.generatedAt)
     || !Array.isArray(seed.screenshotHistory) || !Array.isArray(seed.iceObservations) || !Array.isArray(seed.treasuryCurves)
     || !Array.isArray(seed.derivedSpreads) || !Array.isArray(seed.publishedBatches)) invalid();

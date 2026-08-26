@@ -161,6 +161,20 @@ export function benchmarkRefreshRequest(activeTab: string): { sources: ['benchma
   return activeTab === 'benchmark' ? { sources: ['benchmarks'], force: false } : null;
 }
 
+export function mapCdsCollectionState(collection: Partial<NonNullable<AiDashboardSnapshot['creditRisk']['cds5y']['collection']>> | undefined) {
+  const state = collection?.state || 'source-error';
+  const missingCompanies = (collection?.partialDates || []).flatMap((row) => row.missingCompanies || [])
+    .filter((company, index, values) => values.indexOf(company) === index);
+  return {
+    color: state === 'healthy' ? 'success' : state === 'partial' ? 'warning' : 'error',
+    label: state === 'healthy' ? '云端每日记录正常' : state === 'partial' ? '部分发布' : state === 'stale' ? '数据过期' : '来源错误',
+    lastPublishedDate: collection?.lastPublishedDate || null,
+    lastCollectedAt: collection?.lastCollectedAt || null,
+    nextAlarmAt: collection?.nextAlarmAt || null,
+    missingCompanies,
+  };
+}
+
 export function formatBenchmarkValue(
   score: Pick<BenchmarkScore, 'value'> | null | undefined,
   metric: Pick<BenchmarkMetricDefinition, 'unit'>,

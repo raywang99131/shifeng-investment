@@ -423,6 +423,15 @@ export interface CdsCompanyMetric {
   history: CdsHistoryPoint[];
 }
 
+export interface CdsCollectionHealth {
+  state: 'healthy' | 'partial' | 'stale' | 'source-error';
+  lastCollectedAt: string | null;
+  lastPublishedDate: string | null;
+  nextAlarmAt: string | null;
+  partialDates: Array<{ clearingDate: string; missingCompanies: string[] }>;
+  consecutiveFailures: number;
+}
+
 export interface CdsRiskSnapshot {
   asOf: string | null;
   sourceKind?: 'ice_eod_isda' | string;
@@ -434,6 +443,7 @@ export interface CdsRiskSnapshot {
   workbookAvailable?: boolean;
   historyEstimated: boolean;
   note?: string;
+  collection?: CdsCollectionHealth;
   companies: CdsCompanyMetric[];
 }
 

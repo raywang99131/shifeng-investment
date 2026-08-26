@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import express from 'express';
 import { createAiDashboardServiceFromEnv } from '../lib/aiDashboardService.js';
 import { createIceCdsPipelineFromEnv } from '../lib/iceCdsPipeline.js';
+import { createIceCdsCloudExportFromEnv } from '../lib/iceCdsCloudExport.js';
 import { DASHBOARD_SOURCE_KEYS } from '../lib/publicSourceRegistry.js';
 
 const COOKIE_NAME = 'ai_dashboard_session';
@@ -135,6 +136,7 @@ function isExpectedCdsInputError(error) {
 export function createAiDashboardRouter({
   service = createAiDashboardServiceFromEnv(),
   cdsPipeline = createIceCdsPipelineFromEnv(),
+  cloudExport = process.env.ICE_CDS_COLLECTOR_ENABLED === 'true' ? createIceCdsCloudExportFromEnv() : null,
   isLocalWriter = defaultIsLocalWriter,
   accessCode = process.env.AI_DASHBOARD_ACCESS_CODE || '',
   sessionSecret = process.env.AI_DASHBOARD_SESSION_SECRET || '',
@@ -302,10 +304,11 @@ export function createAiDashboardRouter({
 
   router.get('/cds/export.xlsx', async (_req, res) => {
     try {
-      const buffer = await cdsPipeline.exportWorkbook();
+      const exported = cloudExport ? await cloudExport.exportWorkbook() : { buffer: await cdsPipeline.exportWorkbook(), dataState: 'local' };
       res.setHeader('Content-Type', XLSX_MIME);
       res.setHeader('Content-Disposition', 'attachment; filename="ice-cds-history.xlsx"');
-      return res.send(buffer);
+      if (exported.dataState === 'stale-last-good') res.setHeader('X-ICE-CDS-Data-State', 'stale-last-good');
+      return res.send(exported.buffer);
     } catch (error) {
       if (error?.code === 'workbook-unavailable') {
         return jsonError(res, 404, 'ICE_CDS_WORKBOOK_UNAVAILABLE', error.message);

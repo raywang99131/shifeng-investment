@@ -276,6 +276,15 @@
   margin: 0 0 2px;
 }
 
+.ai-cds-collection-state {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px 12px;
+  margin: -4px 4px 12px;
+  font-size: 12px;
+}
+
 .ai-cds-summary-card,
 .ai-cds-chart-card {
   height: 100%;

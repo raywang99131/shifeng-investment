@@ -158,7 +158,7 @@ function writeRawSheet(workbook, state) {
       row.name,
       row.instrumentName,
       row.eodPrice,
-      sourceCell(row.sourceUrl),
+      sourceCell(row.sourceUrl, 'ICE EOD Price'),
       row.importedAt,
     ]);
   }
@@ -197,7 +197,7 @@ function writeDerivedSheet(workbook, state) {
       row.qualityStatus,
       row.officialSpreadBp,
       row.relativeError,
-      sourceCell(row.sourceUrl),
+      sourceCell(row.sourceUrl, '5Y spread 模型换算值'),
     ]);
     sourceRows.set(`${row.company}|${row.clearingDate}`, excelRow.number);
   }
@@ -321,8 +321,12 @@ function writeMethodologySheet(workbook, state) {
     ['priceTolerance', state.methodology?.priceTolerance ?? 0.005],
     ['relativeBenchmarkTolerance', state.methodology?.relativeBenchmarkTolerance ?? 0.01],
     ['note', state.methodology?.note || 'Model-derived unless an official spread benchmark passes validation.'],
-    ['sourceDefinition', 'ICE EOD Price is the source input; Spread (bp) is a model-derived estimate.'],
+    ['sourceDefinition', state.methodology?.sourceDefinition || 'ICE EOD Price is the source input; Spread (bp) is a model-derived estimate.'],
     ['officialStatus', 'This workbook does not present model-derived spreads as official ICE spread quotations.'],
+    ...(state.methodology?.cloudDataState ? [['cloudDataState', state.methodology.cloudDataState]] : []),
+    ...(state.methodology?.cloudExportedAt ? [['cloudExportedAt', state.methodology.cloudExportedAt]] : []),
+    ...(state.methodology?.cloudLatestPublishedAt ? [['cloudLatestPublishedAt', state.methodology.cloudLatestPublishedAt]] : []),
+    ...(state.methodology?.screenshotBackfillSource ? [['screenshotBackfillSource', state.methodology.screenshotBackfillSource]] : []),
   ];
   for (const entry of entries) sheet.addRow(entry);
   styleBody(sheet);

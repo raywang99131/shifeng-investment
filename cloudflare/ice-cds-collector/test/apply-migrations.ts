@@ -9,14 +9,6 @@ declare module 'cloudflare:test' {
   }
 }
 
-declare global {
-  namespace Cloudflare {
-    interface Env {
-      TEST_MIGRATIONS: D1Migration[];
-    }
-  }
-}
-
 beforeEach(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
+  await applyD1Migrations(env.DB, (env as typeof env & { TEST_MIGRATIONS: D1Migration[] }).TEST_MIGRATIONS);
 });
