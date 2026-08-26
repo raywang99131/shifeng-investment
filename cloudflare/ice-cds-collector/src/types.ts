@@ -145,6 +145,15 @@ export interface LatestBatchSnapshot extends PublishedBatch {
   companies: LatestBatchCompany[];
 }
 
+export interface HistoryBatchSnapshot extends PublishedBatch {
+  companies: LatestBatchCompany[];
+}
+
+export interface HistorySnapshotPage {
+  data: HistoryBatchSnapshot[];
+  nextCursor: string | null;
+}
+
 export interface ManualImportInput {
   observations: IceObservation[];
   treasuryCurve: TreasuryCurve;
@@ -174,8 +183,16 @@ export interface ExportQuery {
 }
 
 export interface ExportPage {
-  data: unknown[];
+  data: AuditExportEntry[];
   nextCursor: string | null;
+}
+
+export type AuditExportSection = 'ice_eod_revisions' | 'ice_eod_current' | 'treasury_curves'
+  | 'cds_spread_revisions' | 'published_batches' | 'published_batch_current' | 'seed_history';
+
+export interface AuditExportEntry {
+  section: AuditExportSection;
+  record: unknown;
 }
 
 export interface CollectorHealth {

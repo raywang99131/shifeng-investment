@@ -21,3 +21,11 @@ export async function constantTimeBearerEquals(request: Request, expectedToken: 
   for (let index = 0; index < left.length; index += 1) difference |= left[index] ^ right[index];
   return difference === 0;
 }
+
+export const tokensAreDistinct = async (readToken: string, writeToken: string): Promise<boolean> => {
+  if (readToken.length === 0 || writeToken.length === 0) return false;
+  const [left, right] = await Promise.all([digest(readToken), digest(writeToken)]);
+  let difference = 0;
+  for (let index = 0; index < left.length; index += 1) difference |= left[index] ^ right[index];
+  return difference !== 0;
+};

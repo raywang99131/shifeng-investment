@@ -47,6 +47,22 @@ describe('CollectorRepository', () => {
     expect(revisions?.count).toBe(2);
   });
 
+  it('keeps Treasury curve identities immutable when a payload conflict reuses an existing ID', async () => {
+    const repository = new CollectorRepository(env.DB);
+    const curve = await fetchTreasuryCurve(async () => new Response(treasuryFixture, {
+      headers: { 'content-type': 'text/csv' },
+    }), '2026-08-24', new Date('2026-08-25T00:00:00.000Z'));
+    await repository.upsertTreasuryCurve(curve);
+    await expect(repository.upsertTreasuryCurve({ ...curve, nodes: [...curve.nodes, { years: 99, zeroRate: 0.01 }] }))
+      .rejects.toThrow('Treasury curve identity conflicts with existing content');
+    const stored = await env.DB.prepare(`SELECT zero_rate FROM treasury_curve_nodes WHERE curve_id = ? ORDER BY years ASC LIMIT 1`)
+      .bind(curve.curveId).first<{ zero_rate: number }>();
+    expect(stored?.zero_rate).toBe(curve.nodes[0].zeroRate);
+    const count = await env.DB.prepare(`SELECT COUNT(*) AS count FROM treasury_curve_nodes WHERE curve_id = ?`)
+      .bind(curve.curveId).first<{ count: number }>();
+    expect(count?.count).toBe(curve.nodes.length);
+  });
+
   it('atomically rolls back a source batch when its third raw revision fails validation', async () => {
     const repository = new CollectorRepository(env.DB);
     const rows = [

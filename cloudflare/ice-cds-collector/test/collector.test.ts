@@ -227,6 +227,8 @@ describe('durable collector lifecycle', () => {
       const beforeEnsure = Date.now();
       const denied = await instance.fetch(new Request('https://collector.internal/ensure-alarm'));
       expect(denied.status).toBe(404);
+      const externalDenied = await instance.fetch(new Request('https://attacker.example/import', { method: 'POST', body: '{}' }));
+      expect(externalDenied.status).toBe(404);
       const ensured = await instance.fetch(new Request('https://collector.internal/ensure-alarm', { method: 'POST' }));
       expect(ensured.status).toBe(200);
       const ensuredBody = await ensured.json<{ nextAlarmAt: string }>();
@@ -248,5 +250,34 @@ describe('durable collector lifecycle', () => {
     const secondAlarm = await runInDurableObject(stub, (_instance, state) => state.storage.getAlarm());
 
     expect(secondAlarm).toBe(firstAlarm);
+  });
+
+  it('serializes every durable-object workflow while a collection awaits source I/O', async () => {
+    const stub = globalCollectorStub();
+    await runInDurableObject(stub, async (instance: CdsCollector) => {
+      let sourceStarted!: () => void;
+      const sourceStartedPromise = new Promise<void>((resolve) => { sourceStarted = resolve; });
+      let releaseSource!: () => void;
+      const releaseSourcePromise = new Promise<void>((resolve) => { releaseSource = resolve; });
+      (instance as unknown as { fetchImpl: typeof fetch }).fetchImpl = async (input) => {
+        sourceStarted();
+        await releaseSourcePromise;
+        return String(input).startsWith('https://www.ice.com/')
+          ? new Response(JSON.stringify(completeFixture), { headers: { 'content-type': 'application/json' } })
+          : new Response(treasuryFixture, { headers: { 'content-type': 'text/csv' } });
+      };
+
+      const collecting = instance.fetch(new Request('https://collector.internal/collect-now', { method: 'POST' }));
+      await sourceStartedPromise;
+      let ensureFinished = false;
+      const ensuring = instance.fetch(new Request('https://collector.internal/ensure-alarm', { method: 'POST' }))
+        .then(() => { ensureFinished = true; });
+      await Promise.resolve();
+      expect(ensureFinished).toBe(false);
+      releaseSource();
+      await expect(collecting).resolves.toHaveProperty('status', 200);
+      await ensuring;
+      expect(ensureFinished).toBe(true);
+    });
   });
 });

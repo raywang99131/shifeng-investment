@@ -1,10 +1,10 @@
-import { constantTimeBearerEquals } from './auth';
+import { constantTimeBearerEquals, tokensAreDistinct } from './auth';
+import { readBoundedJson } from './body';
 import { COLLECTOR_OBJECT_NAME } from './collector';
-import { parseManualImport, ManualImportValidationError } from './manualImport';
+import { parseManualImport } from './manualImport';
 import { CollectorRepository } from './repository';
 import type { Env } from './types';
 
-const MAX_IMPORT_BYTES = 128 * 1024;
 const MAX_HISTORY_LIMIT = 366;
 const MAX_EXPORT_LIMIT = 500;
 
@@ -54,16 +54,8 @@ const historyQuery = (url: URL) => {
 const exportQuery = (url: URL) => {
   const cursor = one(url.searchParams, 'cursor');
   const limit = positiveInteger(one(url.searchParams, 'limit'), MAX_EXPORT_LIMIT, MAX_EXPORT_LIMIT);
-  if (cursor !== null && (!/^\d+$/.test(cursor) || !Number.isSafeInteger(Number(cursor)))) throw new Error('invalid');
+  if (cursor !== null && (!/^v1\.[A-Za-z0-9_-]{1,2048}$/.test(cursor))) throw new Error('invalid');
   return { cursor, limit };
-};
-
-const readJsonBody = async (request: Request): Promise<unknown> => {
-  const declaredLength = Number(request.headers.get('content-length'));
-  if (Number.isFinite(declaredLength) && declaredLength > MAX_IMPORT_BYTES) throw new ManualImportValidationError('Manual import is invalid');
-  const text = await request.text();
-  if (new TextEncoder().encode(text).byteLength > MAX_IMPORT_BYTES) throw new ManualImportValidationError('Manual import is invalid');
-  try { return JSON.parse(text); } catch { throw new ManualImportValidationError('Manual import is invalid'); }
 };
 
 const forwardWrite = async (env: Env, path: '/import' | '/collect-now', body?: string): Promise<Response> => {
@@ -82,7 +74,7 @@ const forwardWrite = async (env: Env, path: '/import' | '/collect-now', body?: s
 };
 
 async function handleRead(request: Request, env: Env, url: URL): Promise<Response> {
-  if (!(await constantTimeBearerEquals(request, env.READ_TOKEN))) return unauthorized();
+  if (!(await tokensAreDistinct(env.READ_TOKEN, env.WRITE_TOKEN)) || !(await constantTimeBearerEquals(request, env.READ_TOKEN))) return unauthorized();
   const repository = new CollectorRepository(env.DB);
   if (request.method !== 'GET') return notFound();
   try {
@@ -100,7 +92,7 @@ async function handleRead(request: Request, env: Env, url: URL): Promise<Respons
     }
     if (url.pathname === '/v1/cds/history') {
       const query = historyQuery(url);
-      try { return Response.json(await repository.history(query)); } catch { return unavailable(); }
+      try { return Response.json(await repository.historySnapshots(query)); } catch { return unavailable(); }
     }
     if (url.pathname === '/v1/cds/export-source') {
       const query = exportQuery(url);
@@ -117,12 +109,12 @@ async function handleRead(request: Request, env: Env, url: URL): Promise<Respons
 }
 
 async function handleInternal(request: Request, env: Env, url: URL): Promise<Response> {
-  if (!(await constantTimeBearerEquals(request, env.WRITE_TOKEN))) return unauthorized();
+  if (!(await tokensAreDistinct(env.READ_TOKEN, env.WRITE_TOKEN)) || !(await constantTimeBearerEquals(request, env.WRITE_TOKEN))) return unauthorized();
   if (request.method !== 'POST') return notFound();
   try {
     if (url.pathname === '/internal/v1/cds/collect-now') return forwardWrite(env, '/collect-now');
     if (url.pathname === '/internal/v1/cds/import') {
-      const manual = parseManualImport(await readJsonBody(request));
+      const manual = await parseManualImport(await readBoundedJson(request), new Date());
       return forwardWrite(env, '/import', JSON.stringify(manual));
     }
     return notFound();

@@ -6,6 +6,8 @@ import treasuryFixture from './fixtures/treasury-2026.csv?raw';
 import { collectOnce } from '../src/collector';
 import { fetchIceObservations } from '../src/sources/ice';
 import { fetchTreasuryCurve } from '../src/sources/treasury';
+import { constantTimeBearerEquals } from '../src/auth';
+import { handleApiRequest } from '../src/api';
 import type { Env } from '../src/types';
 
 const NOW = new Date('2026-08-25T12:00:00.000Z');
@@ -115,25 +117,45 @@ describe('collector HTTP API', () => {
     });
     expect(first.status).toBe(200);
     const firstPage = await first.json<{ data: Array<{ revision: number }>; nextCursor: string | null }>();
-    expect(firstPage).toEqual({ data: [expect.objectContaining({ revision: 1 })], nextCursor: '2026-08-24|1' });
+    expect(firstPage).toEqual({ data: [expect.objectContaining({ revision: 1, companies: expect.arrayContaining([
+      expect.objectContaining({ company: 'Oracle' }),
+    ]) })], nextCursor: '2026-08-24|1' });
 
     const second = await request(`/v1/cds/history?from=2026-08-24&to=2026-08-24&limit=1&cursor=${encodeURIComponent(firstPage.nextCursor!)}`, {
       headers: authorise(READ_TOKEN),
     });
-    expect(await second.json()).toEqual({ data: [expect.objectContaining({ revision: 2 })], nextCursor: null });
+    expect(await second.json()).toEqual({ data: [expect.objectContaining({ revision: 2, companies: expect.any(Array) })], nextCursor: null });
   });
 
-  it('paginates raw audit export with an opaque numeric cursor', async () => {
+  it('paginates all reconstructable audit sections with an opaque section/key cursor', async () => {
     await seed();
+    await env.DB.prepare(`
+      INSERT INTO seed_history (observation_date, company, value_bp, source_kind, source_label, note, imported_at)
+      VALUES ('2026-08-21', 'Oracle', 160, 'screenshot_backfill', 'Screenshot', 'seed', '2026-08-25T00:00:00.000Z')
+    `).run();
     const first = await request('/v1/cds/export-source?limit=3', { headers: authorise(READ_TOKEN) });
     expect(first.status).toBe(200);
-    const firstPage = await first.json<{ data: Array<{ revisionId: number }>; nextCursor: string | null }>();
+    const firstPage = await first.json<{ data: Array<{ section: string; record: { revisionId?: number } }>; nextCursor: string | null }>();
     expect(firstPage.data).toHaveLength(3);
-    expect(firstPage.nextCursor).toMatch(/^\d+$/);
+    expect(firstPage.data.every((entry) => entry.section === 'ice_eod_revisions')).toBe(true);
+    expect(firstPage.nextCursor).toMatch(/^v1\./);
     const second = await request(`/v1/cds/export-source?limit=3&cursor=${firstPage.nextCursor}`, { headers: authorise(READ_TOKEN) });
-    const secondPage = await second.json<{ data: Array<{ revisionId: number }>; nextCursor: string | null }>();
+    const secondPage = await second.json<{ data: Array<{ section: string; record: { revisionId?: number } }>; nextCursor: string | null }>();
     expect(secondPage.data).toHaveLength(3);
-    expect(new Set([...firstPage.data, ...secondPage.data].map((row) => row.revisionId)).size).toBe(6);
+    expect(new Set([...firstPage.data, ...secondPage.data].map((row) => row.record.revisionId)).size).toBe(6);
+
+    const sections = new Set(firstPage.data.map((entry) => entry.section));
+    let cursor = secondPage.nextCursor;
+    while (cursor) {
+      const page = await request(`/v1/cds/export-source?limit=500&cursor=${encodeURIComponent(cursor)}`, { headers: authorise(READ_TOKEN) });
+      const body = await page.json<{ data: Array<{ section: string }>; nextCursor: string | null }>();
+      body.data.forEach((entry) => sections.add(entry.section));
+      cursor = body.nextCursor;
+    }
+    expect(sections).toEqual(new Set([
+      'ice_eod_revisions', 'ice_eod_current', 'treasury_curves', 'cds_spread_revisions',
+      'published_batches', 'published_batch_current', 'seed_history',
+    ]));
   });
 
   it('forwards a validated seven-company manual import through the fixed durable object', async () => {
@@ -152,6 +174,28 @@ describe('collector HTTP API', () => {
     const run = await env.DB.prepare(`SELECT trigger_kind, status FROM collector_runs ORDER BY rowid DESC LIMIT 1`)
       .first<{ trigger_kind: string; status: string }>();
     expect(run).toEqual({ trigger_kind: 'manual', status: 'success' });
+    const canonical = await env.DB.prepare(`SELECT payload_hash FROM ice_eod_revisions WHERE clearing_date = ? AND company = 'Oracle' ORDER BY revision_id DESC LIMIT 1`)
+      .bind('2026-08-25').first<{ payload_hash: string }>();
+    expect(canonical?.payload_hash).not.toContain('-manual');
+  });
+
+  it('rejects manual imports with future timestamps, aliases or source paths outside the canonical preview', async () => {
+    const fetchImpl = fixtureFetch();
+    const observations = (await fetchIceObservations(fetchImpl, NOW)).rows;
+    const treasuryCurve = await fetchTreasuryCurve(fetchImpl, '2026-08-24', NOW);
+    const attempts = [
+      { observations: observations.map((row, index) => index === 0 ? { ...row, retrievedAt: '2099-01-01T00:00:00.000Z' } : row), treasuryCurve },
+      { observations: observations.map((row, index) => index === 0 ? { ...row, iceName: 'NOT ORACLE' } : row), treasuryCurve },
+      { observations: observations.map((row, index) => index === 0 ? { ...row, sourceUrl: 'https://www.ice.com/not-the-fixed-feed' } : row), treasuryCurve },
+      { observations, treasuryCurve, ignored: true },
+    ];
+    for (const body of attempts) {
+      const response = await request('/internal/v1/cds/import', {
+        method: 'POST', headers: new Headers({ ...Object.fromEntries(authorise(WRITE_TOKEN)), 'content-type': 'application/json' }), body: JSON.stringify(body),
+      });
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: { code: 'INVALID_REQUEST', message: 'Invalid request' } });
+    }
   });
 
   it('rejects malformed and oversized internal import bodies before they can write data', async () => {
@@ -166,5 +210,27 @@ describe('collector HTTP API', () => {
       body: '{}',
     });
     expect(oversized.status).toBe(400);
+  });
+
+  it('fails closed when a configured token is empty or both configured roles are identical', async () => {
+    expect(await constantTimeBearerEquals(new Request('https://collector.test', { headers: authorise(READ_TOKEN) }), '')).toBe(false);
+    const response = await handleApiRequest(new Request('https://collector.test/v1/cds/latest', {
+      headers: authorise('same-token'),
+    }), { ...(env as unknown as Env), READ_TOKEN: 'same-token', WRITE_TOKEN: 'same-token' });
+    expect(response.status).toBe(401);
+  });
+
+  it('does not expose a corrupted latest batch with duplicate or misaligned companies', async () => {
+    await seed();
+    const batch = await env.DB.prepare(`
+      SELECT current.batch_id FROM published_batch_current AS current
+      JOIN published_batches AS batches USING (batch_id)
+      ORDER BY batches.clearing_date DESC, batches.revision DESC LIMIT 1
+    `).first<{ batch_id: string }>();
+    await env.DB.prepare(`UPDATE published_batch_rows SET company = 'Duplicate' WHERE batch_id = ? AND company = 'Meta'`)
+      .bind(batch!.batch_id).run();
+    const response = await request('/v1/cds/latest', { headers: authorise(READ_TOKEN) });
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: { code: 'SERVICE_UNAVAILABLE', message: 'Service unavailable' } });
   });
 });
