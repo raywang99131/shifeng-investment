@@ -71,6 +71,7 @@ type BatchRow = {
 type LatestCompanyRow = {
   batch_company: string;
   spread_company: string;
+  spread_clearing_date: string;
   spread_bp: number;
   eod_price: number;
   instrument_name: string;
@@ -142,19 +143,31 @@ const AUDIT_SECTIONS: readonly AuditExportSection[] = [
   'published_batches', 'published_batch_current', 'seed_history',
 ];
 
-type AuditCursor = { section: AuditExportSection; key: string | null };
+type ExportWatermarks = Record<AuditExportSection, number>;
+type ExportPointers = { iceCurrent: string; batchCurrent: string };
+type AuditCursor = { v: 2; section: AuditExportSection; key: number | null; watermarks: ExportWatermarks; pointers: ExportPointers };
 
+export class InvalidExportCursorError extends Error {}
+export class ExportSnapshotChangedError extends Error {}
+
+const cursorNumber = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+const cursorKeys = (value: unknown): value is Record<AuditExportSection, unknown> => typeof value === 'object' && value !== null
+  && Object.keys(value).length === AUDIT_SECTIONS.length && AUDIT_SECTIONS.every((section) => cursorNumber((value as Record<string, unknown>)[section]));
+const cursorPointers = (value: unknown): value is ExportPointers => typeof value === 'object' && value !== null
+  && typeof (value as Record<string, unknown>).iceCurrent === 'string' && /^[a-f0-9]{64}$/.test((value as Record<string, unknown>).iceCurrent as string)
+  && typeof (value as Record<string, unknown>).batchCurrent === 'string' && /^[a-f0-9]{64}$/.test((value as Record<string, unknown>).batchCurrent as string);
 const encodeAuditCursor = (cursor: AuditCursor): string => `v1.${btoa(JSON.stringify(cursor)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')}`;
-
-const decodeAuditCursor = (cursor: string | null | undefined): AuditCursor => {
-  if (!cursor) return { section: AUDIT_SECTIONS[0], key: null };
-  if (!/^v1\.[A-Za-z0-9_-]+$/.test(cursor)) throw new Error('Invalid audit cursor');
+const decodeAuditCursor = (cursor: string): AuditCursor => {
+  if (!/^v1\.[A-Za-z0-9_-]+$/.test(cursor)) throw new InvalidExportCursorError('Invalid export cursor');
   try {
     const encoded = cursor.slice(3).replace(/-/g, '+').replace(/_/g, '/');
-    const parsed = JSON.parse(atob(encoded.padEnd(encoded.length + (4 - encoded.length % 4) % 4, '='))) as AuditCursor;
-    if (!AUDIT_SECTIONS.includes(parsed.section) || (parsed.key !== null && typeof parsed.key !== 'string')) throw new Error('invalid');
-    return parsed;
-  } catch { throw new Error('Invalid audit cursor'); }
+    const parsed = JSON.parse(atob(encoded.padEnd(encoded.length + (4 - encoded.length % 4) % 4, '='))) as Partial<AuditCursor>;
+    if (parsed.v !== 2 || !AUDIT_SECTIONS.includes(parsed.section as AuditExportSection)
+      || (parsed.key !== null && !cursorNumber(parsed.key)) || !cursorKeys(parsed.watermarks) || !cursorPointers(parsed.pointers)) {
+      throw new Error('invalid');
+    }
+    return parsed as AuditCursor;
+  } catch { throw new InvalidExportCursorError('Invalid export cursor'); }
 };
 
 export class CollectorRepository {
@@ -588,7 +601,7 @@ export class CollectorRepository {
 
   private async batchSnapshot<T extends PublishedBatch>(batch: T): Promise<T & { companies: LatestBatchCompany[] }> {
     const rows = await this.db.prepare(`
-      SELECT rows.company AS batch_company, spreads.company AS spread_company, spreads.spread_bp, spreads.eod_price,
+      SELECT rows.company AS batch_company, spreads.company AS spread_company, spreads.clearing_date AS spread_clearing_date, spreads.spread_bp, spreads.eod_price,
              spreads.instrument_name, spreads.quality_status
       FROM published_batch_rows AS rows
       JOIN cds_spread_revisions AS spreads USING (spread_revision_id)
@@ -598,10 +611,10 @@ export class CollectorRepository {
         WHEN 'Amazon' THEN 4 WHEN 'Google' THEN 5 WHEN 'Microsoft' THEN 6 WHEN 'Meta' THEN 7
         ELSE 999 END
     `).bind(batch.batchId).all<LatestCompanyRow>();
-    if (rows.results.length !== TRACKED_COMPANIES.length || batch.sourceKind !== 'ice_eod_isda'
+    if (rows.results.length !== TRACKED_COMPANIES.length || batch.sourceKind !== 'ice_eod_isda' || batch.qualityStatus !== 'model-derived'
       || new Set(rows.results.map((row) => row.batch_company)).size !== TRACKED_COMPANIES.length
       || !TRACKED_COMPANIES.every((company, index) => rows.results[index]?.batch_company === company
-        && rows.results[index]?.spread_company === company)) {
+        && rows.results[index]?.spread_company === company && rows.results[index]?.spread_clearing_date === batch.clearingDate)) {
       throw new Error('Latest batch is incomplete');
     }
     const companies: LatestBatchCompany[] = rows.results.map((row) => {
@@ -662,79 +675,108 @@ export class CollectorRepository {
   }
 
   async exportSource(query: ExportQuery): Promise<ExportPage> {
-    const start = decodeAuditCursor(query.cursor);
+    const start = query.cursor ? decodeAuditCursor(query.cursor) : await this.startExportSnapshot();
+    await this.assertExportSnapshot(start);
     let sectionIndex = AUDIT_SECTIONS.indexOf(start.section);
     let key = start.key;
     const data: AuditExportEntry[] = [];
     while (sectionIndex < AUDIT_SECTIONS.length && data.length < query.limit) {
       const section = AUDIT_SECTIONS[sectionIndex];
-      const chunk = await this.auditSection(section, key, query.limit - data.length);
+      const chunk = await this.auditSection(section, key, start.watermarks[section], query.limit - data.length);
       data.push(...chunk.data);
-      if (chunk.hasMore) return { data, nextCursor: encodeAuditCursor({ section, key: chunk.lastKey }) };
+      await this.assertExportSnapshot(start);
+      if (chunk.hasMore) return { data, nextCursor: encodeAuditCursor({ ...start, section, key: chunk.lastKey }) };
       sectionIndex += 1;
       key = null;
     }
     return {
       data,
-      nextCursor: sectionIndex < AUDIT_SECTIONS.length ? encodeAuditCursor({ section: AUDIT_SECTIONS[sectionIndex], key: null }) : null,
+      nextCursor: sectionIndex < AUDIT_SECTIONS.length ? encodeAuditCursor({ ...start, section: AUDIT_SECTIONS[sectionIndex], key: null }) : null,
     };
   }
 
-  private async auditSection(section: AuditExportSection, cursor: string | null, limit: number): Promise<{
-    data: AuditExportEntry[]; hasMore: boolean; lastKey: string;
+  private async startExportSnapshot(): Promise<AuditCursor> {
+    const max = async (table: string): Promise<number> => (await this.db.prepare(`SELECT COALESCE(MAX(rowid), 0) AS value FROM ${table}`).first<{ value: number }>())?.value ?? 0;
+    const watermarks = Object.fromEntries(await Promise.all(AUDIT_SECTIONS.map(async (section) => [section, await max({
+      ice_eod_revisions: 'ice_eod_revisions', ice_eod_current: 'ice_eod_current', treasury_curves: 'treasury_curves',
+      cds_spread_revisions: 'cds_spread_revisions', published_batches: 'published_batches', published_batch_current: 'published_batch_current', seed_history: 'seed_history',
+    }[section])]))) as ExportWatermarks;
+    const pointers = await this.currentPointerHashes();
+    return { v: 2, section: AUDIT_SECTIONS[0], key: null, watermarks, pointers };
+  }
+
+  private async currentPointerHashes(): Promise<ExportPointers> {
+    const digest = async (value: unknown): Promise<string> => {
+      const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(value)));
+      return [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+    };
+    const [ice, batches] = await Promise.all([
+      this.db.prepare(`SELECT clearing_date, company, revision_id FROM ice_eod_current ORDER BY clearing_date ASC, company ASC`).all(),
+      this.db.prepare(`SELECT clearing_date, batch_id FROM published_batch_current ORDER BY clearing_date ASC`).all(),
+    ]);
+    return { iceCurrent: await digest(ice.results), batchCurrent: await digest(batches.results) };
+  }
+
+  private async assertExportSnapshot(cursor: AuditCursor): Promise<void> {
+    const pointers = await this.currentPointerHashes();
+    if (pointers.iceCurrent !== cursor.pointers.iceCurrent || pointers.batchCurrent !== cursor.pointers.batchCurrent) {
+      throw new ExportSnapshotChangedError('Export snapshot changed');
+    }
+  }
+
+  private async auditSection(section: AuditExportSection, cursor: number | null, watermark: number, limit: number): Promise<{
+    data: AuditExportEntry[]; hasMore: boolean; lastKey: number;
   }> {
     const take = limit + 1;
+    const after = cursor ?? 0;
     if (section === 'ice_eod_revisions') {
-      const rows = await this.db.prepare(`SELECT revision_id, clearing_date, company, ice_name, instrument_name, eod_price, coupon_bp, payload_hash, retrieved_at, source_url FROM ice_eod_revisions WHERE revision_id > ? ORDER BY revision_id ASC LIMIT ?`)
-        .bind(Number(cursor ?? 0), take).all<IceRevisionRow>();
+      const rows = await this.db.prepare(`SELECT rowid AS audit_row_id, revision_id, clearing_date, company, ice_name, instrument_name, eod_price, coupon_bp, payload_hash, retrieved_at, source_url FROM ice_eod_revisions WHERE rowid > ? AND rowid <= ? ORDER BY rowid ASC LIMIT ?`)
+        .bind(after, watermark, take).all<IceRevisionRow & { audit_row_id: number }>();
       const visible = rows.results.slice(0, limit);
-      return { data: visible.map((row) => ({ section, record: toStoredIceObservation(row) })), hasMore: rows.results.length > limit, lastKey: String(visible.at(-1)?.revision_id ?? cursor ?? 0) };
+      return { data: visible.map((row) => ({ section, record: toStoredIceObservation(row) })), hasMore: rows.results.length > limit, lastKey: visible.at(-1)?.audit_row_id ?? after };
     }
     if (section === 'ice_eod_current') {
-      const [date, company] = (cursor ?? '|').split('|', 2);
-      const rows = await this.db.prepare(`SELECT clearing_date, company, revision_id FROM ice_eod_current WHERE clearing_date > ? OR (clearing_date = ? AND company > ?) ORDER BY clearing_date ASC, company ASC LIMIT ?`)
-        .bind(date, date, company, take).all<{ clearing_date: string; company: string; revision_id: number }>();
+      const rows = await this.db.prepare(`SELECT rowid AS audit_row_id, clearing_date, company, revision_id FROM ice_eod_current WHERE rowid > ? AND rowid <= ? ORDER BY rowid ASC LIMIT ?`)
+        .bind(after, watermark, take).all<{ audit_row_id: number; clearing_date: string; company: string; revision_id: number }>();
       const visible = rows.results.slice(0, limit);
-      return { data: visible.map((row) => ({ section, record: { clearingDate: row.clearing_date, company: row.company, revisionId: row.revision_id } })), hasMore: rows.results.length > limit, lastKey: visible.length ? `${visible.at(-1)!.clearing_date}|${visible.at(-1)!.company}` : cursor ?? '|' };
+      return { data: visible.map((row) => ({ section, record: { clearingDate: row.clearing_date, company: row.company, revisionId: row.revision_id } })), hasMore: rows.results.length > limit, lastKey: visible.at(-1)?.audit_row_id ?? after };
     }
     if (section === 'treasury_curves') {
-      const rows = await this.db.prepare(`SELECT curve_id, as_of, currency, source_label, source_url, retrieved_at, payload_hash FROM treasury_curves WHERE curve_id > ? ORDER BY curve_id ASC LIMIT ?`)
-        .bind(cursor ?? '', take).all<{ curve_id: string; as_of: string; currency: string; source_label: string; source_url: string; retrieved_at: string; payload_hash: string }>();
+      const rows = await this.db.prepare(`SELECT rowid AS audit_row_id, curve_id, as_of, currency, source_label, source_url, retrieved_at, payload_hash FROM treasury_curves WHERE rowid > ? AND rowid <= ? ORDER BY rowid ASC LIMIT ?`)
+        .bind(after, watermark, take).all<{ audit_row_id: number; curve_id: string; as_of: string; currency: string; source_label: string; source_url: string; retrieved_at: string; payload_hash: string }>();
       const visible = rows.results.slice(0, limit);
       const data = await Promise.all(visible.map(async (row) => {
         const nodes = await this.db.prepare(`SELECT years, zero_rate FROM treasury_curve_nodes WHERE curve_id = ? ORDER BY years ASC`).bind(row.curve_id).all<{ years: number; zero_rate: number }>();
         return { section, record: { curveId: row.curve_id, asOf: row.as_of, currency: row.currency, sourceLabel: row.source_label, sourceUrl: row.source_url, retrievedAt: row.retrieved_at, payloadHash: row.payload_hash, nodes: nodes.results.map((node) => ({ years: node.years, zeroRate: node.zero_rate })) } };
       }));
-      return { data, hasMore: rows.results.length > limit, lastKey: visible.at(-1)?.curve_id ?? cursor ?? '' };
+      return { data, hasMore: rows.results.length > limit, lastKey: visible.at(-1)?.audit_row_id ?? after };
     }
     if (section === 'cds_spread_revisions') {
-      const rows = await this.db.prepare(`SELECT spread_revision_id, clearing_date, company, ice_revision_id, curve_id, instrument_name, maturity_date, eod_price, coupon_bp, spread_bp, round_trip_price, price_residual, hazard_rate, recovery_rate, model_version, quality_status, created_at FROM cds_spread_revisions WHERE spread_revision_id > ? ORDER BY spread_revision_id ASC LIMIT ?`)
-        .bind(Number(cursor ?? 0), take).all<SpreadRevisionRow>();
+      const rows = await this.db.prepare(`SELECT rowid AS audit_row_id, spread_revision_id, clearing_date, company, ice_revision_id, curve_id, instrument_name, maturity_date, eod_price, coupon_bp, spread_bp, round_trip_price, price_residual, hazard_rate, recovery_rate, model_version, quality_status, created_at FROM cds_spread_revisions WHERE rowid > ? AND rowid <= ? ORDER BY rowid ASC LIMIT ?`)
+        .bind(after, watermark, take).all<SpreadRevisionRow & { audit_row_id: number }>();
       const visible = rows.results.slice(0, limit);
-      return { data: visible.map((row) => ({ section, record: toStoredDerivedSpread(row) })), hasMore: rows.results.length > limit, lastKey: String(visible.at(-1)?.spread_revision_id ?? cursor ?? 0) };
+      return { data: visible.map((row) => ({ section, record: toStoredDerivedSpread(row) })), hasMore: rows.results.length > limit, lastKey: visible.at(-1)?.audit_row_id ?? after };
     }
     if (section === 'published_batches') {
-      const rows = await this.db.prepare(`SELECT batch_id, clearing_date, revision, published_at, source_kind, quality_status FROM published_batches WHERE batch_id > ? ORDER BY batch_id ASC LIMIT ?`)
-        .bind(cursor ?? '', take).all<BatchRow>();
+      const rows = await this.db.prepare(`SELECT rowid AS audit_row_id, batch_id, clearing_date, revision, published_at, source_kind, quality_status FROM published_batches WHERE rowid > ? AND rowid <= ? ORDER BY rowid ASC LIMIT ?`)
+        .bind(after, watermark, take).all<BatchRow & { audit_row_id: number }>();
       const visible = rows.results.slice(0, limit);
       const data = await Promise.all(visible.map(async (row) => {
         const children = await this.db.prepare(`SELECT company, spread_revision_id FROM published_batch_rows WHERE batch_id = ? ORDER BY company ASC`).bind(row.batch_id).all<{ company: string; spread_revision_id: number }>();
         return { section, record: { ...toPublishedBatch(row), rows: children.results.map((child) => ({ company: child.company, spreadRevisionId: child.spread_revision_id })) } };
       }));
-      return { data, hasMore: rows.results.length > limit, lastKey: visible.at(-1)?.batch_id ?? cursor ?? '' };
+      return { data, hasMore: rows.results.length > limit, lastKey: visible.at(-1)?.audit_row_id ?? after };
     }
     if (section === 'published_batch_current') {
-      const [date] = (cursor ?? '|').split('|', 1);
-      const rows = await this.db.prepare(`SELECT clearing_date, batch_id FROM published_batch_current WHERE clearing_date > ? ORDER BY clearing_date ASC LIMIT ?`)
-        .bind(date, take).all<{ clearing_date: string; batch_id: string }>();
+      const rows = await this.db.prepare(`SELECT rowid AS audit_row_id, clearing_date, batch_id FROM published_batch_current WHERE rowid > ? AND rowid <= ? ORDER BY rowid ASC LIMIT ?`)
+        .bind(after, watermark, take).all<{ audit_row_id: number; clearing_date: string; batch_id: string }>();
       const visible = rows.results.slice(0, limit);
-      return { data: visible.map((row) => ({ section, record: { clearingDate: row.clearing_date, batchId: row.batch_id } })), hasMore: rows.results.length > limit, lastKey: visible.at(-1)?.clearing_date ?? cursor ?? '|' };
+      return { data: visible.map((row) => ({ section, record: { clearingDate: row.clearing_date, batchId: row.batch_id } })), hasMore: rows.results.length > limit, lastKey: visible.at(-1)?.audit_row_id ?? after };
     }
-    const [date, company] = (cursor ?? '|').split('|', 2);
-    const rows = await this.db.prepare(`SELECT observation_date, company, value_bp, source_kind, source_label, note, imported_at FROM seed_history WHERE observation_date > ? OR (observation_date = ? AND company > ?) ORDER BY observation_date ASC, company ASC LIMIT ?`)
-      .bind(date, date, company, take).all<{ observation_date: string; company: string; value_bp: number; source_kind: string; source_label: string; note: string; imported_at: string }>();
+    const rows = await this.db.prepare(`SELECT rowid AS audit_row_id, observation_date, company, value_bp, source_kind, source_label, note, imported_at FROM seed_history WHERE rowid > ? AND rowid <= ? ORDER BY rowid ASC LIMIT ?`)
+      .bind(after, watermark, take).all<{ audit_row_id: number; observation_date: string; company: string; value_bp: number; source_kind: string; source_label: string; note: string; imported_at: string }>();
     const visible = rows.results.slice(0, limit);
-    return { data: visible.map((row) => ({ section, record: { observationDate: row.observation_date, company: row.company, valueBp: row.value_bp, sourceKind: row.source_kind, sourceLabel: row.source_label, note: row.note, importedAt: row.imported_at } })), hasMore: rows.results.length > limit, lastKey: visible.length ? `${visible.at(-1)!.observation_date}|${visible.at(-1)!.company}` : cursor ?? '|' };
+    return { data: visible.map((row) => ({ section, record: { observationDate: row.observation_date, company: row.company, valueBp: row.value_bp, sourceKind: row.source_kind, sourceLabel: row.source_label, note: row.note, importedAt: row.imported_at } })), hasMore: rows.results.length > limit, lastKey: visible.at(-1)?.audit_row_id ?? after };
   }
 
   async health(now: Date): Promise<CollectorHealth> {

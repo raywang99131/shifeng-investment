@@ -2,7 +2,7 @@ import { constantTimeBearerEquals, tokensAreDistinct } from './auth';
 import { readBoundedJson } from './body';
 import { COLLECTOR_OBJECT_NAME } from './collector';
 import { parseManualImport } from './manualImport';
-import { CollectorRepository } from './repository';
+import { CollectorRepository, ExportSnapshotChangedError, InvalidExportCursorError } from './repository';
 import type { Env } from './types';
 
 const MAX_HISTORY_LIMIT = 366;
@@ -96,7 +96,11 @@ async function handleRead(request: Request, env: Env, url: URL): Promise<Respons
     }
     if (url.pathname === '/v1/cds/export-source') {
       const query = exportQuery(url);
-      try { return Response.json(await repository.exportSource(query)); } catch { return unavailable(); }
+      try { return Response.json(await repository.exportSource(query)); } catch (reason) {
+        if (reason instanceof InvalidExportCursorError) return invalid();
+        if (reason instanceof ExportSnapshotChangedError) return error(409, 'EXPORT_SNAPSHOT_CHANGED', 'Export snapshot changed');
+        return unavailable();
+      }
     }
     if (url.pathname === '/v1/cds/health') {
       const [health, partialDates] = await Promise.all([repository.health(new Date()), repository.listPartialDates()]);

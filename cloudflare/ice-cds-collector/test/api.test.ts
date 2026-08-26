@@ -158,6 +158,51 @@ describe('collector HTTP API', () => {
     ]));
   });
 
+  it('rejects malformed decoded export cursors as invalid requests before any data-store failure', async () => {
+    const response = await request(`/v1/cds/export-source?cursor=v1.${btoa('{}')}`, { headers: authorise(READ_TOKEN) });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: { code: 'INVALID_REQUEST', message: 'Invalid request' } });
+  });
+
+  it('keeps an export page sequence pinned to its first-page append-only watermark', async () => {
+    await seed();
+    const first = await request('/v1/cds/export-source?limit=1', { headers: authorise(READ_TOKEN) });
+    const firstPage = await first.json<{ data: Array<{ section: string; record: { revisionId?: number } }>; nextCursor: string }>();
+    await env.DB.prepare(`
+      INSERT INTO ice_eod_revisions (clearing_date, company, ice_name, instrument_name, eod_price, coupon_bp, payload_hash, retrieved_at, source_url)
+      VALUES ('2026-08-26', 'Oracle', 'Oracle Cop', 'ORCLE.SNRFOR.USD.XR14.100.2031-06-20', 95, 100, 'late-export-row', '2026-08-25T12:00:00.000Z', 'https://www.ice.com/api/cds-settlement-prices/icc-single-names')
+    `).run();
+    const inserted = await env.DB.prepare(`SELECT MAX(revision_id) AS id FROM ice_eod_revisions`).first<{ id: number }>();
+    const entries = [...firstPage.data];
+    let cursor: string | null = firstPage.nextCursor;
+    while (cursor) {
+      const page = await request(`/v1/cds/export-source?limit=500&cursor=${encodeURIComponent(cursor)}`, { headers: authorise(READ_TOKEN) });
+      expect(page.status).toBe(200);
+      const body = await page.json<{ data: Array<{ section: string; record: { revisionId?: number } }>; nextCursor: string | null }>();
+      entries.push(...body.data); cursor = body.nextCursor;
+    }
+    const rawIds = entries.filter((entry) => entry.section === 'ice_eod_revisions').map((entry) => entry.record.revisionId);
+    expect(rawIds).not.toContain(inserted?.id);
+    expect(new Set(rawIds).size).toBe(rawIds.length);
+  });
+
+  it('requires a fresh export when current-pointer state changes between pages', async () => {
+    await seedTwoRevisions();
+    const first = await request('/v1/cds/export-source?limit=1', { headers: authorise(READ_TOKEN) });
+    const firstPage = await first.json<{ nextCursor: string }>();
+    const current = await env.DB.prepare(`
+      SELECT current.clearing_date, MIN(revisions.revision_id) AS revision_id
+      FROM ice_eod_current AS current
+      JOIN ice_eod_revisions AS revisions ON revisions.clearing_date = current.clearing_date AND revisions.company = current.company
+      WHERE current.company = 'Oracle' GROUP BY current.clearing_date HAVING COUNT(*) > 1 ORDER BY current.clearing_date DESC LIMIT 1
+    `).first<{ clearing_date: string; revision_id: number }>();
+    await env.DB.prepare(`UPDATE ice_eod_current SET revision_id = ? WHERE clearing_date = ? AND company = 'Oracle'`)
+      .bind(current!.revision_id, current!.clearing_date).run();
+    const response = await request(`/v1/cds/export-source?cursor=${encodeURIComponent(firstPage.nextCursor)}`, { headers: authorise(READ_TOKEN) });
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: { code: 'EXPORT_SNAPSHOT_CHANGED', message: 'Export snapshot changed' } });
+  });
+
   it('forwards a validated seven-company manual import through the fixed durable object', async () => {
     const fetchImpl = fixtureFetch();
     const observations = (await fetchIceObservations(fetchImpl, NOW)).rows.map((row) => ({
@@ -232,5 +277,21 @@ describe('collector HTTP API', () => {
     const response = await request('/v1/cds/latest', { headers: authorise(READ_TOKEN) });
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ error: { code: 'SERVICE_UNAVAILABLE', message: 'Service unavailable' } });
+  });
+
+  it('rejects cross-date or non-model-derived linked rows in both latest and history snapshots', async () => {
+    await seedTwoRevisions();
+    const batch = await env.DB.prepare(`
+      SELECT batches.batch_id, batches.clearing_date FROM published_batch_current AS current
+      JOIN published_batches AS batches USING (batch_id)
+      ORDER BY batches.clearing_date DESC, batches.revision DESC LIMIT 1
+    `).first<{ batch_id: string; clearing_date: string }>();
+    await env.DB.prepare(`
+      UPDATE cds_spread_revisions SET clearing_date = '1900-01-01', quality_status = 'other'
+      WHERE spread_revision_id = (SELECT spread_revision_id FROM published_batch_rows WHERE batch_id = ? LIMIT 1)
+    `).bind(batch!.batch_id).run();
+    expect((await request('/v1/cds/latest', { headers: authorise(READ_TOKEN) })).status).toBe(503);
+    const history = await request(`/v1/cds/history?from=${batch!.clearing_date}&to=${batch!.clearing_date}&limit=10`, { headers: authorise(READ_TOKEN) });
+    expect(history.status).toBe(503);
   });
 });

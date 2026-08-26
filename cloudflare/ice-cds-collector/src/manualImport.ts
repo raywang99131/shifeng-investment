@@ -1,7 +1,7 @@
 import { parseIceInstrumentName } from './domain/contracts';
 import { ICE_CDS_CONTRACT_REGISTRY, TRACKED_COMPANIES } from './domain/registry';
 import { ICE_PUBLIC_URL } from './sources/ice';
-import { TREASURY_CURVE_SOURCE_URL } from './sources/treasury';
+import { buildCanonicalTreasuryCurve, hasCanonicalTreasuryGrid, TREASURY_CURVE_SOURCE_LABEL, TREASURY_CURVE_SOURCE_URL } from './sources/treasury';
 import type { Company, IceObservation, ManualImportInput, TreasuryCurve } from './types';
 
 export class ManualImportValidationError extends Error {}
@@ -56,7 +56,7 @@ const validateCurve = async (value: unknown, clearingDate: string, now: Date): P
   const curve = value as Record<string, unknown> | null; const nodes = Array.isArray(curve?.nodes) ? curve.nodes : null;
   if (!curve || !exactKeys(curve, ['curveId', 'asOf', 'currency', 'sourceLabel', 'sourceUrl', 'retrievedAt', 'payloadHash', 'nodes'])
     || !stringValue(curve.curveId) || !validDate(curve.asOf) || curve.asOf > clearingDate || curve.currency !== 'USD'
-    || !stringValue(curve.sourceLabel) || curve.sourceUrl !== TREASURY_CURVE_SOURCE_URL || !validTimestamp(curve.retrievedAt, now)
+    || curve.sourceLabel !== TREASURY_CURVE_SOURCE_LABEL || curve.sourceUrl !== TREASURY_CURVE_SOURCE_URL || !validTimestamp(curve.retrievedAt, now)
     || !stringValue(curve.payloadHash) || !nodes || nodes.length === 0) invalid();
   const parsedNodes = nodes!.map((node) => {
     const valueNode = node as Record<string, unknown> | null;
@@ -64,12 +64,10 @@ const validateCurve = async (value: unknown, clearingDate: string, now: Date): P
       || Number(valueNode.years) <= 0 || !Number.isFinite(valueNode.zeroRate)) invalid();
     const safeNode = valueNode! as { years: number; zeroRate: number };
     return { years: Number(safeNode.years), zeroRate: Number(safeNode.zeroRate) };
-  }).sort((left, right) => left.years - right.years);
-  if (new Set(parsedNodes.map((node) => node.years)).size !== parsedNodes.length) invalid();
+  });
+  if (!hasCanonicalTreasuryGrid(parsedNodes)) invalid();
   const safe = curve! as unknown as TreasuryCurve;
-  const payloadHash = await sha256({ asOf: safe.asOf, nodes: parsedNodes });
-  return { curveId: `ust-par-zero-proxy-${safe.asOf}-${payloadHash}`, asOf: safe.asOf, currency: 'USD', sourceLabel: safe.sourceLabel.trim(),
-    sourceUrl: TREASURY_CURVE_SOURCE_URL, retrievedAt: safe.retrievedAt, payloadHash, nodes: parsedNodes };
+  return buildCanonicalTreasuryCurve({ asOf: safe.asOf, retrievedAt: safe.retrievedAt, nodes: parsedNodes });
 };
 
 /** Validates and canonicalizes the only accepted emergency-import shape. */
