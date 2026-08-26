@@ -57,6 +57,23 @@ const pauseNextRevision = (repository: CollectorRepository, clearingDate: string
   return { reached, release };
 };
 
+const pauseCurrentBatchRead = (repository: CollectorRepository, clearingDate: string) => {
+  const original = repository.currentPublishedBatchId.bind(repository);
+  const reached = deferred();
+  const release = deferred();
+  let paused = false;
+  repository.currentPublishedBatchId = async (date) => {
+    const batchId = await original(date);
+    if (date === clearingDate && !paused) {
+      paused = true;
+      reached.resolve();
+      await release.promise;
+    }
+    return batchId;
+  };
+  return { reached, release };
+};
+
 describe('publishReadyDates', () => {
   it('keeps three ICE arrivals partial until all seven companies can publish as one batch', async () => {
     const repository = new CollectorRepository(env.DB);
@@ -142,6 +159,39 @@ describe('publishReadyDates', () => {
     expect(secondRevision.find((row) => row.company === 'Oracle')?.eod_price).toBe(95.1309);
     expect(secondRevision.filter((row) => row.company !== 'Oracle').map((row) => row.ice_revision_id))
       .toEqual(firstRevision.filter((row) => row.company !== 'Oracle').map((row) => row.ice_revision_id));
+  });
+
+  it('rejects an old publisher that resumes after a newer input has already published revision one', async () => {
+    const date = '2026-12-04';
+    const oldRepository = new CollectorRepository(env.DB);
+    const newRepository = new CollectorRepository(env.DB);
+    await oldRepository.upsertIceObservations(observations(date));
+    const oldRead = pauseCurrentBatchRead(oldRepository, date);
+
+    const oldRun = publish(oldRepository);
+    await oldRead.reached.promise;
+    await newRepository.upsertIceObservations(observations(date, '2026-08-25T13:00:00.000Z').map((row) => row.company === 'Oracle'
+      ? { ...row, eodPrice: 95.1309, payloadHash: 'cas-corrected-oracle' }
+      : row));
+    const newResult = await publish(newRepository);
+    oldRead.release.resolve();
+    const oldResult = await oldRun;
+
+    expect(newResult.published).toContainEqual(expect.objectContaining({ clearingDate: date, revision: 1 }));
+    expect(oldResult.published.some((batch) => batch.clearingDate === date)).toBe(false);
+    expect(oldResult.partial).toContainEqual({ clearingDate: date, missingCompanies: [], reason: 'publish-race-retry' });
+    const rows = await env.DB.prepare(`
+      SELECT batches.revision, rows.company, spreads.eod_price
+      FROM published_batches AS batches
+      JOIN published_batch_rows AS rows USING (batch_id)
+      JOIN cds_spread_revisions AS spreads USING (spread_revision_id)
+      WHERE batches.clearing_date = ?
+      ORDER BY batches.revision, rows.company
+    `).bind(date).all<{ revision: number; company: string; eod_price: number }>();
+    expect(rows.results).toHaveLength(7);
+    expect([...new Set(rows.results.map((row) => row.revision))]).toEqual([1]);
+    expect(rows.results.find((row) => row.company === 'Oracle')?.eod_price).toBe(95.1309);
+    expect(await newRepository.currentPublishedBatchId(date)).toBe(newResult.published.find((batch) => batch.clearingDate === date)?.batchId);
   });
 
   it.each([

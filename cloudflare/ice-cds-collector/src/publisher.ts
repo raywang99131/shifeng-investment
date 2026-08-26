@@ -43,6 +43,9 @@ export async function publishReadyDates(input: {
       partialDates.push(partial(clearingDate, missingCompanies));
       continue;
     }
+    // This is the CAS expectation for the entire calculation and publication cycle.
+    // A later source/curve calculation must not overwrite a batch that arrived after it.
+    const expectedCurrentBatchId = await input.repository.currentPublishedBatchId(clearingDate);
 
     let curve: TreasuryCurve;
     try {
@@ -107,7 +110,7 @@ export async function publishReadyDates(input: {
     if (sameInputSet(stored, current)) continue;
 
     const revision = await input.repository.nextBatchRevision(clearingDate);
-    const batch = await input.repository.publishBatch({
+    const outcome = await input.repository.compareAndPublishBatch({
       batchId: await createBatchId(clearingDate, revision, spreadRevisionIds),
       clearingDate,
       revision,
@@ -115,9 +118,10 @@ export async function publishReadyDates(input: {
       sourceKind: 'ice_eod_isda',
       qualityStatus: 'model-derived',
       rows: TRACKED_COMPANIES.map((company, index) => ({ company, spreadRevisionId: spreadRevisionIds[index] })),
+      expectedCurrentBatchId,
     });
-    if (sameInputSet(stored, await input.repository.currentPublishedSpreadRevisionIds(clearingDate))) {
-      published.push(batch);
+    if (outcome.status === 'published') {
+      published.push(outcome.batch);
     } else {
       // Do not retry with the in-memory ICE/curve snapshot: another input won this
       // revision and the next collection cycle must re-read both authoritative sources.

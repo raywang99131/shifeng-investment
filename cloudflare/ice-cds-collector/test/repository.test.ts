@@ -164,6 +164,47 @@ describe('CollectorRepository', () => {
     expect(current).toBeNull();
   });
 
+  it('uses a compare-and-swap current pointer so a stale publisher leaves no orphan batch', async () => {
+    const repository = new CollectorRepository(env.DB);
+    const winner = await repository.publishBatch({
+      batchId: 'cas-winner',
+      clearingDate: '2026-08-17',
+      revision: 1,
+      publishedAt: '2026-08-25T00:00:00.000Z',
+      sourceKind: 'ice_eod_isda',
+      qualityStatus: 'model-derived',
+      rows: [],
+    });
+    const replay = await repository.compareAndPublishBatch({
+      batchId: winner.batchId,
+      clearingDate: '2026-08-17',
+      revision: 1,
+      publishedAt: '2026-08-25T00:00:00.000Z',
+      sourceKind: 'ice_eod_isda',
+      qualityStatus: 'model-derived',
+      rows: [],
+      expectedCurrentBatchId: winner.batchId,
+    });
+    const stale = await repository.compareAndPublishBatch({
+      batchId: 'cas-stale',
+      clearingDate: '2026-08-17',
+      revision: 2,
+      publishedAt: '2026-08-25T00:01:00.000Z',
+      sourceKind: 'ice_eod_isda',
+      qualityStatus: 'model-derived',
+      rows: [],
+      expectedCurrentBatchId: null,
+    });
+
+    expect(replay).toEqual({ status: 'published', batch: winner });
+    expect(stale).toEqual({ status: 'competition' });
+    expect(await repository.currentPublishedBatchId('2026-08-17')).toBe(winner.batchId);
+    const batches = await env.DB.prepare(
+      'SELECT batch_id, revision FROM published_batches WHERE clearing_date = ? ORDER BY revision',
+    ).bind('2026-08-17').all<{ batch_id: string; revision: number }>();
+    expect(batches.results).toEqual([{ batch_id: 'cas-winner', revision: 1 }]);
+  });
+
   it('retains content-addressed same-day Treasury curve revisions for reproducible spreads', async () => {
     const repository = new CollectorRepository(env.DB);
     const fetchCurve = async (csv: string) => fetchTreasuryCurve(

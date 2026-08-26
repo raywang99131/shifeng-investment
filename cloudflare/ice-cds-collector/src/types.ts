@@ -116,6 +116,14 @@ export interface PublishBatchInput {
   rows: Array<{ company: Company; spreadRevisionId: number }>;
 }
 
+export interface CompareAndPublishBatchInput extends PublishBatchInput {
+  expectedCurrentBatchId: string | null;
+}
+
+export type CompareAndPublishBatchResult =
+  | { status: 'published'; batch: PublishedBatch }
+  | { status: 'competition' };
+
 export interface PublishedBatch {
   batchId: string;
   clearingDate: string;

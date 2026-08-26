@@ -1,6 +1,8 @@
 import type {
   CollectorHealth,
   Company,
+  CompareAndPublishBatchInput,
+  CompareAndPublishBatchResult,
   DerivedSpread,
   ExportPage,
   ExportQuery,
@@ -292,6 +294,15 @@ export class CollectorRepository {
     return new Map(current.results.map((row) => [row.company, row.spread_revision_id]));
   }
 
+  async currentPublishedBatchId(clearingDate: string): Promise<string | null> {
+    const current = await this.db.prepare(`
+      SELECT batch_id
+      FROM published_batch_current
+      WHERE clearing_date = ?
+    `).bind(clearingDate).first<{ batch_id: string }>();
+    return current?.batch_id ?? null;
+  }
+
   async nextBatchRevision(clearingDate: string): Promise<number> {
     const row = await this.db.prepare(`
       SELECT COALESCE(MAX(revision), 0) AS revision
@@ -390,6 +401,77 @@ export class CollectorRepository {
     `).bind(input.clearingDate, input.revision).first<BatchRow>();
     if (!stored) throw new Error('Published batch was not available after insertion');
     return toPublishedBatch(stored);
+  }
+
+  async compareAndPublishBatch(input: CompareAndPublishBatchInput): Promise<CompareAndPublishBatchResult> {
+    const matchesExpectedCurrent = `(
+      (? IS NULL AND NOT EXISTS (
+        SELECT 1 FROM published_batch_current WHERE clearing_date = ?
+      )) OR (? IS NOT NULL AND EXISTS (
+        SELECT 1 FROM published_batch_current WHERE clearing_date = ? AND batch_id = ?
+      ))
+    )`;
+    const expectedBindings = [
+      input.expectedCurrentBatchId,
+      input.clearingDate,
+      input.expectedCurrentBatchId,
+      input.clearingDate,
+      input.expectedCurrentBatchId,
+    ];
+    await this.db.batch([
+      this.db.prepare(`
+        INSERT INTO published_batches (
+          batch_id, clearing_date, revision, published_at, source_kind, quality_status
+        )
+        SELECT ?, ?, ?, ?, ?, ?
+        WHERE ${matchesExpectedCurrent}
+        ON CONFLICT(clearing_date, revision) DO NOTHING
+      `).bind(
+        input.batchId,
+        input.clearingDate,
+        input.revision,
+        input.publishedAt,
+        input.sourceKind,
+        input.qualityStatus,
+        ...expectedBindings,
+      ),
+      ...input.rows.map((row) => this.db.prepare(`
+        INSERT INTO published_batch_rows (batch_id, company, spread_revision_id)
+        SELECT batch_id, ?, ?
+        FROM published_batches
+        WHERE clearing_date = ? AND revision = ? AND ${matchesExpectedCurrent}
+        ON CONFLICT(batch_id, company) DO NOTHING
+      `).bind(
+        row.company,
+        row.spreadRevisionId,
+        input.clearingDate,
+        input.revision,
+        ...expectedBindings,
+      )),
+      this.db.prepare(`
+        INSERT INTO published_batch_current (clearing_date, batch_id)
+        SELECT ?, ?
+        WHERE EXISTS (SELECT 1 FROM published_batches WHERE batch_id = ?)
+          AND ${matchesExpectedCurrent}
+        ON CONFLICT(clearing_date) DO UPDATE SET batch_id = excluded.batch_id
+        WHERE published_batch_current.batch_id = ?
+      `).bind(
+        input.clearingDate,
+        input.batchId,
+        input.batchId,
+        ...expectedBindings,
+        input.expectedCurrentBatchId,
+      ),
+    ]);
+    const currentBatchId = await this.currentPublishedBatchId(input.clearingDate);
+    if (currentBatchId !== input.batchId) return { status: 'competition' };
+    const stored = await this.db.prepare(`
+      SELECT batch_id, clearing_date, revision, published_at, source_kind, quality_status
+      FROM published_batches
+      WHERE batch_id = ?
+    `).bind(input.batchId).first<BatchRow>();
+    if (!stored) return { status: 'competition' };
+    return { status: 'published', batch: toPublishedBatch(stored) };
   }
 
   async latestBatch(): Promise<PublishedBatch | null> {
