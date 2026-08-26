@@ -92,6 +92,17 @@ test('cloud Excel export takes precedence and labels a last-good fallback withou
   assert.equal(await response.text(), 'cloud-last-good');
 });
 
+test('cloud-enabled import status exposes the Excel download when no local workbook exists', async (t) => {
+  const cdsPipeline = { async preview() { return {}; }, async import() { return {}; }, async exportWorkbook() { return Buffer.from('local'); }, async status() { return { available: false, localWriteAllowed: false, workbookAvailable: false }; } };
+  const cloudExport = { async exportWorkbook() { return { buffer: Buffer.from('cloud'), dataState: 'cloud-current' }; } };
+  const { app } = testApp({ cdsPipeline, cloudExport });
+  const server = await listen(app);
+  t.after(server.close);
+  const status = await fetch(`${server.baseUrl}/api/ai-dashboard/cds/import-status`);
+  assert.equal((await status.json()).data.cloudExportAvailable, true);
+  assert.equal((await fetch(`${server.baseUrl}/api/ai-dashboard/cds/export.xlsx`)).status, 200);
+});
+
 test('ICE CDS import APIs reject remote writers while status masks write access and export remains readable', async (t) => {
   let writeCalls = 0;
   const cdsPipeline = {

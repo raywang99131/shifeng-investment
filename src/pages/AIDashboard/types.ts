@@ -494,6 +494,7 @@ export interface IceCdsImportStatus {
   asOf: string | null;
   generatedAt: string | null;
   workbookAvailable: boolean;
+  cloudExportAvailable?: boolean;
 }
 
 export interface AiDashboardSnapshot {

@@ -169,8 +169,8 @@ function writeDerivedSheet(workbook, state) {
   const sheet = addSheet(workbook, 'Derived 5Y Spreads', [
     'Batch ID', 'Clearing Date', 'Company', 'Instrument Name', 'EOD Price', 'Coupon (bp)', 'Spread (bp)',
     'Maturity Date', 'Round-trip Price', 'Price Residual', 'Hazard Rate', 'Curve ID', 'Recovery Rate',
-    'Model Version', 'Quality Status', 'Official Spread (bp)', 'Relative Error', 'Source URL',
-  ], [24, 14, 16, 42, 13, 13, 14, 14, 17, 15, 14, 30, 14, 26, 18, 20, 16, 18]);
+    'Model Version', 'Quality Status', 'Official Spread (bp)', 'Relative Error', 'Source Kind', 'Source Label', 'Source URL',
+  ], [24, 14, 16, 42, 13, 13, 14, 14, 17, 15, 14, 30, 14, 26, 18, 20, 16, 22, 34, 18]);
   const companyOrder = new Map(state.registry.map((row, index) => [row.company, index]));
   const rows = [...state.derivedRows].sort((left, right) => (
     left.clearingDate.localeCompare(right.clearingDate)
@@ -197,6 +197,8 @@ function writeDerivedSheet(workbook, state) {
       row.qualityStatus,
       row.officialSpreadBp,
       row.relativeError,
+      row.sourceKind || 'ice_eod_isda',
+      row.sourceLabel || '截图历史回填 + ICE EOD Price · 模型换算',
       sourceCell(row.sourceUrl, '5Y spread 模型换算值'),
     ]);
     sourceRows.set(`${row.company}|${row.clearingDate}`, excelRow.number);
@@ -204,7 +206,7 @@ function writeDerivedSheet(workbook, state) {
   styleBody(sheet, [2, 8], {
     5: '0.0000', 6: '0.00', 7: '0.00', 9: '0.0000', 10: '0.000000', 11: '0.000000',
     13: '0.00%', 16: '0.00', 17: '0.00%',
-  }, [18]);
+  }, [20]);
   for (let row = 2; row <= sheet.rowCount; row += 1) applyQualityFill(sheet.getCell(row, 15), sheet.getCell(row, 15).value);
   return { rows, sourceRows };
 }
@@ -212,8 +214,8 @@ function writeDerivedSheet(workbook, state) {
 function writeDashboardSheet(workbook, derived) {
   const sheet = addSheet(workbook, 'Daily Dashboard', [
     'Date', 'Company', 'Spread (bp)', '1D Δ (bp)', '7D Δ (bp)', '1M Δ (bp)', 'EOD Price',
-    'Quality Status', 'Batch ID', 'Instrument Name', 'Source URL',
-  ], [14, 16, 15, 14, 14, 14, 14, 18, 24, 42, 18]);
+    'Quality Status', 'Batch ID', 'Instrument Name', 'Source Kind', 'Source Label', 'Source URL',
+  ], [14, 16, 15, 14, 14, 14, 14, 18, 24, 42, 22, 34, 18]);
   const byCompany = new Map();
   for (const row of derived.rows) {
     if (!byCompany.has(row.company)) byCompany.set(row.company, []);
@@ -240,10 +242,12 @@ function writeDashboardSheet(workbook, derived) {
       { formula: `'Derived 5Y Spreads'!O${sourceRow}`, result: row.qualityStatus },
       { formula: `'Derived 5Y Spreads'!A${sourceRow}`, result: row.batchId },
       { formula: `'Derived 5Y Spreads'!D${sourceRow}`, result: row.instrumentName },
+      { formula: `'Derived 5Y Spreads'!R${sourceRow}`, result: row.sourceKind || 'ice_eod_isda' },
+      { formula: `'Derived 5Y Spreads'!S${sourceRow}`, result: row.sourceLabel || '截图历史回填 + ICE EOD Price · 模型换算' },
       sourceCell(row.sourceUrl),
     ]);
   }
-  styleBody(sheet, [1], { 3: '0.00', 4: '+0.00;[Red]-0.00;-', 5: '+0.00;[Red]-0.00;-', 6: '+0.00;[Red]-0.00;-', 7: '0.0000' }, [11]);
+  styleBody(sheet, [1], { 3: '0.00', 4: '+0.00;[Red]-0.00;-', 5: '+0.00;[Red]-0.00;-', 6: '+0.00;[Red]-0.00;-', 7: '0.0000' }, [13]);
   for (let row = 2; row <= sheet.rowCount; row += 1) {
     for (let column = 3; column <= 10; column += 1) {
       sheet.getCell(row, column).font = { name: 'Aptos', size: 10, color: { argb: COLORS.formulaGreen } };
@@ -326,6 +330,8 @@ function writeMethodologySheet(workbook, state) {
     ...(state.methodology?.cloudDataState ? [['cloudDataState', state.methodology.cloudDataState]] : []),
     ...(state.methodology?.cloudExportedAt ? [['cloudExportedAt', state.methodology.cloudExportedAt]] : []),
     ...(state.methodology?.cloudLatestPublishedAt ? [['cloudLatestPublishedAt', state.methodology.cloudLatestPublishedAt]] : []),
+    ...(state.methodology?.cloudLatestClearingDate ? [['cloudLatestClearingDate', state.methodology.cloudLatestClearingDate]] : []),
+    ...(state.methodology?.cloudLatestRevision ? [['cloudLatestRevision', state.methodology.cloudLatestRevision]] : []),
     ...(state.methodology?.screenshotBackfillSource ? [['screenshotBackfillSource', state.methodology.screenshotBackfillSource]] : []),
   ];
   for (const entry of entries) sheet.addRow(entry);
@@ -390,7 +396,7 @@ export async function readIceCdsWorkbook(buffer) {
     couponBp: row[5], spreadBp: row[6], maturityDate: isoDate(row[7]), roundTripPrice: row[8],
     priceResidual: row[9], hazardRate: row[10], curveId: row[11], recoveryRate: row[12],
     modelVersion: row[13], qualityStatus: row[14], officialSpreadBp: row[15], relativeError: row[16],
-    sourceUrl: sourceUrl(row[17]),
+    sourceKind: row[17], sourceLabel: row[18], sourceUrl: sourceUrl(row[19]),
   }));
   const curveRows = readRows(workbook.getWorksheet('Discount Curves'), (row) => ({
     curveId: row[0], asOf: isoDate(row[1]), currency: row[2], years: row[3], zeroRate: row[4],
@@ -420,6 +426,9 @@ export async function readIceCdsWorkbook(buffer) {
     priceTolerance: metadata.get('priceTolerance'),
     relativeBenchmarkTolerance: metadata.get('relativeBenchmarkTolerance'),
     note: metadata.get('note'),
+    ...(metadata.has('cloudLatestClearingDate') ? { cloudLatestClearingDate: metadata.get('cloudLatestClearingDate') } : {}),
+    ...(metadata.has('cloudLatestRevision') ? { cloudLatestRevision: metadata.get('cloudLatestRevision') } : {}),
+    ...(metadata.has('cloudLatestPublishedAt') ? { cloudLatestPublishedAt: metadata.get('cloudLatestPublishedAt') } : {}),
   };
   const state = {
     schemaVersion: metadata.get('schemaVersion'),

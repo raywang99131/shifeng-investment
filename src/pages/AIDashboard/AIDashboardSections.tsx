@@ -305,10 +305,10 @@ function CdsRiskSection({
           <Tag color="blue">截至 {dateLabel(cds?.asOf)}</Tag>
           {cds?.sourceUrl
             ? <Tag><Link href={cds.sourceUrl} target="_blank" rel="noreferrer">{cds.sourceLabel}</Link></Tag>
-            : <Tag>{cds?.sourceLabel || 'ICE EOD Price · ISDA 换算值'}</Tag>}
+            : <Tag>{cds?.sourceLabel || '截图历史回填 + ICE EOD Price · 模型换算'}</Tag>}
           {cds?.qualityStatus ? <CdsQualityTag status={cds.qualityStatus} /> : null}
           {data.sources.creditRisk?.stale ? <Tag color="warning">数据过期 · 使用上一版</Tag> : null}
-          {importStatus?.workbookAvailable
+          {(importStatus?.workbookAvailable || importStatus?.cloudExportAvailable)
             ? <Button size="small" icon={<DownloadOutlined />} href="/api/ai-dashboard/cds/export.xlsx">下载 Excel</Button>
             : null}
           {importStatus?.localWriteAllowed && onImport
@@ -316,13 +316,13 @@ function CdsRiskSection({
             : null}
         </Space>
       </Flex>
-      <div className="ai-cds-collection-state" role="status">
+      {collection ? <div className="ai-cds-collection-state" role="status">
         <Tag color={collection.color}>{collection.label}</Tag>
         <Text type="secondary">最后完整结算日 {dateLabel(collection.lastPublishedDate || cds?.asOf)}</Text>
         <Text type="secondary">最近采集 {collection.lastCollectedAt || '—'}</Text>
         <Text type="secondary">下次检查 {collection.nextAlarmAt || '—'}</Text>
         {collection.missingCompanies.length > 0 ? <Text type="warning">待补齐 {collection.missingCompanies.join('、')}</Text> : null}
-      </div>
+      </div> : null}
       {companies.length === 0 ? (
         <Card className="ai-cds-empty-card" variant="outlined"><NoData description="等待导入 ICE EOD Price" /></Card>
       ) : (

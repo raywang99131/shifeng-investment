@@ -5,6 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import ExcelJS from 'exceljs';
 import { createIceCdsCloudExport } from './iceCdsCloudExport.js';
+import { readIceCdsWorkbook } from './iceCdsWorkbook.js';
 
 const companies = [
   ['Oracle', 'ORACLE INC', 'ORCL.SNRFOR.USD.XR14.100.2031-06-20', 100, 95.01, 216],
@@ -56,9 +57,9 @@ test('pages one frozen cloud export into the seven-sheet workbook with current D
   const raw = workbook.getWorksheet('Raw EOD Prices');
   const derived = workbook.getWorksheet('Derived 5Y Spreads');
   assert.equal(raw.rowCount - 1, 7);
-  assert.equal(derived.rowCount - 1, 7);
+  assert.equal(derived.rowCount - 1, 8);
   assert.equal(raw.getCell('F2').value, 95.01);
-  assert.equal(derived.getCell('G2').value, 216);
+  assert.equal(Array.from({ length: derived.rowCount - 1 }, (_, index) => derived.getRow(index + 2)).find((row) => row.getCell(2).value instanceof Date && row.getCell(2).value.toISOString().slice(0, 10) === '2026-08-24')?.getCell(7).value, 216);
   const methodology = workbook.getWorksheet('Methodology');
   const metadata = new Map(Array.from({ length: methodology.rowCount - 1 }, (_, index) => {
     const row = methodology.getRow(index + 2);
@@ -81,4 +82,69 @@ test('serves the atomically retained last-good workbook when cloud export fails'
   const result = await fallback.exportWorkbook();
   assert.equal(result.dataState, 'stale-last-good');
   assert.deepEqual(result.buffer, saved.buffer);
+});
+
+test('exports the published batch when a newer raw correction has not yet been republished', async (t) => {
+  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ice-cds-cloud-export-unpublished-correction-'));
+  t.after(() => fs.rm(dataDir, { recursive: true, force: true }));
+  const [first, second] = exportPages();
+  const correction = { ...first.data[0].record, revisionId: 99, eodPrice: 94.5, payloadHash: 'ff'.repeat(32), retrievedAt: '2026-08-25T01:00:00.000Z' };
+  first.data.push({ section: 'ice_eod_revisions', record: correction }, { section: 'ice_eod_current', record: { clearingDate: '2026-08-24', company: 'Oracle', revisionId: 99 } });
+  const cloudExport = createIceCdsCloudExport({ dataDir, cloudClient: { async exportSource(query) { return query?.cursor ? second : first; } } });
+
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load((await cloudExport.exportWorkbook()).buffer);
+  assert.equal(workbook.getWorksheet('Raw EOD Prices').getCell('F2').value, 95.01);
+  const derived = workbook.getWorksheet('Derived 5Y Spreads');
+  assert.equal(Array.from({ length: derived.rowCount - 1 }, (_, index) => derived.getRow(index + 2)).find((row) => row.getCell(2).value instanceof Date && row.getCell(2).value.toISOString().slice(0, 10) === '2026-08-24')?.getCell(7).value, 216);
+});
+
+test('projects screenshot backfill into derived and daily history with its own source label', async (t) => {
+  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ice-cds-cloud-export-screenshot-'));
+  t.after(() => fs.rm(dataDir, { recursive: true, force: true }));
+  const cloudExport = createIceCdsCloudExport({ dataDir, cloudClient: { async exportSource(query) { return exportPages()[query?.cursor ? 1 : 0]; } } });
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load((await cloudExport.exportWorkbook()).buffer);
+  const derived = workbook.getWorksheet('Derived 5Y Spreads');
+  const dashboard = workbook.getWorksheet('Daily Dashboard');
+  const screenshotDerived = Array.from({ length: derived.rowCount - 1 }, (_, index) => derived.getRow(index + 2)).find((row) => row.getCell(3).value === 'Oracle' && row.getCell(2).value instanceof Date && row.getCell(2).value.toISOString().slice(0, 10) === '2026-08-21');
+  const screenshotDashboard = Array.from({ length: dashboard.rowCount - 1 }, (_, index) => dashboard.getRow(index + 2)).find((row) => row.getCell(2).value === 'Oracle' && row.getCell(1).value instanceof Date && row.getCell(1).value.toISOString().slice(0, 10) === '2026-08-21');
+  assert.equal(screenshotDerived?.getCell(7).value, 214);
+  assert.equal(screenshotDerived?.getCell(18).value, 'screenshot_backfill');
+  assert.equal(screenshotDerived?.getCell(19).value, 'User screenshot curve backfill (approximate)');
+  assert.equal(screenshotDashboard?.getCell(12).value.result, 'User screenshot curve backfill (approximate)');
+});
+
+test('keeps the newest cloud batch as last-good when concurrent exports finish out of order', async (t) => {
+  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ice-cds-cloud-export-race-'));
+  t.after(() => fs.rm(dataDir, { recursive: true, force: true }));
+  let releaseOld;
+  const oldGate = new Promise((resolve) => { releaseOld = resolve; });
+  const oldPages = exportPages();
+  const newPages = structuredClone(exportPages());
+  const newBatch = newPages[1].data.find((entry) => entry.section === 'published_batches').record;
+  newBatch.batchId = 'ice-20260825-cloud'; newBatch.clearingDate = '2026-08-25'; newBatch.revision = 2; newBatch.publishedAt = '2026-08-26T00:32:00.000Z';
+  newPages[1].data.find((entry) => entry.section === 'published_batch_current').record.clearingDate = '2026-08-25';
+  newPages[1].data.find((entry) => entry.section === 'published_batch_current').record.batchId = 'ice-20260825-cloud';
+  for (const page of newPages) for (const entry of page.data) {
+    if (entry.record.clearingDate === '2026-08-24') entry.record.clearingDate = '2026-08-25';
+    if (entry.record.asOf === '2026-08-24') entry.record.asOf = '2026-08-25';
+  }
+  const oldExport = createIceCdsCloudExport({ dataDir, cloudClient: { async exportSource(query) { if (!query?.cursor) await oldGate; return oldPages[query?.cursor ? 1 : 0]; } } });
+  const newExport = createIceCdsCloudExport({ dataDir, cloudClient: { async exportSource(query) { return newPages[query?.cursor ? 1 : 0]; } } });
+  const oldRun = oldExport.exportWorkbook();
+  await newExport.exportWorkbook();
+  releaseOld();
+  await oldRun;
+  const preserved = await readIceCdsWorkbook(await fs.readFile(path.join(dataDir, 'ice-cds-history.last-good.xlsx')));
+  assert.equal(preserved.batchId, 'ice-20260825-cloud');
+});
+
+test('uses collision-proof staging when two exports promote in the same millisecond', async (t) => {
+  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ice-cds-cloud-export-same-ms-'));
+  t.after(() => fs.rm(dataDir, { recursive: true, force: true }));
+  const options = () => ({ dataDir, now: () => new Date('2026-08-25T01:00:00.000Z'), cloudClient: { async exportSource(query) { return exportPages()[query?.cursor ? 1 : 0]; } } });
+  await Promise.all([createIceCdsCloudExport(options()).exportWorkbook(), createIceCdsCloudExport(options()).exportWorkbook()]);
+  const saved = await readIceCdsWorkbook(await fs.readFile(path.join(dataDir, 'ice-cds-history.last-good.xlsx')));
+  assert.equal(saved.batchId, 'ice-20260824-cloud');
 });

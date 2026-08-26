@@ -162,6 +162,7 @@ export function benchmarkRefreshRequest(activeTab: string): { sources: ['benchma
 }
 
 export function mapCdsCollectionState(collection: Partial<NonNullable<AiDashboardSnapshot['creditRisk']['cds5y']['collection']>> | undefined) {
+  if (!collection) return null;
   const state = collection?.state || 'source-error';
   const missingCompanies = (collection?.partialDates || []).flatMap((row) => row.missingCompanies || [])
     .filter((company, index, values) => values.indexOf(company) === index);

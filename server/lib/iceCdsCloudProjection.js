@@ -153,7 +153,7 @@ export function projectIceCdsCloud({ previous, latest, history, health, checkedA
   const normalized = normalizeCdsDataset({
     asOf: latestBatch.asOf,
     sourceKind: 'ice_eod_isda',
-    sourceLabel: 'ICE EOD Price · ISDA 换算值',
+    sourceLabel: '截图历史回填 + ICE EOD Price · 模型换算',
     sourceUrl: 'https://www.ice.com/cds-settlement-prices/icc/single-name-instruments',
     batchId: latestBatch.batchId,
     qualityStatus,

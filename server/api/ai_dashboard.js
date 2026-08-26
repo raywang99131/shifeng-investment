@@ -294,7 +294,7 @@ export function createAiDashboardRouter({
       const status = await cdsPipeline.status();
       return res.json({
         success: true,
-        data: { ...status, localWriteAllowed: Boolean(status.localWriteAllowed && isLocalWriter(req)) },
+        data: { ...status, localWriteAllowed: Boolean(status.localWriteAllowed && isLocalWriter(req)), cloudExportAvailable: Boolean(cloudExport) },
       });
     } catch (error) {
       console.error('[ai-dashboard] ICE CDS status error:', error);

@@ -133,7 +133,7 @@ export function createEmptyAiDashboardSnapshot(generatedAt = new Date().toISOStr
       cds5y: {
         asOf: null,
         sourceKind: 'ice_eod_isda',
-        sourceLabel: 'ICE EOD Price · ISDA 换算值',
+        sourceLabel: '截图历史回填 + ICE EOD Price · 模型换算',
         sourceUrl: ICE_CDS_EOD_URL,
         batchId: null,
         qualityStatus: 'unavailable',

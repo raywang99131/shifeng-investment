@@ -10,8 +10,12 @@ describe('mapCdsCollectionState', () => {
       color: 'warning', label: '部分发布', lastPublishedDate: '2026-08-24', lastCollectedAt: '2026-08-25T00:30:00.000Z', nextAlarmAt: '2026-08-25T01:00:00.000Z',
       missingCompanies: ['Meta', 'Oracle'],
     });
-    expect(mapCdsCollectionState({ state: 'healthy' }).label).toBe('云端每日记录正常');
-    expect(mapCdsCollectionState({ state: 'stale' }).color).toBe('error');
-    expect(mapCdsCollectionState({ state: 'source-error' }).color).toBe('error');
+    expect(mapCdsCollectionState({ state: 'healthy' })!.label).toBe('云端每日记录正常');
+    expect(mapCdsCollectionState({ state: 'stale' })!.color).toBe('error');
+    expect(mapCdsCollectionState({ state: 'source-error' })!.color).toBe('error');
+  });
+
+  it('hides the cloud health line for a local-only dashboard and allows clean cloud Excel exports', () => {
+    expect(mapCdsCollectionState(undefined)).toBeNull();
   });
 });
