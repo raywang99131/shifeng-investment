@@ -22,7 +22,7 @@ function mapById(entries, section, key) {
   return new Map(entries.filter((entry) => entry.section === section).map((entry) => [entry.record[key], entry.record]));
 }
 
-function archiveState(entries, generatedAt) {
+export function archiveState(entries, generatedAt) {
   const rawByRevision = mapById(entries, 'ice_eod_revisions', 'revisionId');
   const derivedByRevision = mapById(entries, 'cds_spread_revisions', 'spreadRevisionId');
   const curves = entries.filter((entry) => entry.section === 'treasury_curves').map((entry) => entry.record);
@@ -63,7 +63,7 @@ function archiveState(entries, generatedAt) {
   const screenshotBackfillSource = [...new Set(screenshotHistory.map((row) => row.sourceLabel))].join('；') || null;
   for (const row of screenshotHistory) {
     derivedRows.push({ batchId: `screenshot-backfill-${row.observationDate}`, clearingDate: row.observationDate, company: row.company,
-      instrumentName: 'Screenshot history backfill (approximate)', eodPrice: null, couponBp: null, maturityDate: row.observationDate,
+      instrumentName: 'Screenshot history backfill (approximate)', eodPrice: null, couponBp: null, maturityDate: null,
       spreadBp: row.valueBp, roundTripPrice: null, priceResidual: null, hazardRate: null, curveId: 'screenshot-backfill',
       recoveryRate: null, modelVersion: 'screenshot-backfill-v1', qualityStatus: 'stale', officialSpreadBp: null,
       relativeError: null, sourceKind: 'screenshot_backfill', sourceLabel: row.sourceLabel, sourceUrl: null });

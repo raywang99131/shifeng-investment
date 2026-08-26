@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import ExcelJS from 'exceljs';
-import { createIceCdsCloudExport } from './iceCdsCloudExport.js';
+import { archiveState, createIceCdsCloudExport } from './iceCdsCloudExport.js';
 import { readIceCdsWorkbook } from './iceCdsWorkbook.js';
 
 const companies = [
@@ -132,6 +132,12 @@ test('projects screenshot backfill into derived and daily history with its own s
   assert.equal(screenshotDerived?.getCell(18).value, 'screenshot_backfill');
   assert.equal(screenshotDerived?.getCell(19).value, 'User screenshot curve backfill (approximate)');
   assert.equal(screenshotDashboard?.getCell(12).value.result, 'User screenshot curve backfill (approximate)');
+});
+
+test('keeps screenshot-backfill maturity unknown in archive state before workbook writing', () => {
+  const state = archiveState(exportPages().flatMap((page) => page.data), '2026-08-25T01:00:00.000Z');
+  const screenshotRow = state.derivedRows.find((row) => row.sourceKind === 'screenshot_backfill');
+  assert.equal(screenshotRow?.maturityDate, null);
 });
 
 test('keeps the newest cloud batch as last-good when concurrent exports finish out of order', async (t) => {
