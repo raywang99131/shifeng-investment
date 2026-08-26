@@ -14,6 +14,8 @@
     "backfill:ice-cds-screenshot": "node server/scripts/backfill_ice_cds_screenshot.mjs",
     "init:ice-cds-workbook": "node server/scripts/init_ice_cds_workbook.mjs",
     "verify:ice-cds-workbook": "node server/scripts/verify_ice_cds_workbook.mjs",
+    "build:ice-cds-cloud-seed": "node server/scripts/build_ice_cds_cloud_seed.mjs",
+    "import:ice-cds-cloud-seed": "node server/scripts/import_ice_cds_cloud_seed.mjs",
     "test:ice-cds-worker": "vitest run --config cloudflare/ice-cds-collector/vitest.config.ts",
     "typecheck:ice-cds-worker": "tsc -p cloudflare/ice-cds-collector/tsconfig.json --noEmit",
     "cf:ice-cds:types": "wrangler types --config cloudflare/ice-cds-collector/wrangler.test.jsonc --env-interface Env cloudflare/ice-cds-collector/worker-configuration.d.ts",

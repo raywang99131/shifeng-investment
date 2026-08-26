@@ -3,6 +3,7 @@ import { readBoundedJson } from './body';
 import { COLLECTOR_OBJECT_NAME } from './collector';
 import { parseManualImport } from './manualImport';
 import { CollectorRepository, ExportSnapshotChangedError, InvalidExportCursorError } from './repository';
+import { parseSeedPackage } from './seed';
 import type { Env } from './types';
 
 const MAX_HISTORY_LIMIT = 366;
@@ -58,7 +59,7 @@ const exportQuery = (url: URL) => {
   return { cursor, limit };
 };
 
-const forwardWrite = async (env: Env, path: '/import' | '/collect-now', body?: string): Promise<Response> => {
+const forwardWrite = async (env: Env, path: '/import' | '/collect-now' | '/seed', body?: string): Promise<Response> => {
   try {
     const stub = env.CDS_COLLECTOR.get(env.CDS_COLLECTOR.idFromName(COLLECTOR_OBJECT_NAME));
     const response = await stub.fetch(`https://collector.internal${path}`, {
@@ -120,6 +121,10 @@ async function handleInternal(request: Request, env: Env, url: URL): Promise<Res
     if (url.pathname === '/internal/v1/cds/import') {
       const manual = await parseManualImport(await readBoundedJson(request), new Date());
       return forwardWrite(env, '/import', JSON.stringify(manual));
+    }
+    if (url.pathname === '/internal/v1/cds/seed') {
+      const seed = await parseSeedPackage(await readBoundedJson(request));
+      return forwardWrite(env, '/seed', JSON.stringify(seed));
     }
     return notFound();
   } catch {

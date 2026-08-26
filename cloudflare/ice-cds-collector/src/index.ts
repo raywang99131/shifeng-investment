@@ -4,6 +4,7 @@ import { parseManualImport } from './manualImport';
 import { readBoundedJson } from './body';
 import { CollectorRepository } from './repository';
 import { handleApiRequest } from './api';
+import { applySeedPackage, parseSeedPackage } from './seed';
 import type { Env } from './types';
 
 const REGULAR_INTERVAL_MS = 30 * 60 * 1000;
@@ -59,6 +60,14 @@ export class CdsCollector extends DurableObject<Env> {
         scheduleRetry: () => this.scheduleAlarm(now, FAILURE_INTERVAL_MS),
       });
       return Response.json(result);
+    }
+    if (url.pathname === '/seed') {
+      try {
+        const seed = await parseSeedPackage(await readBoundedJson(request));
+        return Response.json(await applySeedPackage(this.env.DB, seed));
+      } catch {
+        return Response.json({ error: { code: 'INVALID_REQUEST', message: 'Invalid request' } }, { status: 400 });
+      }
     }
     return Response.json({ error: { code: 'NOT_FOUND', message: 'Not found' } }, { status: 404 });
   }
