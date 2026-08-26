@@ -87,11 +87,14 @@ function pointFromCloud(batch, row) {
 }
 
 export function markIceCdsCloudSourceError(cds5y, checkedAt) {
+  // A stale published batch is an age warning and remains the dominant state
+  // when the API read that surfaced it subsequently fails.
+  const priorState = cds5y?.collection?.state;
   return {
     ...(cds5y || {}),
     collection: {
       ...(cds5y?.collection || {}),
-      state: 'source-error',
+      state: priorState === 'stale' ? 'stale' : 'source-error',
       lastCollectedAt: cds5y?.collection?.lastCollectedAt || null,
       lastPublishedDate: cds5y?.collection?.lastPublishedDate || cds5y?.asOf || null,
       nextAlarmAt: cds5y?.collection?.nextAlarmAt || null,

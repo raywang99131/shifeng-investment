@@ -310,6 +310,27 @@ test('cloud CDS collector rejects a repeated history cursor before it can loop i
   assert.equal(historyCalls, 16);
 });
 
+test('cloud CDS collector stops immediately when the Worker repeats a valid history cursor', async () => {
+  const rows = [
+    ['Oracle', 216, 95.01, 'ORCLE.SNRFOR.USD.XR14.100.2031-06-20'], ['CoreWeave', 800, 90.01, 'COREWEI.SNRFOR.USD.XR14.500.2031-06-20'],
+    ['NVIDIA', 87, 100.55, 'NVIDIA.SNRFOR.USD.XR14.100.2031-06-20'], ['Amazon', 66, 101.46, 'AMZN.SNRFOR.USD.XR14.100.2031-06-20'],
+    ['Google', 60, 101.74, 'ALPHINC.SNRFOR.USD.XR14.100.2031-06-20'], ['Microsoft', 49, 102.2, 'MSFT.SNRFOR.USD.XR14.100.2031-06-20'], ['Meta', 97, 100.12, 'METAPL.SNRFOR.USD.XR14.100.2031-06-20'],
+  ];
+  const batch = {
+    asOf: '2026-08-24', batchId: 'ice-20260824-cloud', revision: 1, sourceKind: 'ice_eod_isda', publishedAt: '2026-08-25T00:00:00.000Z',
+    companies: rows.map(([company, spreadBp, eodPrice, instrumentName]) => ({ company, spreadBp, eodPrice, instrumentName, qualityStatus: 'model-derived' })),
+  };
+  let historyCalls = 0;
+  const collector = createIceCdsCloudCollector({ cloudClient: {
+    async latest() { return { data: batch }; },
+    async health() { return { lastAlarmAt: null, lastSourceSuccessAt: null, lastPublishedDate: '2026-08-24', nextAlarmAt: null, consecutiveFailures: 0, stale: false, partialDates: [] }; },
+    async history() { historyCalls += 1; return { data: [{ ...batch, clearingDate: batch.asOf }], nextCursor: '2026-08-24|1' }; },
+  } });
+
+  await assert.rejects(() => collector({ previous: {}, now: new Date('2026-08-25T00:00:00.000Z'), generatedAt: '2026-08-25T00:00:00.000Z' }), /repeated history cursor/i);
+  assert.equal(historyCalls, 2);
+});
+
 test('shared writer queue preserves a newer cloud CDS batch and unrelated snapshot slices during a delayed local import', async (t) => {
   const { dir, dataFile } = await tempDashboard(t, 'ai-dashboard-cds-shared-writer-');
   const dataDir = path.join(dir, 'ice-cds');
@@ -317,7 +338,7 @@ test('shared writer queue preserves a newer cloud CDS batch and unrelated snapsh
     schemaVersion: 2, generatedAt: '2026-08-24T00:00:00.000Z',
     arrAndValuation: { companies: [{ company: 'Anthropic', latestActual: { value: 650 } }], valuations: [] },
   }), 'utf8');
-  const pipeline = createIceCdsPipeline({ dataDir, snapshotFile: dataFile, now: () => new Date('2026-08-25T00:00:00.000Z') });
+  const pipeline = createIceCdsPipeline({ dataDir, snapshotFile: dataFile, cloudAuthoritative: true, now: () => new Date('2026-08-25T00:00:00.000Z') });
   const localRows = [
     ['ORACLE CORP', 'ORCL', 100, 95.24], ['COREWEAVE INC', 'CRWV', 500, 88.125], ['NVIDIA CORP', 'NVDA', 100, 100.42],
     ['AMAZON.COM INC', 'AMZN', 100, 100.2], ['ALPHABET INC', 'GOOGL', 100, 100.25], ['MICROSOFT CORP', 'MSFT', 100, 100.3], ['META PLATFORMS INC', 'META', 100, 99.7],
@@ -357,6 +378,18 @@ test('shared writer queue preserves a newer cloud CDS batch and unrelated snapsh
   assert.equal(snapshot.creditRisk.cds5y.batchId, 'cloud-20260825');
   assert.equal(snapshot.creditRisk.cds5y.asOf, '2026-08-25');
   assert.equal(snapshot.arrAndValuation.companies[0].company, 'Anthropic');
+
+  await pipeline.import({ iceText, discountCurve: curve });
+  const afterOlderLocalImport = await service.getSnapshot();
+  assert.equal(afterOlderLocalImport.creditRisk.cds5y.batchId, 'cloud-20260825');
+  assert.equal(afterOlderLocalImport.creditRisk.cds5y.asOf, '2026-08-25');
+  assert.equal(afterOlderLocalImport.arrAndValuation.companies[0].company, 'Anthropic');
+
+  await pipeline.import({ iceText: iceText.replaceAll('2026-08-24', '2026-08-25'), discountCurve: curve });
+  const afterSameDateLocalImport = await service.getSnapshot();
+  assert.equal(afterSameDateLocalImport.creditRisk.cds5y.batchId, 'cloud-20260825');
+  assert.equal(afterSameDateLocalImport.creditRisk.cds5y.asOf, '2026-08-25');
+  assert.equal(afterSameDateLocalImport.arrAndValuation.companies[0].company, 'Anthropic');
 });
 
 test('environment service ignores legacy Feishu exports and accepts public collectors', async (t) => {

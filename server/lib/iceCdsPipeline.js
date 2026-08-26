@@ -391,7 +391,7 @@ async function rotateBackups(fsImpl, dataDir, workbookFile, snapshotFile, batchI
   }
 }
 
-async function commitAtomically({ fsImpl, dataDir, snapshotFile, workbookFile, state, snapshot }) {
+async function commitAtomically({ fsImpl, dataDir, snapshotFile, workbookFile, state, snapshot, snapshotBatchId = state.batchId }) {
   await fsImpl.mkdir(dataDir, { recursive: true });
   const stagedWorkbook = path.join(dataDir, `ice-cds-history.${state.batchId}.tmp.xlsx`);
   const stagedSnapshot = path.join(dataDir, `snapshot.${state.batchId}.tmp.json`);
@@ -402,7 +402,7 @@ async function commitAtomically({ fsImpl, dataDir, snapshotFile, workbookFile, s
   await fsImpl.writeFile(stagedSnapshot, `${JSON.stringify(snapshot, null, 2)}\n`, 'utf8');
   const stagedState = await readIceCdsWorkbook(await fsImpl.readFile(stagedWorkbook));
   const stagedSnapshotValue = JSON.parse(await fsImpl.readFile(stagedSnapshot, 'utf8'));
-  if (stagedState.batchId !== state.batchId || stagedSnapshotValue.creditRisk?.cds5y?.batchId !== state.batchId) {
+  if (stagedState.batchId !== state.batchId || stagedSnapshotValue.creditRisk?.cds5y?.batchId !== snapshotBatchId) {
     throw new IceCdsPipelineError('Staged Excel and JSON batch IDs do not match', 'batch-mismatch');
   }
 
@@ -446,6 +446,7 @@ export function createIceCdsPipeline({
   fsImpl = fs.promises,
   now = () => new Date(),
   localWriteAllowed = true,
+  cloudAuthoritative = false,
 } = {}) {
   const workbookFile = path.join(dataDir, WORKBOOK_NAME);
   let importQueue = Promise.resolve();
@@ -468,11 +469,22 @@ export function createIceCdsPipeline({
     const state = createArchiveState(previousState, importPreview, generatedAt);
     const previousSnapshot = await readSnapshot(fsImpl, snapshotFile, generatedAt);
     const cds5y = createCdsSnapshot(state, importPreview, generatedAt);
+    const existingCds5y = previousSnapshot.creditRisk?.cds5y;
+    // During the cloud shadow period, a complete cloud batch is authoritative
+    // for a shared date as well as for a newer as-of date. The local workbook
+    // still receives the import and remains available as the rollback archive.
+    const retainCloudSnapshot = cloudAuthoritative
+      && existingCds5y?.sourceKind === 'ice_eod_isda'
+      && Array.isArray(existingCds5y.companies)
+      && existingCds5y.companies.length === ICE_CDS_CONTRACT_REGISTRY.length
+      && existingCds5y.collection
+      && existingCds5y.asOf >= cds5y.asOf;
+    const visibleCds5y = retainCloudSnapshot ? existingCds5y : cds5y;
     const snapshot = {
       ...previousSnapshot,
       sources: {
         ...(previousSnapshot.sources || {}),
-        creditRisk: {
+        creditRisk: retainCloudSnapshot && previousSnapshot.sources?.creditRisk ? previousSnapshot.sources.creditRisk : {
           status: 'ready',
           stale: false,
           asOf: cds5y.asOf,
@@ -483,10 +495,10 @@ export function createIceCdsPipeline({
       },
       creditRisk: {
         ...(previousSnapshot.creditRisk || {}),
-        cds5y,
+        cds5y: visibleCds5y,
       },
     };
-    await commitAtomically({ fsImpl, dataDir, snapshotFile, workbookFile, state, snapshot });
+    await commitAtomically({ fsImpl, dataDir, snapshotFile, workbookFile, state, snapshot, snapshotBatchId: visibleCds5y.batchId });
     return { snapshot, batchId: state.batchId, workbookPath: workbookFile };
   };
   const performImport = (input) => enqueueIceCdsSnapshotWrite(() => performImportUnlocked(input));
@@ -540,5 +552,6 @@ export function createIceCdsPipelineFromEnv(options = {}) {
     fsImpl: options.fsImpl,
     now: options.now,
     localWriteAllowed: options.localWriteAllowed ?? process.env.ICE_CDS_LOCAL_WRITES_DISABLED !== '1',
+    cloudAuthoritative: options.cloudAuthoritative ?? process.env.ICE_CDS_COLLECTOR_ENABLED === 'true',
   });
 }

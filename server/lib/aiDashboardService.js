@@ -294,11 +294,19 @@ export function createIceCdsCloudCollector({ cloudClient } = {}) {
     const history = { data: [] };
     let cursor = null;
     let pageCount = 0;
+    const seenHistoryCursors = new Set();
     do {
       if (pageCount >= MAX_CLOUD_HISTORY_PAGES) throw new Error('Cloud history pagination exceeded its safe limit');
+      if (cursor) {
+        if (seenHistoryCursors.has(cursor)) throw new Error('Cloud history returned a repeated history cursor');
+        seenHistoryCursors.add(cursor);
+      }
       const page = await cloudClient.history({ from: from <= to ? from : to, to, limit: 366, ...(cursor ? { cursor } : {}) });
       pageCount += 1;
       history.data.push(...page.data);
+      if (page.nextCursor && seenHistoryCursors.has(page.nextCursor)) {
+        throw new Error('Cloud history returned a repeated history cursor');
+      }
       cursor = page.nextCursor;
     } while (cursor);
     const health = await cloudClient.health();

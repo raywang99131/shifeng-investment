@@ -78,3 +78,15 @@ test('treats Worker collection failures as source-error and does not increment t
   assert.equal(afterReadFailure.collection.state, 'source-error');
   assert.equal(afterReadFailure.collection.consecutiveFailures, 3);
 });
+
+test('keeps a stale Worker age warning when an Express cloud read also fails', () => {
+  const stale = projectIceCdsCloud({
+    previous: screenshotPrevious, latest: batch(), history: { data: [batch()] },
+    health: { ...health, stale: true, consecutiveFailures: 4 },
+  });
+  const afterReadFailure = markIceCdsCloudSourceError(stale, '2026-08-25T01:00:00.000Z');
+
+  assert.equal(stale.collection.state, 'stale');
+  assert.equal(afterReadFailure.collection.state, 'stale');
+  assert.equal(afterReadFailure.collection.consecutiveFailures, 4);
+});
