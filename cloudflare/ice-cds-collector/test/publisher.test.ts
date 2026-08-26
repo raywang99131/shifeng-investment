@@ -8,7 +8,7 @@ import { createBatchId, publishReadyDates } from '../src/publisher';
 import { CollectorRepository } from '../src/repository';
 import { FixedSourceError } from '../src/sources/http';
 import { fetchTreasuryCurve } from '../src/sources/treasury';
-import type { IceObservation, TreasuryCurve } from '../src/types';
+import type { IceObservation, StoredIceObservation, TreasuryCurve } from '../src/types';
 import * as spread from '../src/domain/spread';
 
 const NOW = new Date('2026-08-25T12:00:00.000Z');
@@ -57,21 +57,23 @@ const pauseNextRevision = (repository: CollectorRepository, clearingDate: string
   return { reached, release };
 };
 
-const pauseCurrentBatchRead = (repository: CollectorRepository, clearingDate: string) => {
-  const original = repository.currentPublishedBatchId.bind(repository);
+const pauseAfterCurrentObservations = (repository: CollectorRepository, clearingDate: string) => {
+  const original = repository.getCurrentObservations.bind(repository);
   const reached = deferred();
   const release = deferred();
   let paused = false;
-  repository.currentPublishedBatchId = async (date) => {
-    const batchId = await original(date);
+  let snapshot: StoredIceObservation[] | null = null;
+  repository.getCurrentObservations = async (date) => {
+    const observations = await original(date);
     if (date === clearingDate && !paused) {
       paused = true;
+      snapshot = observations;
       reached.resolve();
       await release.promise;
     }
-    return batchId;
+    return observations;
   };
-  return { reached, release };
+  return { reached, release, snapshot: () => snapshot };
 };
 
 describe('publishReadyDates', () => {
@@ -161,15 +163,16 @@ describe('publishReadyDates', () => {
       .toEqual(firstRevision.filter((row) => row.company !== 'Oracle').map((row) => row.ice_revision_id));
   });
 
-  it('rejects an old publisher that resumes after a newer input has already published revision one', async () => {
+  it('rejects old observed rows when a newer input publishes before their calculation can continue', async () => {
     const date = '2026-12-04';
     const oldRepository = new CollectorRepository(env.DB);
     const newRepository = new CollectorRepository(env.DB);
     await oldRepository.upsertIceObservations(observations(date));
-    const oldRead = pauseCurrentBatchRead(oldRepository, date);
+    const oldRead = pauseAfterCurrentObservations(oldRepository, date);
 
     const oldRun = publish(oldRepository);
     await oldRead.reached.promise;
+    expect(oldRead.snapshot()?.find((row) => row.company === 'Oracle')?.eodPrice).toBe(95.0309);
     await newRepository.upsertIceObservations(observations(date, '2026-08-25T13:00:00.000Z').map((row) => row.company === 'Oracle'
       ? { ...row, eodPrice: 95.1309, payloadHash: 'cas-corrected-oracle' }
       : row));

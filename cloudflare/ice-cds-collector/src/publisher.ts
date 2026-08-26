@@ -36,6 +36,9 @@ export async function publishReadyDates(input: {
   const partialDates: PartialDate[] = [];
 
   for (const clearingDate of await input.repository.listObservedDates()) {
+    // Capture the CAS baseline before reading any ICE/Treasury input. This makes the
+    // expected pointer cover the entire snapshot, calculation, and publication window.
+    const expectedCurrentBatchId = await input.repository.currentPublishedBatchId(clearingDate);
     const observations = await input.repository.getCurrentObservations(clearingDate);
     const byCompany = new Map(observations.map((observation) => [observation.company, observation]));
     const missingCompanies = TRACKED_COMPANIES.filter((company) => !byCompany.has(company));
@@ -43,9 +46,6 @@ export async function publishReadyDates(input: {
       partialDates.push(partial(clearingDate, missingCompanies));
       continue;
     }
-    // This is the CAS expectation for the entire calculation and publication cycle.
-    // A later source/curve calculation must not overwrite a batch that arrived after it.
-    const expectedCurrentBatchId = await input.repository.currentPublishedBatchId(clearingDate);
 
     let curve: TreasuryCurve;
     try {
