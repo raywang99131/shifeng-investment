@@ -176,6 +176,8 @@ export function mapCdsCollectionState(collection: Partial<NonNullable<AiDashboar
   };
 }
 
+export const CDS_SOURCE_COPY = '截图历史回填 + ICE EOD Price · 模型换算';
+
 export function formatBenchmarkValue(
   score: Pick<BenchmarkScore, 'value'> | null | undefined,
   metric: Pick<BenchmarkMetricDefinition, 'unit'>,

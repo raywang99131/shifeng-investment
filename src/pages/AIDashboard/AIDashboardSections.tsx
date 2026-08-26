@@ -59,6 +59,7 @@ import {
   groupOfficialBenchmarkMetrics,
   methodologyTooltip,
   mapCdsCollectionState,
+  CDS_SOURCE_COPY,
   officialWinnerRows,
 } from './viewModel';
 
@@ -304,8 +305,8 @@ function CdsRiskSection({
         <Space size={8} wrap>
           <Tag color="blue">截至 {dateLabel(cds?.asOf)}</Tag>
           {cds?.sourceUrl
-            ? <Tag><Link href={cds.sourceUrl} target="_blank" rel="noreferrer">{cds.sourceLabel}</Link></Tag>
-            : <Tag>{cds?.sourceLabel || '截图历史回填 + ICE EOD Price · 模型换算'}</Tag>}
+            ? <Tag><Link href={cds.sourceUrl} target="_blank" rel="noreferrer">{CDS_SOURCE_COPY}</Link></Tag>
+            : <Tag>{CDS_SOURCE_COPY}</Tag>}
           {cds?.qualityStatus ? <CdsQualityTag status={cds.qualityStatus} /> : null}
           {data.sources.creditRisk?.stale ? <Tag color="warning">数据过期 · 使用上一版</Tag> : null}
           {(importStatus?.workbookAvailable || importStatus?.cloudExportAvailable)

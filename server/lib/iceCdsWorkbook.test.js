@@ -136,6 +136,25 @@ test('workbook round-trip preserves raw, derived, curve, registry, and audit val
   assert.deepEqual(restored.methodology, state.methodology);
 });
 
+test('reads a legacy 18-column derived sheet and writes it back with preserved source provenance', async () => {
+  const legacy = new ExcelJS.Workbook();
+  await legacy.xlsx.load(await buildIceCdsWorkbook(sampleState()));
+  const derived = legacy.getWorksheet('Derived 5Y Spreads');
+  derived.eachRow((row, number) => {
+    if (number === 1) row.getCell(18).value = 'Source URL';
+    else row.getCell(18).value = row.getCell(20).value;
+  });
+  derived.spliceColumns(19, 2);
+  const restored = await readIceCdsWorkbook(Buffer.from(await legacy.xlsx.writeBuffer()));
+  const oracle = restored.derivedRows.find((row) => row.company === 'Oracle' && row.clearingDate === '2026-08-24');
+
+  assert.equal(oracle.sourceUrl, sampleState().rawRows[0].sourceUrl);
+  assert.equal(oracle.sourceKind, 'ice_eod_isda');
+  assert.equal(oracle.sourceLabel, '截图历史回填 + ICE EOD Price · 模型换算');
+  const reread = await readIceCdsWorkbook(await buildIceCdsWorkbook(restored));
+  assert.equal(reread.derivedRows.find((row) => row.company === 'Oracle' && row.clearingDate === '2026-08-24').sourceUrl, sampleState().rawRows[0].sourceUrl);
+});
+
 test('rejects duplicate derived unique keys before creating an audit archive', async () => {
   const state = sampleState();
   state.derivedRows.push({ ...state.derivedRows[0], spreadBp: 999 });

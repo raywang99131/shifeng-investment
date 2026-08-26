@@ -84,6 +84,24 @@ test('serves the atomically retained last-good workbook when cloud export fails'
   assert.deepEqual(result.buffer, saved.buffer);
 });
 
+test('replaces a corrupt last-good workbook after a healthy cloud export', async (t) => {
+  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ice-cds-cloud-export-corrupt-recovery-'));
+  t.after(() => fs.rm(dataDir, { recursive: true, force: true }));
+  await fs.writeFile(path.join(dataDir, 'ice-cds-history.last-good.xlsx'), 'corrupt');
+  const cloudExport = createIceCdsCloudExport({ dataDir, cloudClient: { async exportSource(query) { return exportPages()[query?.cursor ? 1 : 0]; } } });
+  const result = await cloudExport.exportWorkbook();
+  assert.equal(result.dataState, 'cloud-current');
+  assert.equal((await readIceCdsWorkbook(await fs.readFile(path.join(dataDir, 'ice-cds-history.last-good.xlsx')))).batchId, 'ice-20260824-cloud');
+});
+
+test('does not send corrupt last-good bytes when both cloud export and fallback validation fail', async (t) => {
+  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ice-cds-cloud-export-corrupt-fallback-'));
+  t.after(() => fs.rm(dataDir, { recursive: true, force: true }));
+  await fs.writeFile(path.join(dataDir, 'ice-cds-history.last-good.xlsx'), 'corrupt');
+  const cloudExport = createIceCdsCloudExport({ dataDir, cloudClient: { async exportSource() { throw new Error('collector unavailable'); } } });
+  await assert.rejects(() => cloudExport.exportWorkbook(), (error) => error?.code === 'workbook-unavailable');
+});
+
 test('exports the published batch when a newer raw correction has not yet been republished', async (t) => {
   const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ice-cds-cloud-export-unpublished-correction-'));
   t.after(() => fs.rm(dataDir, { recursive: true, force: true }));
@@ -110,6 +128,7 @@ test('projects screenshot backfill into derived and daily history with its own s
   const screenshotDerived = Array.from({ length: derived.rowCount - 1 }, (_, index) => derived.getRow(index + 2)).find((row) => row.getCell(3).value === 'Oracle' && row.getCell(2).value instanceof Date && row.getCell(2).value.toISOString().slice(0, 10) === '2026-08-21');
   const screenshotDashboard = Array.from({ length: dashboard.rowCount - 1 }, (_, index) => dashboard.getRow(index + 2)).find((row) => row.getCell(2).value === 'Oracle' && row.getCell(1).value instanceof Date && row.getCell(1).value.toISOString().slice(0, 10) === '2026-08-21');
   assert.equal(screenshotDerived?.getCell(7).value, 214);
+  assert.equal(screenshotDerived?.getCell(8).value, null);
   assert.equal(screenshotDerived?.getCell(18).value, 'screenshot_backfill');
   assert.equal(screenshotDerived?.getCell(19).value, 'User screenshot curve backfill (approximate)');
   assert.equal(screenshotDashboard?.getCell(12).value.result, 'User screenshot curve backfill (approximate)');

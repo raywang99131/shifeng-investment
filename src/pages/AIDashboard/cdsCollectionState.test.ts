@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mapCdsCollectionState } from './viewModel';
+import { CDS_SOURCE_COPY, mapCdsCollectionState } from './viewModel';
 
 describe('mapCdsCollectionState', () => {
   it('maps durable collection health to the compact state line without calling model-derived data official', () => {
@@ -17,5 +17,9 @@ describe('mapCdsCollectionState', () => {
 
   it('hides the cloud health line for a local-only dashboard and allows clean cloud Excel exports', () => {
     expect(mapCdsCollectionState(undefined)).toBeNull();
+  });
+
+  it('uses the fixed source copy instead of legacy snapshot labels', () => {
+    expect(CDS_SOURCE_COPY).toBe('截图历史回填 + ICE EOD Price · 模型换算');
   });
 });

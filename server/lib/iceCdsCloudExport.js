@@ -119,7 +119,13 @@ async function writeAtomically(fsImpl, file, buffer) {
 async function promoteLastGood({ fsImpl, file, buffer, promotion }) {
   return enqueuePromotion(file, async () => {
     try {
-      const existing = await readIceCdsWorkbook(await fsImpl.readFile(file));
+      const existingBuffer = await fsImpl.readFile(file);
+      let existing;
+      try { existing = await readIceCdsWorkbook(existingBuffer); } catch { existing = null; }
+      if (!existing) {
+        await writeAtomically(fsImpl, file, buffer);
+        return true;
+      }
       const previous = {
         clearingDate: existing.methodology?.cloudLatestClearingDate,
         revision: existing.methodology?.cloudLatestRevision,
@@ -168,10 +174,11 @@ export function createIceCdsCloudExport({
         return { buffer, dataState: 'cloud-current' };
       } catch (error) {
         try {
-          return { buffer: await fsImpl.readFile(lastGoodFile), dataState: 'stale-last-good' };
+          const buffer = await fsImpl.readFile(lastGoodFile);
+          await readIceCdsWorkbook(buffer);
+          return { buffer, dataState: 'stale-last-good' };
         } catch (fallbackError) {
-          if (fallbackError?.code === 'ENOENT') throw new IceCdsCloudExportError('Cloud export failed and no last-good workbook is available', 'workbook-unavailable');
-          throw fallbackError;
+          if (fallbackError?.code === 'ENOENT' || fallbackError) throw new IceCdsCloudExportError('Cloud export failed and no valid last-good workbook is available', 'workbook-unavailable');
         }
       }
     },

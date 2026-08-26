@@ -9,6 +9,7 @@ const SHEET_NAMES = Object.freeze([
   'Validation Log',
   'Methodology',
 ]);
+const CDS_SOURCE_COPY = '截图历史回填 + ICE EOD Price · 模型换算';
 
 const COLORS = Object.freeze({
   navy: 'FF17365D',
@@ -187,7 +188,7 @@ function writeDerivedSheet(workbook, state) {
       row.eodPrice,
       row.couponBp,
       row.spreadBp,
-      dateValue(row.maturityDate, 'Derived maturity date'),
+      row.sourceKind === 'screenshot_backfill' ? null : dateValue(row.maturityDate, 'Derived maturity date'),
       row.roundTripPrice,
       row.priceResidual,
       row.hazardRate,
@@ -198,7 +199,7 @@ function writeDerivedSheet(workbook, state) {
       row.officialSpreadBp,
       row.relativeError,
       row.sourceKind || 'ice_eod_isda',
-      row.sourceLabel || '截图历史回填 + ICE EOD Price · 模型换算',
+      row.sourceLabel || CDS_SOURCE_COPY,
       sourceCell(row.sourceUrl, '5Y spread 模型换算值'),
     ]);
     sourceRows.set(`${row.company}|${row.clearingDate}`, excelRow.number);
@@ -243,7 +244,7 @@ function writeDashboardSheet(workbook, derived) {
       { formula: `'Derived 5Y Spreads'!A${sourceRow}`, result: row.batchId },
       { formula: `'Derived 5Y Spreads'!D${sourceRow}`, result: row.instrumentName },
       { formula: `'Derived 5Y Spreads'!R${sourceRow}`, result: row.sourceKind || 'ice_eod_isda' },
-      { formula: `'Derived 5Y Spreads'!S${sourceRow}`, result: row.sourceLabel || '截图历史回填 + ICE EOD Price · 模型换算' },
+      { formula: `'Derived 5Y Spreads'!S${sourceRow}`, result: row.sourceLabel || CDS_SOURCE_COPY },
       sourceCell(row.sourceUrl),
     ]);
   }
@@ -391,13 +392,23 @@ export async function readIceCdsWorkbook(buffer) {
     batchId: row[0], clearingDate: isoDate(row[1]), company: row[2], name: row[3], instrumentName: row[4],
     eodPrice: row[5], sourceUrl: sourceUrl(row[6]), importedAt: row[7],
   }));
-  const derivedRows = readRows(workbook.getWorksheet('Derived 5Y Spreads'), (row) => ({
+  const derivedSheet = workbook.getWorksheet('Derived 5Y Spreads');
+  const derivedHeaders = new Map(rowValues(derivedSheet, 1).map((value, index) => [String(value || '').trim(), index]));
+  const derivedColumn = (label) => derivedHeaders.get(label);
+  const sourceUrlColumn = derivedColumn('Source URL');
+  if (sourceUrlColumn === undefined) throw new Error('Derived 5Y Spreads must include Source URL');
+  const sourceKindColumn = derivedColumn('Source Kind');
+  const sourceLabelColumn = derivedColumn('Source Label');
+  const derivedRows = readRows(derivedSheet, (row) => {
+    const sourceKind = sourceKindColumn === undefined ? 'ice_eod_isda' : row[sourceKindColumn] === 'screenshot_backfill' ? 'screenshot_backfill' : 'ice_eod_isda';
+    return {
     batchId: row[0], clearingDate: isoDate(row[1]), company: row[2], instrumentName: row[3], eodPrice: row[4],
     couponBp: row[5], spreadBp: row[6], maturityDate: isoDate(row[7]), roundTripPrice: row[8],
     priceResidual: row[9], hazardRate: row[10], curveId: row[11], recoveryRate: row[12],
     modelVersion: row[13], qualityStatus: row[14], officialSpreadBp: row[15], relativeError: row[16],
-    sourceKind: row[17], sourceLabel: row[18], sourceUrl: sourceUrl(row[19]),
-  }));
+    sourceKind, sourceLabel: sourceLabelColumn === undefined || typeof row[sourceLabelColumn] !== 'string' || !row[sourceLabelColumn].trim() ? CDS_SOURCE_COPY : row[sourceLabelColumn], sourceUrl: sourceUrl(row[sourceUrlColumn]),
+  };
+  });
   const curveRows = readRows(workbook.getWorksheet('Discount Curves'), (row) => ({
     curveId: row[0], asOf: isoDate(row[1]), currency: row[2], years: row[3], zeroRate: row[4],
     sourceLabel: row[5], sourceUrl: sourceUrl(row[6]),
