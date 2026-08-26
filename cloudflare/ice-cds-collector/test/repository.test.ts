@@ -138,4 +138,27 @@ describe('CollectorRepository', () => {
     expect(secondPage.data.map((batch) => batch.revision)).toEqual([3]);
     expect(secondPage.nextCursor).toBeNull();
   });
+
+  it('rolls back a new batch when a child row cannot be written', async () => {
+    const repository = new CollectorRepository(env.DB);
+
+    await expect(repository.publishBatch({
+      batchId: 'atomicity-failure',
+      clearingDate: '2026-08-18',
+      revision: 1,
+      publishedAt: '2026-08-25T00:00:00.000Z',
+      sourceKind: 'ice_eod_isda',
+      qualityStatus: 'model-derived',
+      rows: [{ company: 'NVIDIA', spreadRevisionId: 999_999 }],
+    })).rejects.toThrow();
+
+    const batchCount = await env.DB.prepare(
+      'SELECT COUNT(*) AS count FROM published_batches WHERE clearing_date = ?',
+    ).bind('2026-08-18').first<{ count: number }>();
+    const current = await env.DB.prepare(
+      'SELECT batch_id FROM published_batch_current WHERE clearing_date = ?',
+    ).bind('2026-08-18').first<{ batch_id: string }>();
+    expect(batchCount?.count).toBe(0);
+    expect(current).toBeNull();
+  });
 });

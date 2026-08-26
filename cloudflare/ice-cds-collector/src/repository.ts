@@ -319,41 +319,49 @@ export class CollectorRepository {
   }
 
   async publishBatch(input: PublishBatchInput): Promise<PublishedBatch> {
-    await this.db.prepare(`
-      INSERT INTO published_batches (
-        batch_id, clearing_date, revision, published_at, source_kind, quality_status
-      ) VALUES (?, ?, ?, ?, ?, ?)
-      ON CONFLICT(clearing_date, revision) DO NOTHING
-    `).bind(
-      input.batchId,
-      input.clearingDate,
-      input.revision,
-      input.publishedAt,
-      input.sourceKind,
-      input.qualityStatus,
-    ).run();
+    await this.db.batch([
+      this.db.prepare(`
+        INSERT INTO published_batches (
+          batch_id, clearing_date, revision, published_at, source_kind, quality_status
+        ) VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(clearing_date, revision) DO NOTHING
+      `).bind(
+        input.batchId,
+        input.clearingDate,
+        input.revision,
+        input.publishedAt,
+        input.sourceKind,
+        input.qualityStatus,
+      ),
+      ...input.rows.map((row) => this.db.prepare(`
+        INSERT INTO published_batch_rows (batch_id, company, spread_revision_id)
+        SELECT batch_id, ?, ?
+        FROM published_batches
+        WHERE clearing_date = ? AND revision = ?
+        ON CONFLICT(batch_id, company) DO NOTHING
+      `).bind(
+        row.company,
+        row.spreadRevisionId,
+        input.clearingDate,
+        input.revision,
+      )),
+      this.db.prepare(`
+        INSERT INTO published_batch_current (clearing_date, batch_id)
+        SELECT ?, batch_id
+        FROM published_batches
+        WHERE clearing_date = ? AND revision = ?
+        ON CONFLICT(clearing_date) DO UPDATE SET batch_id = excluded.batch_id
+        WHERE
+          (SELECT revision FROM published_batches WHERE batch_id = excluded.batch_id)
+            >= (SELECT revision FROM published_batches WHERE batch_id = published_batch_current.batch_id)
+      `).bind(input.clearingDate, input.clearingDate, input.revision),
+    ]);
     const stored = await this.db.prepare(`
       SELECT batch_id, clearing_date, revision, published_at, source_kind, quality_status
       FROM published_batches
       WHERE clearing_date = ? AND revision = ?
     `).bind(input.clearingDate, input.revision).first<BatchRow>();
     if (!stored) throw new Error('Published batch was not available after insertion');
-
-    await this.db.batch([
-      ...input.rows.map((row) => this.db.prepare(`
-        INSERT INTO published_batch_rows (batch_id, company, spread_revision_id)
-        VALUES (?, ?, ?)
-        ON CONFLICT(batch_id, company) DO NOTHING
-      `).bind(stored.batch_id, row.company, row.spreadRevisionId)),
-      this.db.prepare(`
-        INSERT INTO published_batch_current (clearing_date, batch_id)
-        VALUES (?, ?)
-        ON CONFLICT(clearing_date) DO UPDATE SET batch_id = excluded.batch_id
-        WHERE
-          (SELECT revision FROM published_batches WHERE batch_id = excluded.batch_id)
-            >= (SELECT revision FROM published_batches WHERE batch_id = published_batch_current.batch_id)
-      `).bind(input.clearingDate, stored.batch_id),
-    ]);
     return toPublishedBatch(stored);
   }
 
