@@ -12,6 +12,8 @@ import { normalizeOfficialBenchmarks } from './officialBenchmarkData.js';
 import { createOfficialDocumentClient } from './officialDocumentClient.js';
 import { createOfficialModelCardRegistry } from './officialModelCardRegistry.js';
 import { DASHBOARD_SOURCE_KEYS, PUBLIC_SOURCE_REGISTRY } from './publicSourceRegistry.js';
+import { createIceCdsCloudClient } from './iceCdsCloudClient.js';
+import { markIceCdsCloudSourceError, projectIceCdsCloud } from './iceCdsCloudProjection.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,6 +22,7 @@ const OPENROUTER_DATA_API_URL = 'https://openrouter.ai/api/v1/datasets/rankings-
 const ICE_CDS_EOD_URL = 'https://www.ice.com/cds-settlement-prices/icc/single-name-instruments';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const BENCHMARK_FRESH_MS = 15 * 60 * 1000;
+const MAX_CLOUD_HISTORY_PAGES = 16;
 const SOURCE_KEY_SET = new Set(DASHBOARD_SOURCE_KEYS);
 
 const SLICE_PAYLOAD_FIELDS = Object.freeze({
@@ -278,6 +281,46 @@ export function createDtccCreditRiskCollector({ cdsPublicClient } = {}) {
   };
 }
 
+export function createIceCdsCloudCollector({ cloudClient } = {}) {
+  if (!cloudClient || typeof cloudClient.latest !== 'function' || typeof cloudClient.history !== 'function' || typeof cloudClient.health !== 'function') {
+    throw new Error('cloudClient must implement latest, history, and health');
+  }
+  return async ({ previous, now, generatedAt }) => {
+    const latest = await cloudClient.latest();
+    const from = utcDateOffset(now, -365);
+    const to = latest?.data?.asOf;
+    if (typeof to !== 'string') throw new Error('Cloud collector returned no complete batch');
+    const history = { data: [] };
+    let cursor = null;
+    let pageCount = 0;
+    do {
+      if (pageCount >= MAX_CLOUD_HISTORY_PAGES) throw new Error('Cloud history pagination exceeded its safe limit');
+      const page = await cloudClient.history({ from: from <= to ? from : to, to, limit: 366, ...(cursor ? { cursor } : {}) });
+      pageCount += 1;
+      history.data.push(...page.data);
+      cursor = page.nextCursor;
+    } while (cursor);
+    const health = await cloudClient.health();
+    const cds5y = projectIceCdsCloud({
+      previous: previous.creditRisk?.cds5y,
+      latest,
+      history,
+      health,
+      checkedAt: generatedAt,
+    });
+    return {
+      payload: { creditRisk: { ...(previous.creditRisk || {}), cds5y } },
+      source: {
+        status: 'ready',
+        stale: cds5y.collection?.state === 'stale',
+        asOf: cds5y.asOf,
+        url: process.env.ICE_CDS_COLLECTOR_BASE_URL || null,
+        message: `云端 ICE EOD Price 完整批次同步成功；${cds5y.batchId}`,
+      },
+    };
+  };
+}
+
 async function readSnapshotFile(dataFile, now) {
   try {
     const parsed = JSON.parse(await fs.promises.readFile(dataFile, 'utf8'));
@@ -407,6 +450,7 @@ export function createAiDashboardService({
   openRouterClient,
   openRouterPublicClient,
   officialBenchmarkClient,
+  cloudCreditRiskEnabled = false,
   now = () => new Date(),
 } = {}) {
   const activeCollectors = { ...collectors };
@@ -445,6 +489,12 @@ export function createAiDashboardService({
       if (result.skipped) continue;
       if (result.error) {
         next.sources[result.sourceKey] = failedSource(previous.sources[result.sourceKey], result.error, generatedAt);
+        if (result.sourceKey === 'creditRisk' && cloudCreditRiskEnabled) {
+          next.creditRisk = {
+            ...(previous.creditRisk || {}),
+            cds5y: markIceCdsCloudSourceError(previous.creditRisk?.cds5y, generatedAt),
+          };
+        }
         continue;
       }
       Object.assign(next, result.value.payload);
@@ -506,6 +556,7 @@ export function createAiDashboardService({
   };
 
   return {
+    cloudCreditRiskEnabled,
     getSnapshot,
     refresh(options = {}) {
       const sources = validateRefreshSources(options.sources || DASHBOARD_SOURCE_KEYS);
@@ -545,6 +596,8 @@ export function createAiDashboardServiceFromEnv({
   capitalSourceIds,
   computeSourceIds,
   officialBenchmarkClient,
+  iceCdsCloudClient,
+  cloudCreditRiskEnabled = process.env.ICE_CDS_COLLECTOR_ENABLED === 'true',
   now = () => new Date(),
 } = {}) {
   const openRouterClient = process.env.OPENROUTER_API_KEY
@@ -617,12 +670,22 @@ export function createAiDashboardServiceFromEnv({
     });
     mergedCollectors.benchmarks = createOfficialBenchmarkCollector({ officialBenchmarkClient: benchmarkClient });
   }
+  if (cloudCreditRiskEnabled && typeof mergedCollectors.creditRisk !== 'function') {
+    try {
+      mergedCollectors.creditRisk = createIceCdsCloudCollector({
+        cloudClient: iceCdsCloudClient || createIceCdsCloudClient({ fetchImpl }),
+      });
+    } catch (error) {
+      mergedCollectors.creditRisk = async () => { throw error; };
+    }
+  }
   return createAiDashboardService({
     dataFile,
     collectors: mergedCollectors,
     openRouterClient,
     openRouterPublicClient,
     officialBenchmarkClient,
+    cloudCreditRiskEnabled,
     now,
   });
 }
@@ -636,7 +699,7 @@ export function startAiDashboardAutoRefresh(service, {
   const run = (sources) => service.refresh({ sources }).catch((error) => {
     console.error(`[ai-dashboard] automatic refresh failed: ${error.message}`);
   });
-  const automaticSources = DASHBOARD_SOURCE_KEYS.filter((source) => source !== 'creditRisk');
+  const automaticSources = DASHBOARD_SOURCE_KEYS.filter((source) => source !== 'creditRisk' || service.cloudCreditRiskEnabled === true);
   const researchSources = ['growth', 'pricing', 'capital', 'artificialAnalysis', 'compute'];
   const initial = setTimeoutImpl(() => run(automaticSources), 5_000);
   const researchInterval = setIntervalImpl(() => run(researchSources), DAY_MS);

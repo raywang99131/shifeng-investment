@@ -119,3 +119,15 @@ test('daily scheduler runs once after startup, repeats daily, and can be stopped
   assert.deepEqual(clearedTimeouts, ['initial']);
   assert.deepEqual(clearedIntervals, ['daily']);
 });
+
+test('local ICE scheduler stays enabled by default but can be explicitly disabled for cloud cutover', () => {
+  let scheduled = 0;
+  const stop = startIceCdsAutoRefresh(async () => {}, {
+    enabled: false,
+    setTimeoutImpl() { scheduled += 1; },
+    setIntervalImpl() { scheduled += 1; },
+  });
+
+  stop();
+  assert.equal(scheduled, 0);
+});

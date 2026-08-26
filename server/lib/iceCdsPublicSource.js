@@ -189,8 +189,13 @@ export function startIceCdsAutoRefresh(refresh, {
   setIntervalImpl = setInterval,
   clearTimeoutImpl = clearTimeout,
   clearIntervalImpl = clearInterval,
+  enabled = process.env.ICE_CDS_LOCAL_REFRESH_ENABLED !== 'false',
 } = {}) {
   if (typeof refresh !== 'function') throw new IceCdsPublicSourceError('ICE CDS refresh function is required', 'invalid-refresh');
+  if (!enabled) {
+    console.log('[ai-dashboard] local ICE 5Y CDS refresh is disabled');
+    return () => {};
+  }
   const run = () => Promise.resolve().then(refresh).catch((error) => {
     console.error(`[ai-dashboard] ICE CDS automatic refresh failed: ${error.message}`);
   });

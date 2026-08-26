@@ -3323,6 +3323,8 @@ app.listen(PORT, HOST, () => {
     startNewsAutoRefresh();
     priceTracking.startAutoRefresh();
     startAiDashboardAutoRefresh(aiDashboardService);
-    startIceCdsAutoRefresh(refreshPublicIceCds);
+    startIceCdsAutoRefresh(refreshPublicIceCds, {
+      enabled: process.env.ICE_CDS_LOCAL_REFRESH_ENABLED !== 'false',
+    });
   }
 });

@@ -38,6 +38,25 @@ function optionalFiniteNumber(value) {
   return finiteNumber(value);
 }
 
+function normalizeCollection(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const allowedStates = new Set(['healthy', 'partial', 'stale', 'source-error']);
+  if (!allowedStates.has(value.state) || !Number.isSafeInteger(value.consecutiveFailures) || value.consecutiveFailures < 0
+    || !Array.isArray(value.partialDates)) return undefined;
+  return {
+    lastCollectedAt: typeof value.lastCollectedAt === 'string' ? value.lastCollectedAt : null,
+    lastPublishedDate: validDate(value.lastPublishedDate) ? value.lastPublishedDate : null,
+    nextAlarmAt: typeof value.nextAlarmAt === 'string' ? value.nextAlarmAt : null,
+    partialDates: value.partialDates.filter((row) => row && validDate(row.clearingDate) && Array.isArray(row.missingCompanies)).map((row) => ({
+      clearingDate: row.clearingDate,
+      missingCompanies: row.missingCompanies.map((company) => String(company)),
+      ...(typeof row.reason === 'string' ? { reason: row.reason } : {}),
+    })),
+    consecutiveFailures: value.consecutiveFailures,
+    state: value.state,
+  };
+}
+
 export function normalizeCdsDataset(dataset) {
   if (!dataset || typeof dataset !== 'object' || Array.isArray(dataset)) {
     throw new Error('CDS dataset must be an object');
@@ -73,13 +92,13 @@ export function normalizeCdsDataset(dataset) {
       if (point?.eodPrice !== undefined && eodPrice === null) continue;
       if (pointQualityStatus === undefined) continue;
       if (isIceDerived && !isScreenshotBackfill && (eodPrice === null || !instrumentName || !pointQualityStatus)) continue;
-      historyByDate.set(point.date, {
+      historyByDate.set(`${point.date}|${pointSourceKind}`, {
         date: point.date,
         valueBp,
         ...(eodPrice === null ? {} : { eodPrice }),
         ...(instrumentName ? { instrumentName } : {}),
         ...(pointQualityStatus ? { qualityStatus: pointQualityStatus } : {}),
-        ...(isScreenshotBackfill ? { sourceKind: pointSourceKind } : {}),
+        ...(pointSourceKind ? { sourceKind: pointSourceKind } : {}),
       });
     }
 
@@ -98,6 +117,7 @@ export function normalizeCdsDataset(dataset) {
     }];
   });
 
+  const collection = normalizeCollection(dataset.collection);
   return {
     asOf: dataset.asOf,
     ...(sourceKind ? { sourceKind } : {}),
@@ -108,6 +128,7 @@ export function normalizeCdsDataset(dataset) {
     workbookAvailable: dataset.workbookAvailable === true,
     historyEstimated: dataset.historyEstimated === true,
     note: typeof dataset.note === 'string' ? dataset.note.trim() : '',
+    ...(collection ? { collection } : {}),
     companies,
   };
 }

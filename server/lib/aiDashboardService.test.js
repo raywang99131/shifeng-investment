@@ -6,6 +6,7 @@ import test from 'node:test';
 import {
   createAiDashboardService,
   createAiDashboardServiceFromEnv,
+  createIceCdsCloudCollector,
   createEmptyAiDashboardSnapshot,
   createOpenRouterClient,
   startAiDashboardAutoRefresh,
@@ -222,6 +223,89 @@ test('explicit ICE collector failure preserves the last-good ICE batch and marks
   assert.equal(snapshot.sources.creditRisk.stale, true);
   assert.match(snapshot.sources.creditRisk.message, /ICE batch unavailable/);
   assert.equal(snapshot.creditRisk.cds5y.companies[0].latestBp, 221);
+});
+
+test('cloud CDS collector projects a complete durable batch and retains the preceding last-good history', async (t) => {
+  const { dataFile } = await tempDashboard(t, 'ai-dashboard-cds-cloud-success-');
+  const names = [
+    ['Oracle', 216, 95.01, 'ORCLE.SNRFOR.USD.XR14.100.2031-06-20'], ['CoreWeave', 800, 90.01, 'COREWEI.SNRFOR.USD.XR14.500.2031-06-20'],
+    ['NVIDIA', 87, 100.55, 'NVIDIA.SNRFOR.USD.XR14.100.2031-06-20'], ['Amazon', 66, 101.46, 'AMZN.SNRFOR.USD.XR14.100.2031-06-20'],
+    ['Google', 60, 101.74, 'ALPHINC.SNRFOR.USD.XR14.100.2031-06-20'], ['Microsoft', 49, 102.2, 'MSFT.SNRFOR.USD.XR14.100.2031-06-20'],
+    ['Meta', 97, 100.12, 'METAPL.SNRFOR.USD.XR14.100.2031-06-20'],
+  ];
+  const batch = {
+    asOf: '2026-08-24', batchId: 'ice-20260824-cloud', revision: 1, sourceKind: 'ice_eod_isda', publishedAt: '2026-08-25T00:00:00.000Z',
+    companies: names.map(([company, spreadBp, eodPrice, instrumentName]) => ({ company, spreadBp, eodPrice, instrumentName, qualityStatus: 'model-derived' })),
+  };
+  await fs.promises.writeFile(dataFile, JSON.stringify({
+    schemaVersion: 2, generatedAt: '2026-08-24T00:00:00.000Z',
+    creditRisk: { cds5y: { sourceKind: 'ice_eod_isda', asOf: '2026-08-21', companies: [{
+      company: 'Oracle', latestBp: 214, latestEodPrice: 95, latestInstrumentName: 'ORCLE.SNRFOR.USD.XR14.100.2031-06-20', qualityStatus: 'model-derived', changes: {},
+      history: [{ date: '2026-08-21', valueBp: 214, sourceKind: 'screenshot_backfill', qualityStatus: 'stale' }],
+    }] } },
+  }), 'utf8');
+  const collector = createIceCdsCloudCollector({ cloudClient: {
+    async latest() { return { data: batch }; },
+    async history() { return { data: [{ ...batch, clearingDate: batch.asOf }], nextCursor: null }; },
+    async health() { return { lastAlarmAt: null, lastSourceSuccessAt: '2026-08-25T00:30:00.000Z', lastPublishedDate: '2026-08-24', nextAlarmAt: '2026-08-25T01:00:00.000Z', consecutiveFailures: 0, stale: false, partialDates: [] }; },
+  } });
+  const service = createAiDashboardService({
+    dataFile, collectors: { creditRisk: collector }, cloudCreditRiskEnabled: true,
+    now: () => new Date('2026-08-25T00:35:00.000Z'),
+  });
+
+  const snapshot = await service.refresh({ sources: ['creditRisk'], force: true });
+
+  assert.equal(snapshot.sources.creditRisk.status, 'ready');
+  assert.equal(snapshot.creditRisk.cds5y.companies.length, 7);
+  assert.equal(snapshot.creditRisk.cds5y.companies.find((row) => row.company === 'Oracle').changes.oneDayBp, 2);
+  assert.equal(snapshot.creditRisk.cds5y.collection.state, 'healthy');
+});
+
+test('cloud CDS source failure leaves the last-good batch intact and marks collection source-error', async (t) => {
+  const { dataFile } = await tempDashboard(t, 'ai-dashboard-cds-cloud-failure-');
+  await fs.promises.writeFile(dataFile, JSON.stringify({
+    schemaVersion: 2, generatedAt: '2026-08-24T00:00:00.000Z',
+    creditRisk: { cds5y: { sourceKind: 'ice_eod_isda', asOf: '2026-08-24', companies: [{
+      company: 'Oracle', latestBp: 216, latestEodPrice: 95.01, latestInstrumentName: 'ORCLE.SNRFOR.USD.XR14.100.2031-06-20', qualityStatus: 'model-derived', changes: {}, history: [],
+    }] } },
+  }), 'utf8');
+  const service = createAiDashboardService({
+    dataFile, collectors: { async creditRisk() { throw new Error('Cloud collector returned HTTP 503'); } }, cloudCreditRiskEnabled: true,
+    now: () => new Date('2026-08-25T00:35:00.000Z'),
+  });
+
+  const snapshot = await service.refresh({ sources: ['creditRisk'], force: true });
+
+  assert.equal(snapshot.creditRisk.cds5y.companies[0].latestBp, 216);
+  assert.equal(snapshot.sources.creditRisk.stale, true);
+  assert.equal(snapshot.creditRisk.cds5y.collection.state, 'source-error');
+});
+
+test('cloud CDS collector rejects a repeated history cursor before it can loop indefinitely', async () => {
+  const names = [
+    ['Oracle', 216, 95.01, 'ORCLE.SNRFOR.USD.XR14.100.2031-06-20'], ['CoreWeave', 800, 90.01, 'COREWEI.SNRFOR.USD.XR14.500.2031-06-20'],
+    ['NVIDIA', 87, 100.55, 'NVIDIA.SNRFOR.USD.XR14.100.2031-06-20'], ['Amazon', 66, 101.46, 'AMZN.SNRFOR.USD.XR14.100.2031-06-20'],
+    ['Google', 60, 101.74, 'ALPHINC.SNRFOR.USD.XR14.100.2031-06-20'], ['Microsoft', 49, 102.2, 'MSFT.SNRFOR.USD.XR14.100.2031-06-20'],
+    ['Meta', 97, 100.12, 'METAPL.SNRFOR.USD.XR14.100.2031-06-20'],
+  ];
+  const batch = {
+    asOf: '2026-08-24', batchId: 'ice-20260824-cloud', revision: 1, sourceKind: 'ice_eod_isda', publishedAt: '2026-08-25T00:00:00.000Z',
+    companies: names.map(([company, spreadBp, eodPrice, instrumentName]) => ({ company, spreadBp, eodPrice, instrumentName, qualityStatus: 'model-derived' })),
+  };
+  let historyCalls = 0;
+  const collector = createIceCdsCloudCollector({ cloudClient: {
+    async latest() { return { data: batch }; },
+    async health() { return { lastAlarmAt: null, lastSourceSuccessAt: null, lastPublishedDate: '2026-08-24', nextAlarmAt: null, consecutiveFailures: 0, stale: false, partialDates: [] }; },
+    async history() {
+      historyCalls += 1;
+      if (historyCalls > 16) throw new Error('unbounded history pagination');
+      return { data: [{ ...batch, clearingDate: batch.asOf }], nextCursor: `cursor-${historyCalls}` };
+    },
+  } });
+
+  await assert.rejects(() => collector({ previous: {}, now: new Date('2026-08-25T00:00:00.000Z'), generatedAt: '2026-08-25T00:00:00.000Z' }), /history pagination/i);
+  assert.equal(historyCalls, 16);
 });
 
 test('environment service ignores legacy Feishu exports and accepts public collectors', async (t) => {
@@ -621,4 +705,23 @@ test('auto refresh excludes import-driven ICE CDS and clears every timer', async
   stop();
   assert.deepEqual(clearedTimeouts, [timeouts[0].id]);
   assert.deepEqual(clearedIntervals, intervals.map((timer) => timer.id));
+});
+
+test('auto refresh includes durable cloud CDS only when the opt-in feature flag is enabled', async () => {
+  const timeouts = [];
+  const calls = [];
+  const service = {
+    cloudCreditRiskEnabled: true,
+    async refresh(options) { calls.push(options); return {}; },
+  };
+  const stop = startAiDashboardAutoRefresh(service, {
+    setTimeoutImpl(callback) { timeouts.push(callback); return 'initial'; },
+    setIntervalImpl() { return 'interval'; },
+    clearTimeoutImpl() {},
+    clearIntervalImpl() {},
+  });
+
+  await timeouts[0]();
+  assert.equal(calls[0].sources.includes('creditRisk'), true);
+  stop();
 });
