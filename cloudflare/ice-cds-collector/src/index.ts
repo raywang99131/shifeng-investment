@@ -1,15 +1,66 @@
 import { DurableObject } from 'cloudflare:workers';
+import { COLLECTOR_OBJECT_NAME, collectOnce } from './collector';
+import { CollectorRepository } from './repository';
 import type { Env } from './types';
 
+const REGULAR_INTERVAL_MS = 30 * 60 * 1000;
+const FAILURE_INTERVAL_MS = 5 * 60 * 1000;
+
 export class CdsCollector extends DurableObject<Env> {
-  async fetch(): Promise<Response> {
-    return Response.json(
-      { error: { code: 'NOT_IMPLEMENTED', message: 'Collector is not implemented' } },
-      { status: 501 },
-    );
+  private fetchImpl: typeof fetch = fetch;
+
+  async fetch(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+    if (request.method !== 'POST' || url.origin !== 'https://collector.internal') {
+      return Response.json({ error: { code: 'NOT_FOUND', message: 'Not found' } }, { status: 404 });
+    }
+    const now = new Date();
+    if (url.pathname === '/ensure-alarm') {
+      const nextAlarmAt = await this.ensureAlarm(now);
+      await new CollectorRepository(this.env.DB).setNextAlarm(nextAlarmAt, now.toISOString());
+      return Response.json({ ok: true, nextAlarmAt });
+    }
+    if (url.pathname === '/collect-now') {
+      const nextAlarmAt = await this.ensureAlarm(now);
+      try {
+        const result = await collectOnce({
+          env: this.env, triggerKind: 'manual', now, fetchImpl: this.fetchImpl, nextAlarmAt,
+        });
+        return Response.json(result);
+      } catch (error) {
+        const retryAlarmAt = await this.scheduleAlarm(now, FAILURE_INTERVAL_MS);
+        await new CollectorRepository(this.env.DB).setNextAlarm(retryAlarmAt, now.toISOString());
+        throw error;
+      }
+    }
+    return Response.json({ error: { code: 'NOT_FOUND', message: 'Not found' } }, { status: 404 });
   }
 
-  async alarm(): Promise<void> {}
+  async alarm(): Promise<void> {
+    const now = new Date();
+    const nextAlarmAt = await this.scheduleAlarm(now, REGULAR_INTERVAL_MS);
+    try {
+      await collectOnce({
+        env: this.env, triggerKind: 'alarm', now, fetchImpl: this.fetchImpl, nextAlarmAt,
+      });
+    } catch (error) {
+      const retryAlarmAt = await this.scheduleAlarm(now, FAILURE_INTERVAL_MS);
+      await new CollectorRepository(this.env.DB).setNextAlarm(retryAlarmAt, now.toISOString());
+      throw error;
+    }
+  }
+
+  private async ensureAlarm(now: Date, delayMs = REGULAR_INTERVAL_MS): Promise<string> {
+    const existing = await this.ctx.storage.getAlarm();
+    if (existing !== null && existing > now.getTime()) return new Date(existing).toISOString();
+    return this.scheduleAlarm(now, delayMs);
+  }
+
+  private async scheduleAlarm(now: Date, delayMs: number): Promise<string> {
+    const next = new Date(now.getTime() + delayMs);
+    await this.ctx.storage.setAlarm(next.getTime());
+    return next.toISOString();
+  }
 }
 
 const worker: ExportedHandler<Env> = {
@@ -19,6 +70,11 @@ const worker: ExportedHandler<Env> = {
       return Response.json({ ok: true, service: 'ice-cds-collector' });
     }
     return Response.json({ error: { code: 'NOT_FOUND', message: 'Not found' } }, { status: 404 });
+  },
+  async scheduled(_controller, env, ctx) {
+    const id = env.CDS_COLLECTOR.idFromName(COLLECTOR_OBJECT_NAME);
+    const stub = env.CDS_COLLECTOR.get(id);
+    ctx.waitUntil(stub.fetch('https://collector.internal/ensure-alarm', { method: 'POST' }));
   },
 };
 

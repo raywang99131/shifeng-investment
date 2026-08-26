@@ -169,3 +169,10 @@ export interface CollectorHealth {
   nextAlarmAt: string | null;
   stale: boolean;
 }
+
+export interface CollectorRunResult {
+  runId: string;
+  rawWriteCount: number;
+  publishedDates: string[];
+  partialDates: PartialDate[];
+}

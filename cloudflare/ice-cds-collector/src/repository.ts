@@ -18,6 +18,7 @@ import type {
   TreasuryCurve,
 } from './types';
 import { TRACKED_COMPANIES } from './domain/registry';
+import { isCollectorStale } from './usBusinessDays';
 
 type IceRevisionRow = {
   revision_id: number;
@@ -155,6 +156,51 @@ export class CollectorRepository {
       input.nextAlarmAt ?? null,
       input.runId,
     ).run();
+  }
+
+  async recordCollectionSuccess(input: {
+    at: string;
+    lastPublishedDate: string | null;
+    nextAlarmAt?: string | null;
+  }): Promise<void> {
+    await this.db.prepare(`
+      UPDATE collector_state
+      SET last_alarm_at = ?, last_source_success_at = ?,
+          last_published_date = CASE
+            WHEN ? IS NULL THEN last_published_date
+            WHEN last_published_date IS NULL OR ? > last_published_date THEN ?
+            ELSE last_published_date
+          END,
+          consecutive_failures = 0,
+          next_alarm_at = COALESCE(?, next_alarm_at),
+          updated_at = ?
+      WHERE state_key = 'singleton'
+    `).bind(
+      input.at,
+      input.at,
+      input.lastPublishedDate,
+      input.lastPublishedDate,
+      input.lastPublishedDate,
+      input.nextAlarmAt ?? null,
+      input.at,
+    ).run();
+  }
+
+  async recordCollectionFailure(input: { at: string; nextAlarmAt?: string | null }): Promise<void> {
+    await this.db.prepare(`
+      UPDATE collector_state
+      SET last_alarm_at = ?, consecutive_failures = consecutive_failures + 1,
+          next_alarm_at = COALESCE(?, next_alarm_at), updated_at = ?
+      WHERE state_key = 'singleton'
+    `).bind(input.at, input.nextAlarmAt ?? null, input.at).run();
+  }
+
+  async setNextAlarm(nextAlarmAt: string, updatedAt: string): Promise<void> {
+    await this.db.prepare(`
+      UPDATE collector_state
+      SET next_alarm_at = ?, updated_at = ?
+      WHERE state_key = 'singleton'
+    `).bind(nextAlarmAt, updatedAt).run();
   }
 
   async upsertIceObservations(rows: IceObservation[]): Promise<{ inserted: number; current: number }> {
@@ -549,16 +595,13 @@ export class CollectorRepository {
       next_alarm_at: string | null;
     }>();
     if (!state) throw new Error('Collector state is missing');
-    const lastPublishedAt = state.last_published_date === null
-      ? null
-      : Date.parse(`${state.last_published_date}T00:00:00.000Z`);
     return {
       lastAlarmAt: state.last_alarm_at,
       lastSourceSuccessAt: state.last_source_success_at,
       lastPublishedDate: state.last_published_date,
       consecutiveFailures: state.consecutive_failures,
       nextAlarmAt: state.next_alarm_at,
-      stale: lastPublishedAt === null || now.getTime() - lastPublishedAt > 2 * 24 * 60 * 60 * 1000,
+      stale: isCollectorStale(state.last_published_date, now),
     };
   }
 
