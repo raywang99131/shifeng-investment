@@ -1,5 +1,6 @@
 import { normalizeCdsDataset } from './aiCdsData.js';
 import { ICE_CDS_CONTRACT_REGISTRY } from './iceCdsRegistry.js';
+import { IceCdsCloudClientError } from './iceCdsCloudClient.js';
 
 const COMPANY_ORDER = ICE_CDS_CONTRACT_REGISTRY.map((row) => row.company);
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -14,11 +15,12 @@ function validDate(value) {
 function completeBatch(value) {
   const asOf = value?.asOf || value?.clearingDate;
   const expected = new Set(COMPANY_ORDER);
-  if (!value || !validDate(asOf) || value.sourceKind !== 'ice_eod_isda' || !Array.isArray(value.companies)
+  if (!value || !validDate(asOf) || typeof value.batchId !== 'string' || !value.batchId || !Number.isSafeInteger(value.revision) || value.revision < 1
+    || value.sourceKind !== 'ice_eod_isda' || typeof value.publishedAt !== 'string' || !Number.isFinite(Date.parse(value.publishedAt)) || !Array.isArray(value.companies)
     || value.companies.length !== COMPANY_ORDER.length || new Set(value.companies.map((row) => row?.company)).size !== COMPANY_ORDER.length
-    || !value.companies.every((row) => expected.has(row?.company) && Number.isFinite(row.spreadBp)
-      && Number.isFinite(row.eodPrice) && typeof row.instrumentName === 'string' && row.instrumentName && typeof row.qualityStatus === 'string' && row.qualityStatus)) {
-    throw new Error('Cloud collector did not return a complete seven-company batch');
+    || !value.companies.every((row) => expected.has(row?.company) && Number.isFinite(row.spreadBp) && row.spreadBp >= 0
+      && Number.isFinite(row.eodPrice) && row.eodPrice >= 0 && typeof row.instrumentName === 'string' && row.instrumentName && row.qualityStatus === 'model-derived')) {
+    throw new IceCdsCloudClientError('INVALID_RESPONSE', 'Cloud collector returned an invalid response');
   }
   return { ...value, asOf };
 }
@@ -67,7 +69,8 @@ function collectionFromHealth(health = {}) {
     nextAlarmAt: health.nextAlarmAt || null,
     partialDates,
     consecutiveFailures: Number.isSafeInteger(health.consecutiveFailures) ? health.consecutiveFailures : 0,
-    state: health.stale ? 'stale' : partialDates.length > 0 ? 'partial' : 'healthy',
+    // A stale published batch is the dominant data-age warning; otherwise a Worker failure is source-error.
+    state: health.stale ? 'stale' : Number(health.consecutiveFailures) > 0 ? 'source-error' : partialDates.length > 0 ? 'partial' : 'healthy',
   };
 }
 
@@ -93,7 +96,7 @@ export function markIceCdsCloudSourceError(cds5y, checkedAt) {
       lastPublishedDate: cds5y?.collection?.lastPublishedDate || cds5y?.asOf || null,
       nextAlarmAt: cds5y?.collection?.nextAlarmAt || null,
       partialDates: Array.isArray(cds5y?.collection?.partialDates) ? cds5y.collection.partialDates : [],
-      consecutiveFailures: Math.max(1, Number(cds5y?.collection?.consecutiveFailures || 0) + 1),
+      consecutiveFailures: Number.isSafeInteger(cds5y?.collection?.consecutiveFailures) ? cds5y.collection.consecutiveFailures : 0,
     },
     ...(checkedAt ? { lastCheckedAt: checkedAt } : {}),
   };
@@ -131,7 +134,7 @@ export function projectIceCdsCloud({ previous, latest, history, health, checkedA
     const historyPoints = [...companyHistory.get(company).values()]
       .sort((left, right) => left.date.localeCompare(right.date) || left.sourceKind.localeCompare(right.sourceKind));
     const latestPoint = historyPoints.filter((point) => point.sourceKind === 'ice_eod_isda').at(-1);
-    if (!latestPoint) throw new Error('Cloud collector did not return a complete seven-company batch');
+    if (!latestPoint) throw new IceCdsCloudClientError('INVALID_RESPONSE', 'Cloud collector returned an invalid response');
     const historyForSnapshot = historyPoints.map(({ revision, ...point }) => point);
     return {
       company,
@@ -144,7 +147,7 @@ export function projectIceCdsCloud({ previous, latest, history, health, checkedA
     };
   });
   const qualityStatus = companies.every((company) => company.qualityStatus === 'validated') ? 'validated' : 'model-derived';
-  return normalizeCdsDataset({
+  const normalized = normalizeCdsDataset({
     asOf: latestBatch.asOf,
     sourceKind: 'ice_eod_isda',
     sourceLabel: 'ICE EOD Price · ISDA 换算值',
@@ -158,4 +161,8 @@ export function projectIceCdsCloud({ previous, latest, history, health, checkedA
     collection: collectionFromHealth(health),
     companies,
   });
+  if (normalized.companies.length !== COMPANY_ORDER.length || !COMPANY_ORDER.every((company, index) => normalized.companies[index]?.company === company)) {
+    throw new IceCdsCloudClientError('INVALID_RESPONSE', 'Cloud collector returned an invalid response');
+  }
+  return normalized;
 }

@@ -63,6 +63,41 @@ test('returns stable safe errors for collector HTTP failures and malformed data'
     && error.code === 'INVALID_RESPONSE');
 });
 
+test('rejects a non-model-derived or incomplete Worker batch before it can reach the dashboard', async () => {
+  const badQuality = structuredClone(latestPayload);
+  badQuality.data.companies[0].qualityStatus = 'validated';
+  const badPrice = structuredClone(latestPayload);
+  badPrice.data.companies[1].eodPrice = -1;
+  for (const payload of [badQuality, badPrice]) {
+    const client = createIceCdsCloudClient({
+      baseUrl: 'https://collector.example', readToken: 'read-only-token', fetchImpl: async () => Response.json(payload),
+    });
+    await assert.rejects(() => client.latest(), (error) => error instanceof IceCdsCloudClientError && error.code === 'INVALID_RESPONSE');
+  }
+});
+
+test('rejects malformed history and audit cursors plus malformed section records as stable invalid responses', async () => {
+  const historyClient = createIceCdsCloudClient({
+    baseUrl: 'https://collector.example', readToken: 'read-only-token',
+    fetchImpl: async () => Response.json({ data: [{ ...latestPayload.data, clearingDate: latestPayload.data.asOf }], nextCursor: 'not-a-history-cursor' }),
+  });
+  await assert.rejects(() => historyClient.history({ from: '2026-08-01', to: '2026-08-24' }), (error) => error instanceof IceCdsCloudClientError && error.code === 'INVALID_RESPONSE');
+
+  const exportClient = createIceCdsCloudClient({
+    baseUrl: 'https://collector.example', readToken: 'read-only-token',
+    fetchImpl: async () => Response.json({ data: [{ section: 'published_batches', record: { batchId: 'missing-required-fields' } }], nextCursor: 'v1.bad' }),
+  });
+  await assert.rejects(() => exportClient.exportSource(), (error) => error instanceof IceCdsCloudClientError && error.code === 'INVALID_RESPONSE');
+  await assert.rejects(() => exportClient.exportSource({ cursor: 'invalid' }), (error) => error instanceof IceCdsCloudClientError && error.code === 'INVALID_REQUEST');
+  await assert.rejects(() => exportClient.exportSource({ cursor: 'v1.bad' }), (error) => error instanceof IceCdsCloudClientError && error.code === 'INVALID_REQUEST');
+
+  const validHistoryClient = createIceCdsCloudClient({
+    baseUrl: 'https://collector.example', readToken: 'read-only-token',
+    fetchImpl: async () => Response.json({ data: [{ ...latestPayload.data, clearingDate: latestPayload.data.asOf }], nextCursor: null }),
+  });
+  await assert.rejects(() => validHistoryClient.history('from=2026-08-01&to=2026-08-24&cursor=2026-08-24%7C1&cursor=2026-08-24%7C2'), (error) => error instanceof IceCdsCloudClientError && error.code === 'INVALID_REQUEST');
+});
+
 test('aborts a collector read at the configured timeout without leaking credentials', async () => {
   const client = createIceCdsCloudClient({
     baseUrl: 'https://collector.example', readToken: 'read-only-token', timeoutMs: 1,

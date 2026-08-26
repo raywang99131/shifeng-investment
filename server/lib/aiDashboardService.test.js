@@ -11,6 +11,8 @@ import {
   createOpenRouterClient,
   startAiDashboardAutoRefresh,
 } from './aiDashboardService.js';
+import { createIceCdsPipeline } from './iceCdsPipeline.js';
+import { enqueueIceCdsSnapshotWrite } from './iceCdsSnapshotWriteQueue.js';
 
 const ALL_PUBLIC_SLICES = [
   'growth',
@@ -306,6 +308,55 @@ test('cloud CDS collector rejects a repeated history cursor before it can loop i
 
   await assert.rejects(() => collector({ previous: {}, now: new Date('2026-08-25T00:00:00.000Z'), generatedAt: '2026-08-25T00:00:00.000Z' }), /history pagination/i);
   assert.equal(historyCalls, 16);
+});
+
+test('shared writer queue preserves a newer cloud CDS batch and unrelated snapshot slices during a delayed local import', async (t) => {
+  const { dir, dataFile } = await tempDashboard(t, 'ai-dashboard-cds-shared-writer-');
+  const dataDir = path.join(dir, 'ice-cds');
+  await fs.promises.writeFile(dataFile, JSON.stringify({
+    schemaVersion: 2, generatedAt: '2026-08-24T00:00:00.000Z',
+    arrAndValuation: { companies: [{ company: 'Anthropic', latestActual: { value: 650 } }], valuations: [] },
+  }), 'utf8');
+  const pipeline = createIceCdsPipeline({ dataDir, snapshotFile: dataFile, now: () => new Date('2026-08-25T00:00:00.000Z') });
+  const localRows = [
+    ['ORACLE CORP', 'ORCL', 100, 95.24], ['COREWEAVE INC', 'CRWV', 500, 88.125], ['NVIDIA CORP', 'NVDA', 100, 100.42],
+    ['AMAZON.COM INC', 'AMZN', 100, 100.2], ['ALPHABET INC', 'GOOGL', 100, 100.25], ['MICROSOFT CORP', 'MSFT', 100, 100.3], ['META PLATFORMS INC', 'META', 100, 99.7],
+  ];
+  const iceText = ['Clearing Date\tName\tInstrument Name\tEOD Price', ...localRows.map(([name, symbol, couponBp, price]) => `2026-08-24\t${name}\t${symbol}.SNRFOR.USD.XR14.${couponBp}.2031-06-20\t${price}`)].join('\n');
+  const curve = {
+    curveId: 'usd-sofr-2026-08-24-test', asOf: '2026-08-24', currency: 'USD', sourceLabel: 'USD SOFR zero curve', sourceUrl: 'https://example.test/curve',
+    nodes: [{ years: 0.25, zeroRate: 0.041 }, { years: 1, zeroRate: 0.039 }, { years: 3, zeroRate: 0.037 }, { years: 5, zeroRate: 0.036 }, { years: 10, zeroRate: 0.038 }],
+  };
+  const cloudRows = [
+    ['Oracle', 216, 95.01, 'ORCLE.SNRFOR.USD.XR14.100.2031-06-20'], ['CoreWeave', 800, 90.01, 'COREWEI.SNRFOR.USD.XR14.500.2031-06-20'],
+    ['NVIDIA', 87, 100.55, 'NVIDIA.SNRFOR.USD.XR14.100.2031-06-20'], ['Amazon', 66, 101.46, 'AMZN.SNRFOR.USD.XR14.100.2031-06-20'],
+    ['Google', 60, 101.74, 'ALPHINC.SNRFOR.USD.XR14.100.2031-06-20'], ['Microsoft', 49, 102.2, 'MSFT.SNRFOR.USD.XR14.100.2031-06-20'], ['Meta', 97, 100.12, 'METAPL.SNRFOR.USD.XR14.100.2031-06-20'],
+  ];
+  const cloudBatch = {
+    asOf: '2026-08-25', batchId: 'cloud-20260825', revision: 1, sourceKind: 'ice_eod_isda', publishedAt: '2026-08-25T00:00:00.000Z',
+    companies: cloudRows.map(([company, spreadBp, eodPrice, instrumentName]) => ({ company, spreadBp, eodPrice, instrumentName, qualityStatus: 'model-derived' })),
+  };
+  const service = createAiDashboardService({
+    dataFile, cloudCreditRiskEnabled: true,
+    collectors: { creditRisk: createIceCdsCloudCollector({ cloudClient: {
+      async latest() { return { data: cloudBatch }; },
+      async history() { return { data: [{ ...cloudBatch, clearingDate: cloudBatch.asOf }], nextCursor: null }; },
+      async health() { return { lastAlarmAt: null, lastSourceSuccessAt: null, lastPublishedDate: '2026-08-25', nextAlarmAt: null, consecutiveFailures: 0, stale: false, partialDates: [] }; },
+    } }) },
+    now: () => new Date('2026-08-25T00:00:00.000Z'),
+  });
+  let release;
+  const hold = enqueueIceCdsSnapshotWrite(() => new Promise((resolve) => { release = resolve; }));
+  const localImport = pipeline.import({ iceText, discountCurve: curve });
+  await new Promise((resolve) => setImmediate(resolve));
+  const cloudRefresh = service.refresh({ sources: ['creditRisk'], force: true });
+  release();
+  await Promise.all([hold, localImport, cloudRefresh]);
+
+  const snapshot = await service.getSnapshot();
+  assert.equal(snapshot.creditRisk.cds5y.batchId, 'cloud-20260825');
+  assert.equal(snapshot.creditRisk.cds5y.asOf, '2026-08-25');
+  assert.equal(snapshot.arrAndValuation.companies[0].company, 'Anthropic');
 });
 
 test('environment service ignores legacy Feishu exports and accepts public collectors', async (t) => {
@@ -709,6 +760,8 @@ test('auto refresh excludes import-driven ICE CDS and clears every timer', async
 
 test('auto refresh includes durable cloud CDS only when the opt-in feature flag is enabled', async () => {
   const timeouts = [];
+  const intervals = [];
+  const cleared = [];
   const calls = [];
   const service = {
     cloudCreditRiskEnabled: true,
@@ -716,12 +769,16 @@ test('auto refresh includes durable cloud CDS only when the opt-in feature flag 
   };
   const stop = startAiDashboardAutoRefresh(service, {
     setTimeoutImpl(callback) { timeouts.push(callback); return 'initial'; },
-    setIntervalImpl() { return 'interval'; },
+    setIntervalImpl(callback, ms) { const id = { callback, ms }; intervals.push(id); return id; },
     clearTimeoutImpl() {},
-    clearIntervalImpl() {},
+    clearIntervalImpl(id) { cleared.push(id); },
   });
 
   await timeouts[0]();
   assert.equal(calls[0].sources.includes('creditRisk'), true);
+  assert.equal(intervals.length, 4);
+  await intervals.at(-1).callback();
+  assert.deepEqual(calls.at(-1), { sources: ['creditRisk'] });
   stop();
+  assert.equal(cleared.includes(intervals.at(-1)), true);
 });

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { projectIceCdsCloud } from './iceCdsCloudProjection.js';
+import { markIceCdsCloudSourceError, projectIceCdsCloud } from './iceCdsCloudProjection.js';
+import { IceCdsCloudClientError } from './iceCdsCloudClient.js';
 
 const COMPANY_ROWS = [
   ['Oracle', 216, 95.01, 'ORCLE.SNRFOR.USD.XR14.100.2031-06-20'],
@@ -62,5 +63,18 @@ test('deduplicates a cloud point by date company and source kind without inventi
   assert.equal(oracle.history.filter((point) => point.date === '2026-08-24' && point.sourceKind === 'ice_eod_isda').length, 1);
   assert.equal(oracle.latestBp, 218);
   assert.equal(cds5y.collection.state, 'partial');
-  assert.throws(() => projectIceCdsCloud({ previous: screenshotPrevious, latest: { ...batch(), companies: batch().companies.slice(0, 6) }, history: { data: [] }, health }), /complete seven-company batch/);
+  assert.throws(() => projectIceCdsCloud({ previous: screenshotPrevious, latest: { ...batch(), companies: batch().companies.slice(0, 6) }, history: { data: [] }, health }), (error) => error instanceof IceCdsCloudClientError && error.code === 'INVALID_RESPONSE');
+});
+
+test('treats Worker collection failures as source-error and does not increment them for an Express read failure', () => {
+  const cds5y = projectIceCdsCloud({
+    previous: screenshotPrevious, latest: batch(), history: { data: [batch()] },
+    health: { ...health, consecutiveFailures: 3 },
+  });
+  const afterReadFailure = markIceCdsCloudSourceError(cds5y, '2026-08-25T01:00:00.000Z');
+
+  assert.equal(cds5y.collection.state, 'source-error');
+  assert.equal(cds5y.collection.consecutiveFailures, 3);
+  assert.equal(afterReadFailure.collection.state, 'source-error');
+  assert.equal(afterReadFailure.collection.consecutiveFailures, 3);
 });

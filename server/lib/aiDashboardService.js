@@ -14,6 +14,7 @@ import { createOfficialModelCardRegistry } from './officialModelCardRegistry.js'
 import { DASHBOARD_SOURCE_KEYS, PUBLIC_SOURCE_REGISTRY } from './publicSourceRegistry.js';
 import { createIceCdsCloudClient } from './iceCdsCloudClient.js';
 import { markIceCdsCloudSourceError, projectIceCdsCloud } from './iceCdsCloudProjection.js';
+import { enqueueIceCdsSnapshotWrite } from './iceCdsSnapshotWriteQueue.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -462,7 +463,7 @@ export function createAiDashboardService({
 
   const getSnapshot = async () => readSnapshotFile(dataFile, now);
 
-  const performRefresh = async ({ sources, force = false }) => {
+  const performRefreshUnlocked = async ({ sources, force = false }) => {
     const previous = await getSnapshot();
     const generatedAt = isoNow(now);
     const nowDate = now();
@@ -554,6 +555,7 @@ export function createAiDashboardService({
     await writeSnapshotFile(dataFile, next);
     return next;
   };
+  const performRefresh = (options) => enqueueIceCdsSnapshotWrite(() => performRefreshUnlocked(options));
 
   return {
     cloudCreditRiskEnabled,
@@ -705,11 +707,15 @@ export function startAiDashboardAutoRefresh(service, {
   const researchInterval = setIntervalImpl(() => run(researchSources), DAY_MS);
   const openRouterInterval = setIntervalImpl(() => run(['openRouter']), DAY_MS);
   const benchmarkInterval = setIntervalImpl(() => run(['benchmarks']), DAY_MS);
+  const cloudCreditRiskInterval = service.cloudCreditRiskEnabled === true
+    ? setIntervalImpl(() => run(['creditRisk']), DAY_MS)
+    : null;
   console.log('[ai-dashboard] scheduled public-source slices for daily refresh; ICE CDS is import-driven');
   return () => {
     clearTimeoutImpl(initial);
     clearIntervalImpl(researchInterval);
     clearIntervalImpl(openRouterInterval);
     clearIntervalImpl(benchmarkInterval);
+    if (cloudCreditRiskInterval !== null) clearIntervalImpl(cloudCreditRiskInterval);
   };
 }
