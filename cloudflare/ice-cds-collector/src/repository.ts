@@ -15,10 +15,7 @@ import type {
   StoredIceObservation,
   TreasuryCurve,
 } from './types';
-
-const TRACKED_COMPANIES: readonly Company[] = [
-  'Oracle', 'CoreWeave', 'NVIDIA', 'Amazon', 'Google', 'Microsoft', 'Meta',
-];
+import { TRACKED_COMPANIES } from './domain/registry';
 
 type IceRevisionRow = {
   revision_id: number;
@@ -65,7 +62,7 @@ type BatchRow = {
 const toStoredIceObservation = (row: IceRevisionRow): StoredIceObservation => ({
   revisionId: row.revision_id,
   clearingDate: row.clearing_date,
-  company: row.company,
+  company: row.company as Company,
   iceName: row.ice_name,
   instrumentName: row.instrument_name,
   eodPrice: row.eod_price,
@@ -78,7 +75,7 @@ const toStoredIceObservation = (row: IceRevisionRow): StoredIceObservation => ({
 const toStoredDerivedSpread = (row: SpreadRevisionRow): StoredDerivedSpread => ({
   spreadRevisionId: row.spread_revision_id,
   clearingDate: row.clearing_date,
-  company: row.company,
+  company: row.company as Company,
   iceRevisionId: row.ice_revision_id,
   curveId: row.curve_id,
   instrumentName: row.instrument_name,

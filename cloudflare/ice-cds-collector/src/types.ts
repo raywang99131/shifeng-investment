@@ -6,7 +6,7 @@ export interface Env {
   ENVIRONMENT: 'test' | 'staging' | 'production';
 }
 
-export type Company = string;
+export type Company = 'Oracle' | 'CoreWeave' | 'NVIDIA' | 'Amazon' | 'Google' | 'Microsoft' | 'Meta';
 export type TriggerKind = 'alarm' | 'cron' | 'manual' | 'seed';
 export type RunStatus = 'running' | 'success' | 'partial' | 'failed';
 
@@ -60,6 +60,27 @@ export interface TreasuryCurve {
   retrievedAt: string;
   payloadHash: string;
   nodes: TreasuryCurveNode[];
+}
+
+export interface SpreadInput {
+  couponBp: number;
+  cleanPrice: number;
+  clearingDate: string;
+  maturityDate: string;
+  recoveryRate: number;
+  discountCurve: TreasuryCurve;
+}
+
+export interface SpreadResult {
+  spreadBp: number;
+  roundTripPrice: number;
+  priceResidual: number;
+  hazardRate: number;
+  curveId: string;
+  recoveryRate: number;
+  stepInDate: string;
+  cashSettlementDate: string;
+  modelVersion: string;
 }
 
 export interface DerivedSpread {
