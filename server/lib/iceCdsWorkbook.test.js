@@ -155,6 +155,79 @@ test('reads a legacy 18-column derived sheet and writes it back with preserved s
   assert.equal(reread.derivedRows.find((row) => row.company === 'Oracle' && row.clearingDate === '2026-08-24').sourceUrl, sampleState().rawRows[0].sourceUrl);
 });
 
+test('round-trips a realistic legacy workbook without reclassifying screenshot history as ICE', async () => {
+  const state = sampleState();
+  state.derivedRows.push({
+    batchId: 'screenshot-reference-20260824-v1',
+    clearingDate: '2026-08-20',
+    company: 'Oracle',
+    instrumentName: 'SCREENSHOT.ORCL.5Y',
+    eodPrice: null,
+    couponBp: 100,
+    spreadBp: 211,
+    maturityDate: '2031-06-20',
+    roundTripPrice: null,
+    priceResidual: null,
+    hazardRate: null,
+    curveId: 'screenshot-reference-not-applicable',
+    recoveryRate: 0.4,
+    modelVersion: 'screenshot-backfill-v1',
+    qualityStatus: 'stale',
+    officialSpreadBp: null,
+    relativeError: null,
+    sourceUrl: null,
+  });
+  const legacy = new ExcelJS.Workbook();
+  await legacy.xlsx.load(await buildIceCdsWorkbook(state));
+  const derived = legacy.getWorksheet('Derived 5Y Spreads');
+  derived.eachRow((row, number) => {
+    if (number === 1) row.getCell(18).value = 'Source URL';
+    else row.getCell(18).value = row.getCell(20).value;
+  });
+  derived.spliceColumns(19, 2);
+
+  const restored = await readIceCdsWorkbook(Buffer.from(await legacy.xlsx.writeBuffer()));
+  const screenshot = restored.derivedRows.find((row) => row.instrumentName === 'SCREENSHOT.ORCL.5Y');
+  const ice = restored.derivedRows.find((row) => row.company === 'Oracle' && row.clearingDate === '2026-08-24');
+  assert.deepEqual({ sourceKind: screenshot?.sourceKind, maturityDate: screenshot?.maturityDate, eodPrice: screenshot?.eodPrice }, {
+    sourceKind: 'screenshot_backfill', maturityDate: null, eodPrice: null,
+  });
+  assert.equal(screenshot?.sourceLabel, 'User screenshot curve backfill (approximate)');
+  assert.deepEqual({ sourceKind: ice?.sourceKind, sourceUrl: ice?.sourceUrl }, {
+    sourceKind: 'ice_eod_isda', sourceUrl: sampleState().rawRows[0].sourceUrl,
+  });
+
+  const roundTrippedBuffer = await buildIceCdsWorkbook(restored);
+  const roundTripped = await readIceCdsWorkbook(roundTrippedBuffer);
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(roundTrippedBuffer);
+  const outputScreenshot = roundTripped.derivedRows.find((row) => row.instrumentName === 'SCREENSHOT.ORCL.5Y');
+  assert.deepEqual(workbook.worksheets.map((sheet) => sheet.name), SHEET_NAMES);
+  assert.equal(outputScreenshot?.sourceKind, 'screenshot_backfill');
+  assert.equal(outputScreenshot?.maturityDate, null);
+  assert.equal(outputScreenshot?.eodPrice, null);
+  assert.equal(roundTripped.derivedRows.find((row) => row.company === 'Oracle' && row.clearingDate === '2026-08-24')?.sourceUrl, sampleState().rawRows[0].sourceUrl);
+  assert.equal(workbook.getWorksheet('Derived 5Y Spreads').getCell('T5').value.hyperlink, sampleState().rawRows[0].sourceUrl);
+});
+
+test('rejects an explicit ICE source kind that conflicts with screenshot-backfill evidence', async () => {
+  const state = sampleState();
+  state.derivedRows.push({
+    ...state.derivedRows[0],
+    batchId: 'screenshot-reference-20260824-v1',
+    clearingDate: '2026-08-20',
+    instrumentName: 'SCREENSHOT.ORCL.5Y',
+    eodPrice: null,
+    maturityDate: null,
+    curveId: 'screenshot-reference-not-applicable',
+    modelVersion: 'screenshot-backfill-v1',
+    qualityStatus: 'stale',
+    sourceKind: 'ice_eod_isda',
+    sourceUrl: null,
+  });
+  await assert.rejects(() => buildIceCdsWorkbook(state), /source kind conflicts/i);
+});
+
 test('rejects duplicate derived unique keys before creating an audit archive', async () => {
   const state = sampleState();
   state.derivedRows.push({ ...state.derivedRows[0], spreadBp: 999 });

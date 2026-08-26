@@ -10,6 +10,7 @@ const SHEET_NAMES = Object.freeze([
   'Methodology',
 ]);
 const CDS_SOURCE_COPY = '截图历史回填 + ICE EOD Price · 模型换算';
+const SCREENSHOT_BACKFILL_LABEL = 'User screenshot curve backfill (approximate)';
 
 const COLORS = Object.freeze({
   navy: 'FF17365D',
@@ -48,6 +49,30 @@ function sourceCell(url, label = 'Open source') {
 function sourceUrl(value) {
   if (value && typeof value === 'object' && typeof value.hyperlink === 'string') return value.hyperlink;
   return typeof value === 'string' && /^https?:\/\//.test(value) ? value : null;
+}
+
+function isScreenshotBackfillEvidence({ batchId, instrumentName, curveId, modelVersion }) {
+  return modelVersion === 'screenshot-backfill-v1'
+    || /^screenshot-(?:reference|backfill)-/i.test(String(batchId || ''))
+    || /^SCREENSHOT\./i.test(String(instrumentName || ''))
+    || /^screenshot-(?:reference|backfill)/i.test(String(curveId || ''));
+}
+
+function sourceMetadataForArchiveRow(row) {
+  const screenshotBackfill = isScreenshotBackfillEvidence(row);
+  if (row.sourceKind && !['ice_eod_isda', 'screenshot_backfill'].includes(row.sourceKind)) {
+    throw new Error(`Derived Source Kind is invalid: ${row.sourceKind}`);
+  }
+  if (screenshotBackfill && row.sourceKind === 'ice_eod_isda') {
+    throw new Error('Derived Source Kind conflicts with screenshot-backfill evidence');
+  }
+  if (row.sourceKind === 'screenshot_backfill' && row.eodPrice !== null && row.eodPrice !== undefined && row.eodPrice !== '') {
+    throw new Error('Screenshot-backfill Derived row must not include an ICE EOD Price');
+  }
+  return {
+    sourceKind: row.sourceKind || (screenshotBackfill ? 'screenshot_backfill' : 'ice_eod_isda'),
+    sourceLabel: row.sourceLabel || (screenshotBackfill ? SCREENSHOT_BACKFILL_LABEL : CDS_SOURCE_COPY),
+  };
 }
 
 function addSheet(workbook, name, headers, widths) {
@@ -180,6 +205,7 @@ function writeDerivedSheet(workbook, state) {
   ));
   const sourceRows = new Map();
   for (const row of rows) {
+    const source = sourceMetadataForArchiveRow(row);
     const excelRow = sheet.addRow([
       row.batchId,
       dateValue(row.clearingDate, 'Derived clearing date'),
@@ -188,7 +214,7 @@ function writeDerivedSheet(workbook, state) {
       row.eodPrice,
       row.couponBp,
       row.spreadBp,
-      row.sourceKind === 'screenshot_backfill' ? null : dateValue(row.maturityDate, 'Derived maturity date'),
+      source.sourceKind === 'screenshot_backfill' ? null : dateValue(row.maturityDate, 'Derived maturity date'),
       row.roundTripPrice,
       row.priceResidual,
       row.hazardRate,
@@ -198,8 +224,8 @@ function writeDerivedSheet(workbook, state) {
       row.qualityStatus,
       row.officialSpreadBp,
       row.relativeError,
-      row.sourceKind || 'ice_eod_isda',
-      row.sourceLabel || CDS_SOURCE_COPY,
+      source.sourceKind,
+      source.sourceLabel,
       sourceCell(row.sourceUrl, '5Y spread 模型换算值'),
     ]);
     sourceRows.set(`${row.company}|${row.clearingDate}`, excelRow.number);
@@ -383,6 +409,32 @@ function assertWorkbookShape(workbook) {
   }
 }
 
+function sourceMetadataForDerivedRow(row, { sourceKindColumn, sourceLabelColumn }) {
+  const screenshotEvidence = isScreenshotBackfillEvidence({
+    batchId: row[0], instrumentName: row[3], curveId: row[11], modelVersion: row[13],
+  });
+  const explicitSourceKind = sourceKindColumn === undefined ? null : String(row[sourceKindColumn] || '').trim();
+  let sourceKind;
+  if (explicitSourceKind) {
+    if (!['ice_eod_isda', 'screenshot_backfill'].includes(explicitSourceKind)) {
+      throw new Error(`Derived Source Kind is invalid: ${explicitSourceKind}`);
+    }
+    if (screenshotEvidence && explicitSourceKind !== 'screenshot_backfill') {
+      throw new Error('Derived Source Kind conflicts with screenshot-backfill evidence');
+    }
+    if (explicitSourceKind === 'screenshot_backfill' && row[4] !== null && row[4] !== undefined && row[4] !== '') {
+      throw new Error('Screenshot-backfill Derived row must not include an ICE EOD Price');
+    }
+    sourceKind = explicitSourceKind;
+  } else {
+    sourceKind = screenshotEvidence ? 'screenshot_backfill' : 'ice_eod_isda';
+  }
+  const sourceLabel = sourceLabelColumn === undefined || typeof row[sourceLabelColumn] !== 'string' || !row[sourceLabelColumn].trim()
+    ? sourceKind === 'screenshot_backfill' ? SCREENSHOT_BACKFILL_LABEL : CDS_SOURCE_COPY
+    : row[sourceLabelColumn];
+  return { sourceKind, sourceLabel };
+}
+
 export async function readIceCdsWorkbook(buffer) {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer);
@@ -400,13 +452,15 @@ export async function readIceCdsWorkbook(buffer) {
   const sourceKindColumn = derivedColumn('Source Kind');
   const sourceLabelColumn = derivedColumn('Source Label');
   const derivedRows = readRows(derivedSheet, (row) => {
-    const sourceKind = sourceKindColumn === undefined ? 'ice_eod_isda' : row[sourceKindColumn] === 'screenshot_backfill' ? 'screenshot_backfill' : 'ice_eod_isda';
+    const { sourceKind, sourceLabel } = sourceMetadataForDerivedRow(row, { sourceKindColumn, sourceLabelColumn });
+    const maturityDate = sourceKind === 'screenshot_backfill' ? null : isoDate(row[7]);
+    if (sourceKind === 'ice_eod_isda') dateValue(maturityDate, 'Derived maturity date');
     return {
     batchId: row[0], clearingDate: isoDate(row[1]), company: row[2], instrumentName: row[3], eodPrice: row[4],
-    couponBp: row[5], spreadBp: row[6], maturityDate: isoDate(row[7]), roundTripPrice: row[8],
+    couponBp: row[5], spreadBp: row[6], maturityDate, roundTripPrice: row[8],
     priceResidual: row[9], hazardRate: row[10], curveId: row[11], recoveryRate: row[12],
     modelVersion: row[13], qualityStatus: row[14], officialSpreadBp: row[15], relativeError: row[16],
-    sourceKind, sourceLabel: sourceLabelColumn === undefined || typeof row[sourceLabelColumn] !== 'string' || !row[sourceLabelColumn].trim() ? CDS_SOURCE_COPY : row[sourceLabelColumn], sourceUrl: sourceUrl(row[sourceUrlColumn]),
+    sourceKind, sourceLabel, sourceUrl: sourceUrl(row[sourceUrlColumn]),
   };
   });
   const curveRows = readRows(workbook.getWorksheet('Discount Curves'), (row) => ({
