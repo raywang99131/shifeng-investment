@@ -5,6 +5,7 @@ import { handleResearchPublishRequest } from './research-publish'
 import {
   getRefreshStatus,
   handleResearchRefreshRequest,
+  readRefreshStatus,
   requestRefresh,
   type DispatchFetch,
   type RefreshContext,
@@ -71,6 +72,31 @@ beforeEach(async () => {
 })
 
 describe('refresh lock and GitHub dispatch', () => {
+  it('reads refresh status without issuing a write statement', async () => {
+    const row = {
+      scope: 'all',
+      jobId: fixedJobId,
+      status: 'success',
+      requestedAt: now.toISOString(),
+      startedAt: now.toISOString(),
+      finishedAt: now.toISOString(),
+      lastSuccessAt: now.toISOString(),
+      lastError: null,
+    }
+    const first = vi.fn(async () => row)
+    const prepare = vi.fn((sql: string) => {
+      expect(sql.trimStart().startsWith('SELECT')).toBe(true)
+      return { first }
+    })
+
+    await expect(readRefreshStatus({ prepare } as unknown as D1Database)).resolves.toMatchObject({
+      jobId: fixedJobId,
+      status: 'success',
+    })
+    expect(prepare).toHaveBeenCalledOnce()
+    expect(first).toHaveBeenCalledOnce()
+  })
+
   it('does not dispatch while the cache is fresh', async () => {
     await setRefreshState({ status: 'success', lastSuccessAt: hoursBefore(1) })
     const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = []
@@ -207,6 +233,7 @@ describe('refresh routes and internal transitions', () => {
         body: JSON.stringify({ jobId: fixedJobId, status: 'running' }),
       }),
       env,
+      now,
     )
     const wrongJob = await handleResearchPublishRequest(
       new Request(`https://example.com${path}`, {
@@ -215,6 +242,7 @@ describe('refresh routes and internal transitions', () => {
         body: JSON.stringify({ jobId: 'wrong-job', status: 'running' }),
       }),
       env,
+      now,
     )
 
     expect(unauthorized?.status).toBe(401)

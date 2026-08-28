@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node scripts/dev-cloud-research.mjs",
     "server": "node index.js",
     "public:tunnel": "bash scripts/cloudflare-tunnel.sh",
     "build": "tsc -b && vite build",
