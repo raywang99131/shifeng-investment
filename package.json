@@ -16,6 +16,7 @@
     "verify:ice-cds-workbook": "node server/scripts/verify_ice_cds_workbook.mjs",
     "check:earnings-copy": "node scripts/check-earnings-copy.mjs",
     "sync:online": "bash scripts/sync-online.sh",
+    "test:deploy": "node --test scripts/deploy/*.test.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -49,6 +50,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
+    "js-yaml": "^5.4.1",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.0",
     "vite": "^8.0.4"

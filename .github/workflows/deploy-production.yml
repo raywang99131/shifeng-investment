@@ -1,0 +1,64 @@
+name: Deploy production
+
+"on":
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: shifeng-investment-production
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test deployment tooling
+        run: npm run test:deploy
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Create production release
+        run: node scripts/deploy/create-release.mjs --sha "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" --output-dir .release
+
+      - name: Upload production release
+        uses: actions/upload-artifact@v4
+        with:
+          name: shifeng-production-${{ github.sha }}
+          path: .release/
+          retention-days: 7
+          if-no-files-found: error
+
+  deploy:
+    needs: build
+    runs-on: [self-hosted, shifeng-prod]
+    steps:
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Download production release
+        uses: actions/download-artifact@v4
+        with:
+          name: shifeng-production-${{ github.sha }}
+          path: artifact
+
+      - name: Install and verify production release
+        run: node artifact/deploy-release.mjs --archive "artifact/shifeng-investment-${GITHUB_SHA}.tar.gz" --checksum "artifact/shifeng-investment-${GITHUB_SHA}.sha256" --sha "$GITHUB_SHA"
