@@ -78,8 +78,7 @@ async function ensureRefreshState(db: D1Database): Promise<void> {
     .run()
 }
 
-export async function getRefreshStatus(db: D1Database): Promise<RefreshState> {
-  await ensureRefreshState(db)
+export async function readRefreshStatus(db: D1Database): Promise<RefreshState> {
   const row = await db
     .prepare(
       `SELECT
@@ -96,10 +95,23 @@ export async function getRefreshStatus(db: D1Database): Promise<RefreshState> {
     )
     .first<RefreshRow>()
 
-  if (row === null) {
-    throw new Error('Research refresh state is missing')
-  }
-  return mapRefreshRow(row)
+  return row === null
+    ? {
+        scope: 'all',
+        jobId: null,
+        status: 'idle',
+        requestedAt: null,
+        startedAt: null,
+        finishedAt: null,
+        lastSuccessAt: null,
+        lastError: null,
+      }
+    : mapRefreshRow(row)
+}
+
+export async function getRefreshStatus(db: D1Database): Promise<RefreshState> {
+  await ensureRefreshState(db)
+  return readRefreshStatus(db)
 }
 
 async function markDispatchFailed(

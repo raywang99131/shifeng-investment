@@ -7,6 +7,7 @@ import { getSummary, putSummary } from './research-store'
 
 function createEnv(options?: {
   legacyOrigin?: string
+  readOnly?: boolean
   assetFetch?: WorkerEnv['ASSETS']['fetch']
 }): WorkerEnv {
   return {
@@ -17,6 +18,7 @@ function createEnv(options?: {
     GITHUB_OWNER: env.GITHUB_OWNER,
     GITHUB_REPO: env.GITHUB_REPO,
     LEGACY_API_ORIGIN: options?.legacyOrigin ?? '',
+    DEV_RESEARCH_READ_ONLY: options?.readOnly ? 'true' : 'false',
     ASSETS: {
       fetch: options?.assetFetch ?? (async () => new Response('asset fallback')),
     } as Fetcher,
@@ -146,6 +148,90 @@ describe('workers.dev internal-only surface', () => {
     await expect(getSummary(env.RESEARCH_DB, 'cninfo', '2026-08-28')).resolves.toMatchObject({
       totalCount: 3,
     })
+  })
+})
+
+describe('cloud-backed local development safety', () => {
+  it('reads refresh status without writing to the remote database', async () => {
+    const first = vi.fn(async () => ({
+      scope: 'all',
+      jobId: 'job-123',
+      status: 'success',
+      requestedAt: '2026-08-28T00:00:00.000Z',
+      startedAt: '2026-08-28T00:01:00.000Z',
+      finishedAt: '2026-08-28T00:02:00.000Z',
+      lastSuccessAt: '2026-08-28T00:02:00.000Z',
+      lastError: null,
+    }))
+    const run = vi.fn(async () => {
+      throw new Error('read-only development must not write')
+    })
+    const prepare = vi.fn((_sql: string) => ({ first, run }))
+    const readOnlyEnv = {
+      ...createEnv({ readOnly: true }),
+      RESEARCH_DB: { prepare } as unknown as D1Database,
+    }
+
+    const response = await get('/api/research/refresh/status', readOnlyEnv)
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({
+      jobId: 'job-123',
+      status: 'success',
+    })
+    expect(prepare).toHaveBeenCalledOnce()
+    expect(prepare.mock.calls[0]?.[0]).toMatch(/^SELECT/)
+    expect(first).toHaveBeenCalledOnce()
+    expect(run).not.toHaveBeenCalled()
+  })
+
+  it('serves cloud reads but neutralizes refreshes and blocks internal writes', async () => {
+    await putSummary(env.RESEARCH_DB, {
+      kind: 'cninfo',
+      date: '2026-08-28',
+      summary: { generatedAt: '2026-08-28T01:00:00.000Z', totalCount: 5 },
+    })
+    const filename = 'cninfo-report.pdf'
+    await env.RESEARCH_REPORTS.put(
+      researchObjectKey('cninfo', '2026-08-28', filename),
+      new Uint8Array([1, 2, 3]),
+      { httpMetadata: { contentType: 'application/pdf' } },
+    )
+    const readOnlyEnv = createEnv({ readOnly: true })
+
+    const read = await get('/api/research/cninfo/latest', readOnlyEnv)
+    const file = await get(
+      `/api/research/files/cninfo/2026-08-28/${filename}`,
+      readOnlyEnv,
+    )
+    const refresh = await handleWorkerRequest(
+      new Request('https://example.com/api/research/refresh', { method: 'POST' }),
+      readOnlyEnv,
+      createContext(),
+    )
+    const publish = await handleWorkerRequest(
+      new Request(
+        'https://example.com/api/research/internal/summaries/cninfo/2026-08-29',
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${env.RESEARCH_PUBLISH_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ generatedAt: '2026-08-29T01:00:00.000Z', totalCount: 99 }),
+        },
+      ),
+      readOnlyEnv,
+      createContext(),
+    )
+
+    expect(read.status).toBe(200)
+    expect(file.status).toBe(200)
+    expect(refresh.status).toBe(200)
+    await expect(refresh.json()).resolves.toMatchObject({ dispatched: false })
+    expect(publish.status).toBe(403)
+    await expect(publish.json()).resolves.toMatchObject({ code: 'DEV_RESEARCH_READ_ONLY' })
+    await expect(getSummary(env.RESEARCH_DB, 'cninfo', '2026-08-29')).resolves.toBeNull()
   })
 })
 

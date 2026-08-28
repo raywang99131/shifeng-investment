@@ -1,6 +1,11 @@
 import { isDateKey, isResearchKind } from './research-contract'
 import { handleResearchPublishRequest } from './research-publish'
-import { handleResearchRefreshRequest, type DispatchFetch, type RefreshContext } from './research-refresh'
+import {
+  handleResearchRefreshRequest,
+  readRefreshStatus,
+  type DispatchFetch,
+  type RefreshContext,
+} from './research-refresh'
 import { getLatestSummary, getSummary, listSummaryDates } from './research-store'
 
 export type WorkerEnv = Pick<
@@ -13,6 +18,7 @@ export type WorkerEnv = Pick<
   | 'GITHUB_OWNER'
   | 'GITHUB_REPO'
   | 'LEGACY_API_ORIGIN'
+  | 'DEV_RESEARCH_READ_ONLY'
 >
 
 const RESEARCH_CACHE_CONTROL = 'public, max-age=60, stale-while-revalidate=300'
@@ -37,6 +43,44 @@ function jsonResponse(body: unknown, status = 200, cacheControl = 'no-store'): R
 
 function errorResponse(error: string, code: string, status: number): Response {
   return jsonResponse({ error, code }, status)
+}
+
+async function handleDevReadOnlyGuard(
+  request: Request,
+  env: WorkerEnv,
+): Promise<Response | null> {
+  if (env.DEV_RESEARCH_READ_ONLY !== 'true') {
+    return null
+  }
+
+  const pathname = new URL(request.url).pathname
+  if (pathname === '/api/research/refresh/status' && request.method === 'GET') {
+    return jsonResponse(await readRefreshStatus(env.RESEARCH_DB))
+  }
+  if (pathname === '/api/research/refresh' && request.method === 'POST') {
+    return jsonResponse({
+      dispatched: false,
+      state: await readRefreshStatus(env.RESEARCH_DB),
+    })
+  }
+
+  const researchRoute = pathname === '/api/research' || pathname.startsWith('/api/research/')
+  const internalRoute = pathname.startsWith('/api/research/internal/')
+  if (!researchRoute) {
+    return errorResponse(
+      'This local development Worker only serves cloud research reads.',
+      'DEV_RESEARCH_READ_ONLY',
+      404,
+    )
+  }
+  if (request.method !== 'GET' || internalRoute) {
+    return errorResponse(
+      'Cloud-backed local development is read-only.',
+      'DEV_RESEARCH_READ_ONLY',
+      403,
+    )
+  }
+  return null
 }
 
 function decodedSegments(pathname: string): string[] | null {
@@ -190,45 +234,51 @@ export async function handleWorkerRequest(
   let response: Response
 
   try {
-    const workersDevInternalOnly = requestUrl.hostname.endsWith('.workers.dev')
-      && !requestUrl.pathname.startsWith('/api/research/internal/')
-    if (workersDevInternalOnly) {
-      route = 'internal-host-only'
-      response = errorResponse(
-        'This hostname only accepts internal research publishing requests.',
-        'INTERNAL_HOST_ONLY',
-        404,
-      )
+    const devReadOnlyResponse = await handleDevReadOnlyGuard(request, env)
+    if (devReadOnlyResponse !== null) {
+      route = 'dev-research-read-only'
+      response = devReadOnlyResponse
     } else {
-      const publishResponse = await handleResearchPublishRequest(request, env)
-      if (publishResponse !== null) {
-        route = 'research-publish'
-        response = publishResponse
-      } else {
-        const refreshResponse = await handleResearchRefreshRequest(
-          request,
-          env,
-          ctx,
-          new Date(),
-          fetchImpl,
+      const workersDevInternalOnly = requestUrl.hostname.endsWith('.workers.dev')
+        && !requestUrl.pathname.startsWith('/api/research/internal/')
+      if (workersDevInternalOnly) {
+        route = 'internal-host-only'
+        response = errorResponse(
+          'This hostname only accepts internal research publishing requests.',
+          'INTERNAL_HOST_ONLY',
+          404,
         )
-        if (refreshResponse !== null) {
-          route = 'research-refresh'
-          response = refreshResponse
+      } else {
+        const publishResponse = await handleResearchPublishRequest(request, env)
+        if (publishResponse !== null) {
+          route = 'research-publish'
+          response = publishResponse
         } else {
-          const readResponse = await handleResearchReadRequest(request, env)
-          if (readResponse !== null) {
-            route = 'research-read'
-            response = readResponse
-          } else if (requestUrl.pathname === '/api/research' || requestUrl.pathname.startsWith('/api/research/')) {
-            route = 'research-not-found'
-            response = errorResponse('Research route not found.', 'RESEARCH_ROUTE_NOT_FOUND', 404)
-          } else if (requestUrl.pathname === '/api' || requestUrl.pathname.startsWith('/api/')) {
-            route = 'legacy-api'
-            response = await proxyLegacyApi(request, env, fetchImpl)
+          const refreshResponse = await handleResearchRefreshRequest(
+            request,
+            env,
+            ctx,
+            new Date(),
+            fetchImpl,
+          )
+          if (refreshResponse !== null) {
+            route = 'research-refresh'
+            response = refreshResponse
           } else {
-            route = 'assets'
-            response = await env.ASSETS.fetch(request)
+            const readResponse = await handleResearchReadRequest(request, env)
+            if (readResponse !== null) {
+              route = 'research-read'
+              response = readResponse
+            } else if (requestUrl.pathname === '/api/research' || requestUrl.pathname.startsWith('/api/research/')) {
+              route = 'research-not-found'
+              response = errorResponse('Research route not found.', 'RESEARCH_ROUTE_NOT_FOUND', 404)
+            } else if (requestUrl.pathname === '/api' || requestUrl.pathname.startsWith('/api/')) {
+              route = 'legacy-api'
+              response = await proxyLegacyApi(request, env, fetchImpl)
+            } else {
+              route = 'assets'
+              response = await env.ASSETS.fetch(request)
+            }
           }
         }
       }
