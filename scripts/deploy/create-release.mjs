@@ -4,6 +4,7 @@ import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
   access,
+  copyFile,
   cp,
   mkdir,
   mkdtemp,
@@ -23,6 +24,7 @@ const EXCLUDED_RELEASE_PATHS = [
   /(^|\/)node_modules(?:\/|$)/,
   /(^|\/)\.env(?:\.|$)/,
   /(^|\/)server\.env$/,
+  /(^|\/)tunnel\.env$/,
   /(^|\/)(?:tunnel|runner).*(?:token|credentials?)(?:\.|$)/i,
   /(^|\/)\.DS_Store$/,
   /\.log$/i,
@@ -77,8 +79,12 @@ export async function createRelease({
   const normalizedProjectRoot = resolve(projectRoot);
   const normalizedOutputDir = isAbsolute(outputDir) ? resolve(outputDir) : resolve(normalizedProjectRoot, outputDir);
   const distRoot = join(normalizedProjectRoot, 'dist');
+  const deployEntrypointSource = join(normalizedProjectRoot, 'scripts', 'deploy', 'deploy-release.mjs');
   if (!await pathExists(join(distRoot, 'index.html'))) {
     throw new Error('dist/index.html is missing; run npm run build first');
+  }
+  if (!await pathExists(deployEntrypointSource)) {
+    throw new Error('scripts/deploy/deploy-release.mjs is missing');
   }
 
   await mkdir(normalizedOutputDir, { recursive: true });
@@ -117,11 +123,13 @@ export async function createRelease({
     const archiveName = `shifeng-investment-${sha}.tar.gz`;
     const archivePath = join(normalizedOutputDir, archiveName);
     const checksumPath = join(normalizedOutputDir, `shifeng-investment-${sha}.sha256`);
+    const deploymentEntrypointPath = join(normalizedOutputDir, 'deploy-release.mjs');
     await execFileAsync('tar', ['-czf', archivePath, '-C', stagingRoot, '.']);
     const sha256 = await sha256File(archivePath);
     await writeFile(checksumPath, `${sha256}  ${basename(archivePath)}\n`);
+    await copyFile(deployEntrypointSource, deploymentEntrypointPath);
 
-    return { archivePath, checksumPath, sha256 };
+    return { archivePath, checksumPath, deploymentEntrypointPath, sha256 };
   } finally {
     await rm(stagingRoot, { recursive: true, force: true });
   }

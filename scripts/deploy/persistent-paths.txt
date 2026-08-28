@@ -1,0 +1,16 @@
+server/data/calendar/events.json
+server/data/funds.json
+server/data/news.json
+server/data/macd_cache.json
+server/data/price-tracking/
+server/data/python-venv/
+server/data/quant/
+server/data/research/
+server/data/tmt-margin/
+server/data/ai-dashboard/
+server/data/tungsten-price-history.json
+server/data/x-followers.json
+server/public/reports/
+server/price_tracking/price_summarized_optimized.xlsx
+server/price_tracking/.price_summarized_optimized.last-good.xlsx
+server/price_tracking/price_summarized_optimized.akshare_update_log.csv

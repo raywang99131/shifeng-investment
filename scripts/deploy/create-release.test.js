@@ -25,17 +25,21 @@ async function makeFixture({ withDist = true } = {}) {
 
   await writeFixtureFile(root, 'server/index.js', 'console.log("server");\n');
   await writeFixtureFile(root, 'scripts/example.py', 'print("python")\n');
+  await writeFixtureFile(root, 'scripts/deploy/deploy-release.mjs', '#!/usr/bin/env node\n');
   await writeFixtureFile(root, 'package.json', '{"name":"fixture","type":"module"}\n');
   await writeFixtureFile(root, 'package-lock.json', '{"name":"fixture","lockfileVersion":3}\n');
   await writeFixtureFile(root, '.env.local', 'SECRET=tracked-but-forbidden\n');
+  await writeFixtureFile(root, 'scripts/tunnel.env', 'CLOUDFLARE_TUNNEL_TOKEN=tracked-but-forbidden\n');
   await writeFixtureFile(root, 'node_modules/junk/index.js', 'forbidden\n');
   await execFileAsync('git', [
     'add', '-f',
     'server/index.js',
     'scripts/example.py',
+    'scripts/deploy/deploy-release.mjs',
     'package.json',
     'package-lock.json',
     '.env.local',
+    'scripts/tunnel.env',
     'node_modules/junk/index.js',
   ], { cwd: root });
 
@@ -95,6 +99,7 @@ test('release contains tracked app code and built frontend but excludes local st
   assert(entries.includes('dist/index.html'));
   assert(entries.includes('dist/build-meta.json'));
   assert(!entries.some((entry) => entry.includes('.env')));
+  assert(!entries.includes('scripts/tunnel.env'));
   assert(!entries.some((entry) => entry.includes('node_modules')));
   assert(!entries.includes('server/data/tmt-margin/private.json'));
 });
@@ -143,4 +148,16 @@ test('release builder rejects a non-full git sha', async (t) => {
   const result = await runBuilder(fixture, { sha: 'abc123' });
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /full 40-character git sha/);
+});
+
+test('release output includes a standalone deployment entrypoint for the self-hosted runner', async (t) => {
+  const fixture = await makeFixture();
+  t.after(() => rm(fixture.root, { recursive: true, force: true }));
+  const entrypoint = '#!/usr/bin/env node\nconsole.log("deploy");\n';
+  await writeFixtureFile(fixture.root, 'scripts/deploy/deploy-release.mjs', entrypoint);
+  await execFileAsync('git', ['add', 'scripts/deploy/deploy-release.mjs'], { cwd: fixture.root });
+
+  const result = await runBuilder(fixture);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(await readFile(join(fixture.outputDir, 'deploy-release.mjs'), 'utf8'), entrypoint);
 });
