@@ -59,7 +59,7 @@ brew install cloudflared
 ```
 
 1. 在 Cloudflare 创建一个 Tunnel，并拿到 `Tunnel token`。
-2. 在 Cloudflare 的 `DNS` 中加一条你想用的子域名（比如 `inv.shifeng.com`）指向这个 Tunnel。
+2. 在 Tunnel 的“已发布应用程序路由”中添加一个只作为源站使用的子域名（当前生产环境为 `origin.shifeng-investment.com`），服务指向 `http://localhost:3000`。公开的 `www` 域名由 Worker 接管，不能同时作为 Worker 的旧 API 上游，否则会产生路由循环。
 3. 在本机创建一个环境文件（不放进仓库）：
 
 ```bash
@@ -67,7 +67,7 @@ cat > ~/.config/shifeng-investment/tunnel.env <<'EOF'
 export CLOUDFLARE_TUNNEL_TOKEN=你的_TOKEN
 export CLOUDFLARE_TUNNEL_MODE=stable
 export CLOUDFLARE_TUNNEL_TRANSPORT_PROTOCOL=http2
-export CLOUDFLARE_TUNNEL_HOSTNAME=inv.shifeng.com
+export CLOUDFLARE_TUNNEL_HOSTNAME=origin.shifeng-investment.com
 export CLOUDFLARE_TUNNEL_EDGE_IP_VERSION=auto
 export CLOUDFLARE_TUNNEL_NAME=shifeng-investment
 EOF
@@ -80,8 +80,10 @@ chmod 600 ~/.config/shifeng-investment/tunnel.env
 npm run public:tunnel
 ```
 
-终端里会启动固定域名站点（你在 DNS 设置的域名），同事可直接访问。
+终端里会启动固定的 Tunnel 源站。用户仍通过 `https://www.shifeng-investment.com` 访问；Worker 会把尚未云化的 `/api` 请求转发到独立的 `origin` 源站。
 说明：`CLOUDFLARE_TUNNEL_MODE=stable` 会在缺 token 时直接报错，不会退化到 Quick Tunnel。
+
+如果正式 Worker 因云研究密钥尚未配置而无法发布，可以执行 `npm run deploy:ai-dashboard-recovery`。该恢复配置不会创建或轮换任何密钥，只发布静态站点、现有 D1/R2 绑定和独立 Tunnel 上游；云研究的发布/主动刷新仍需按部署文档配置正式密钥后再执行 `npm run deploy:cloud`。
 
 你也可以把服务装进 launchd 后台（重启后也能自动启动）：
 

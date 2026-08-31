@@ -12,9 +12,6 @@
       "zone_name": "shifeng-investment.com"
     }
   ],
-  "secrets": {
-    "required": ["GITHUB_DISPATCH_TOKEN", "RESEARCH_PUBLISH_TOKEN"]
-  },
   "assets": {
     "binding": "ASSETS",
     "directory": "./dist",
