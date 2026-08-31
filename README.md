@@ -1,5 +1,28 @@
 # 石锋资产投研平台
 
+## 项目结构与运行边界
+
+本仓库是一个多运行时项目，不是只有一个前端和一个可独立上传即运行的后端。代码上传到 GitHub 不等于运行环境已经配置完成；Cloudflare、GitHub Actions 和本地服务仍需要各自的环境变量、Secret、数据库、对象存储和 Python 依赖。
+
+| 运行单元 | 当前目录 | 用途 | 运行位置 |
+| --- | --- | --- | --- |
+| React/Vite 前端 | `src/`、`public/` | 网站界面 | Cloudflare Worker 静态资产或本地 Vite |
+| Cloudflare Worker | `worker/` | 研究 API、静态资产和旧 API 代理 | Cloudflare |
+| Node/Express API | `server/` | 尚未云化的接口和本地任务 | 本地 Legacy API/Tunnel |
+| Python 研究任务 | `automation/research-tasks/` | 公告、业绩和风险报告 | GitHub Actions |
+| Python 行情与市场任务 | `quote_service/`、`macd screener/`、`server/price_tracking/` | 行情、拥挤度和价格数据 | 本地服务或定时任务 |
+
+根 `Dockerfile` 和 `railway.json` 暂时作为待确认的灾备部署入口保留；已失效的三容器 Compose 配置不再属于支持范围。
+
+在开始开发或目录迁移前运行：
+
+```bash
+npm ci
+npm run verify
+```
+
+`npm run verify` 会依次执行生产构建、Node 测试和 Cloudflare Worker 测试。
+
 ## 公告监控云端版
 
 公告研判、业绩预告、业绩报告和风险提示已经支持 GitHub Actions + Cloudflare Worker/D1/R2。网站打开时先显示缓存，再检查云端更新；电脑关机也不影响公告监控和定时任务。
