@@ -295,39 +295,13 @@ git commit -m "test: add unified repository verification commands"
 ### Task 3: Document runtime and deployment boundaries
 
 **Files:**
-- Modify: `tests/repositoryStructure.test.js`
 - Modify: `README.md`
-- Test: `tests/repositoryStructure.test.js`
 
 **Interfaces:**
 - Consumes: the README visible to GitHub visitors.
-- Produces: an enforced `项目结构与运行边界` section describing current runtime units, active cloud paths, retained legacy API, and local verification commands.
+- Produces: a `项目结构与运行边界` section describing current runtime units, active cloud paths, retained legacy API, and local verification commands.
 
-- [ ] **Step 1: Write the failing README contract**
-
-Append these imports and test behavior to `tests/repositoryStructure.test.js`; merge the `readFileSync` import with existing imports rather than duplicating an import declaration:
-
-```js
-import { readFileSync } from 'node:fs'
-
-test('README documents runtime and deployment boundaries', () => {
-  const readme = readFileSync(path.join(repoRoot, 'README.md'), 'utf8')
-
-  assert.match(readme, /^## 项目结构与运行边界$/m)
-  assert.match(readme, /Cloudflare Worker/)
-  assert.match(readme, /本地 Legacy API/)
-  assert.match(readme, /npm run verify/)
-  assert.match(readme, /代码上传到 GitHub 不等于运行环境已经配置完成/)
-})
-```
-
-- [ ] **Step 2: Run the README contract and verify the expected failure**
-
-Run: `node --test tests/repositoryStructure.test.js`
-
-Expected: the three existing structure tests pass; the README contract fails because the heading and exact deployment warning are absent.
-
-- [ ] **Step 3: Add the runtime-boundary documentation**
+- [ ] **Step 1: Add the runtime-boundary documentation**
 
 Insert the following section in `README.md` immediately after the title and before `公告监控云端版`:
 
@@ -356,16 +330,16 @@ npm run verify
 `npm run verify` 会依次执行生产构建、Node 测试和 Cloudflare Worker 测试。
 ```
 
-- [ ] **Step 4: Run the README contract and verify it passes**
+- [ ] **Step 2: Review the rendered section and command names**
 
-Run: `node --test tests/repositoryStructure.test.js`
+Run: `sed -n '1,90p' README.md && npm run | rg 'test:node|test:worker|verify'`
 
-Expected: 4 tests pass, 0 fail.
+Expected: the new section appears immediately after the title, its table renders with five runtime rows, and all three documented npm commands exist. Human-facing prose is reviewed directly rather than locked to exact wording by a brittle source-text test.
 
-- [ ] **Step 5: Commit the documented boundary**
+- [ ] **Step 3: Commit the documented boundary**
 
 ```bash
-git add README.md tests/repositoryStructure.test.js
+git add README.md
 git commit -m "docs: explain repository runtime boundaries"
 ```
 
@@ -384,7 +358,7 @@ git commit -m "docs: explain repository runtime boundaries"
 
 Run: `npm run verify`
 
-Expected: Vite production build exits 0, 244 Node tests pass, and 38 Worker tests pass. Run with loopback-socket permission because existing API and Worker tests bind to `127.0.0.1`.
+Expected: Vite production build exits 0, 243 Node tests pass, and 38 Worker tests pass. Run with loopback-socket permission because existing API and Worker tests bind to `127.0.0.1`.
 
 - [ ] **Step 2: Run the existing root Python regression suite**
 
@@ -417,4 +391,3 @@ After Wave 1 is verified, create separate implementation plans for:
 1. Moving `src/`, `public/`, and `index.html` into `frontend/` while keeping root build commands and root `dist/`.
 2. Moving Node, Worker, Python services, and jobs into `backend/` one runtime at a time.
 3. Classifying runtime data and consolidating Cloudflare, serverless, Docker, and Railway deployment configuration.
-
