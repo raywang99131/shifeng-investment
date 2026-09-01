@@ -1,5 +1,51 @@
 # 石锋资产投研平台
 
+## ETF 成交额异动监控
+
+“拥挤度追踪 → ETF 成交额异动”使用仓库内的 FastAPI/AkShare 服务、SQLite 缓存和 Express 聚合接口，不再依赖 Downloads 或 Desktop 中的外部 `etf_monitor` 文件夹。
+
+首次在本机运行时，需要准备 Python 3.11 以上的独立环境：
+
+```bash
+python3.12 -m venv server/data/etf-python-venv
+server/data/etf-python-venv/bin/python3 -m pip install \
+  -r server/etf_monitor/requirements-dev.txt
+npm install
+npm run build
+npm run server
+```
+
+`npm run server` 会自动启动并管理 ETF 服务（默认 `127.0.0.1:8000`）：复用已有健康进程、异常退出后重启，并在主站退出时一并关闭。可用以下接口检查：
+
+```bash
+curl http://127.0.0.1:3000/api/etf-monitor/health
+curl http://127.0.0.1:3000/api/etf-monitor/overview
+curl -X POST http://127.0.0.1:3000/api/etf-monitor/refresh
+```
+
+自动行情轮询使用 `Asia/Shanghai` 时间，只在已确认交易日的 `09:30–11:30` 和 `13:00–15:00` 执行；午休、盘前、收盘后及休市日不访问行情源。15:00 后按 K 线完成延迟补抓一次。页面的每分钟更新只读 SQLite 缓存；“立即刷新”是用户显式触发的全量行情请求，在非交易时段也允许执行。
+
+运行数据默认保存在被 Git 忽略的 `server/data/etf-monitor/`：
+
+- `etf_monitor.db`：K 线、异动记录和通知去重状态；
+- `trading_calendar.json`：A 股交易日日历缓存。
+
+常用环境变量：
+
+- `ETF_MONITOR_ENABLED=0`：关闭本地主站的 ETF 子进程管理；
+- `ETF_MONITOR_PORT` / `ETF_MONITOR_URL`：修改端口或复用已有服务；
+- `ETF_MONITOR_PYTHON`：指定 ETF 服务使用的 Python 3.11+；
+- `DB_PATH` / `TRADING_CALENDAR_PATH`：修改持久化路径；
+- `POLL_INTERVAL_SECONDS`：修改盘中轮询间隔，默认 60 秒。
+
+Docker Compose 会运行独立的 `etf-monitor` 服务，API 通过 `http://etf-monitor:8000` 访问它，数据库与日历保存在 `etf-monitor-data` 命名卷中：
+
+```bash
+docker compose up --build
+```
+
+行情源暂时不可用时，页面继续展示最近缓存，并分别标识数据降级和交易日日历降级；旧缓存不会被标成实时数据。
+
 ## AI 投资看板配置
 
 AI 看板位于 `/ai-dashboard`，沿用网站现有访问边界，不再要求单独输入访问口令。看板已停止读取飞书；增长、价格、融资、官网模型卡、算力租赁等板块由服务端从登记过的公开网页读取，每条记录保留来源、口径、数据日期和同步状态。

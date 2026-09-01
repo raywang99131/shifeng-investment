@@ -10,6 +10,19 @@ services:
       - "3001:3001"
     restart: unless-stopped
 
+  etf-monitor:
+    build:
+      context: .
+      dockerfile: server/etf_monitor/Dockerfile
+    container_name: shifeng-etf-monitor
+    environment:
+      DB_PATH: /data/etf_monitor.db
+      TRADING_CALENDAR_PATH: /data/trading_calendar.json
+      APP_TIMEZONE: Asia/Shanghai
+    volumes:
+      - etf-monitor-data:/data
+    restart: unless-stopped
+
   api:
     build:
       context: .
@@ -17,8 +30,14 @@ services:
     container_name: shifeng-api
     ports:
       - "3000:3000"
+    environment:
+      ETF_MONITOR_ENABLED: "0"
+      ETF_MONITOR_URL: http://etf-monitor:8000
     depends_on:
-      - quote
+      quote:
+        condition: service_started
+      etf-monitor:
+        condition: service_healthy
     restart: unless-stopped
 
   web:
@@ -31,3 +50,6 @@ services:
     depends_on:
       - api
     restart: unless-stopped
+
+volumes:
+  etf-monitor-data:
