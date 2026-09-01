@@ -35,9 +35,13 @@ server/data/news.json
 server/data/macd_cache.json
 server/data/price-tracking/
 server/data/python-venv/
+server/data/python-venv
+server/data/etf-python-venv/
+server/data/etf-python-venv
 server/data/quant/
 server/data/research/
 server/data/tmt-margin/
+server/data/etf-monitor/
 server/data/ai-dashboard/
 !server/data/ai-dashboard/
 server/data/ai-dashboard/*
@@ -55,4 +59,7 @@ output/
 state/
 tmp/
 quote_service/__pycache__
+server/etf_monitor/.pytest_cache/
+server/etf_monitor/.pytest_tmp/
+server/etf_monitor/**/__pycache__/
 *.pyc
