@@ -22,6 +22,29 @@ def test_default_volume_ratio_thresholds_match_intraday_rules(monkeypatch):
     assert settings.no_anomaly_confirmation_delay_seconds == 90
 
 
+def test_default_trading_schedule_matches_a_share_sessions(monkeypatch):
+    monkeypatch.setattr(config, "_ENV_LOADED", False)
+    monkeypatch.setattr(config, "_env_file_candidates", lambda: [])
+    for key in [
+        "TRADING_CALENDAR_PATH",
+        "MORNING_OPEN_TIME",
+        "MORNING_CLOSE_TIME",
+        "AFTERNOON_OPEN_TIME",
+        "AFTERNOON_CLOSE_TIME",
+    ]:
+        monkeypatch.delenv(key, raising=False)
+
+    settings = Settings()
+
+    assert settings.trading_calendar_path.as_posix().endswith(
+        "server/data/etf-monitor/trading_calendar.json"
+    )
+    assert settings.morning_open_time == time(9, 30)
+    assert settings.morning_close_time == time(11, 30)
+    assert settings.afternoon_open_time == time(13, 0)
+    assert settings.afternoon_close_time == time(15, 0)
+
+
 def test_settings_loads_values_from_dotenv_file(tmp_path, monkeypatch):
     (tmp_path / ".env").write_text(
         "\n".join(

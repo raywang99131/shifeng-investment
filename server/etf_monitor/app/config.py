@@ -171,6 +171,26 @@ class Settings(BaseModel):
         )
     )
     timezone: str = Field(default_factory=lambda: _str_env("APP_TIMEZONE", "Asia/Shanghai"))
+    trading_calendar_path: Path = Field(
+        default_factory=lambda: Path(
+            _str_env(
+                "TRADING_CALENDAR_PATH",
+                "server/data/etf-monitor/trading_calendar.json",
+            )
+        )
+    )
+    morning_open_time: time = Field(
+        default_factory=lambda: _time_env("MORNING_OPEN_TIME", time(9, 30))
+    )
+    morning_close_time: time = Field(
+        default_factory=lambda: _time_env("MORNING_CLOSE_TIME", time(11, 30))
+    )
+    afternoon_open_time: time = Field(
+        default_factory=lambda: _time_env("AFTERNOON_OPEN_TIME", time(13, 0))
+    )
+    afternoon_close_time: time = Field(
+        default_factory=lambda: _time_env("AFTERNOON_CLOSE_TIME", time(15, 0))
+    )
     db_path: Path = Field(
         default_factory=lambda: Path(
             _str_env("DB_PATH", "server/data/etf-monitor/etf_monitor.db")
