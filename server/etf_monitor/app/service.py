@@ -121,6 +121,23 @@ class MonitorService:
             error=self.last_error if data_status in {"cached", "degraded"} else None,
         )
 
+    def cached_snapshot(self, symbol: str | None = None) -> MonitorSnapshot:
+        requested_symbol = symbol or self.settings.symbol
+        candles = self.candle_cache.list_candles(requested_symbol, limit=500)
+        candles = _completed_candles(candles, self.settings)
+        candles = _snapshot_candles(candles, self.settings)
+        latest_candle = candles[-1] if candles else None
+        return MonitorSnapshot(
+            symbol=requested_symbol,
+            name=self.settings.name_for_symbol(requested_symbol),
+            data_status="cached" if latest_candle else "empty",
+            latest_candle=latest_candle,
+            candles=candles[-80:],
+            current_alert=self._current_alert(requested_symbol, latest_candle),
+            last_updated=latest_candle.time if latest_candle else None,
+            error=None,
+        )
+
     def list_alerts(
         self, symbol: str | None = None, limit: int = 100
     ) -> list[AlertLog]:

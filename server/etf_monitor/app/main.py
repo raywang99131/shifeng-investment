@@ -79,6 +79,12 @@ def create_app(
     def snapshot(symbol: str = Query(default=resolved_settings.symbol)) -> MonitorSnapshot:
         return service.snapshot(symbol)
 
+    @app.get("/api/monitor/cached-snapshot", response_model=MonitorSnapshot)
+    def cached_snapshot(
+        symbol: str = Query(default=resolved_settings.symbol),
+    ) -> MonitorSnapshot:
+        return service.cached_snapshot(symbol)
+
     @app.get("/api/monitor/symbols", response_model=SymbolListResponse)
     def symbols() -> SymbolListResponse:
         return SymbolListResponse(symbols=service.list_symbols())

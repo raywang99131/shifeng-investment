@@ -29,6 +29,11 @@ class FakeMarketDataClient:
         return self.candles
 
 
+class MustNotFetchMarketDataClient:
+    def fetch_intraday_candles(self, symbol: str) -> list[Candle]:
+        raise AssertionError("cached snapshot must not fetch market data")
+
+
 class ConcurrencySensitiveMarketDataClient:
     def __init__(self):
         self._lock = threading.Lock()
@@ -130,3 +135,28 @@ def test_poll_merges_cached_history_for_previous_day_same_slot_detection(tmp_pat
     assert response.alert.candle_time == datetime.fromisoformat("2026-08-12T13:45:00")
     assert response.alert.prev_volume == 112_000_000
     assert response.alert.ratio == 1.76
+
+
+def test_cached_snapshot_reads_sqlite_without_market_request(tmp_path):
+    settings = Settings(
+        db_path=tmp_path / "monitor.db",
+        scheduler_enabled=False,
+    )
+    service = MonitorService(
+        settings=settings,
+        market_data_client=MustNotFetchMarketDataClient(),
+        db_path=settings.db_path,
+    )
+    cached_candle = candle(
+        "2026-08-12T10:00:00",
+        12_000_000,
+        "159915.SZ",
+        "创业板ETF易方达",
+    )
+    service.candle_cache.upsert_candles([cached_candle])
+
+    snapshot = service.cached_snapshot("159915.SZ")
+
+    assert snapshot.data_status == "cached"
+    assert snapshot.latest_candle == cached_candle
+    assert snapshot.error is None

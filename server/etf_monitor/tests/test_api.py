@@ -52,6 +52,11 @@ class FakeMarketDataClient:
         return self.candles
 
 
+class MustNotFetchMarketDataClient:
+    def fetch_intraday_candles(self, symbol: str):
+        raise AssertionError("cached snapshot must not fetch market data")
+
+
 class SymbolAwareMarketDataClient:
     def __init__(self, candles_by_symbol=None):
         self.calls = []
@@ -1066,6 +1071,28 @@ def test_snapshot_uses_cached_candles_when_market_data_source_fails(tmp_path):
     assert body["latest_candle"]["volume"] == 1200
     assert body["last_updated"] == "2026-07-20T10:00:00"
     assert len(body["candles"]) == 2
+
+
+def test_cached_snapshot_endpoint_never_calls_market_data(tmp_path):
+    db_path = tmp_path / "monitor.db"
+    store = AlertStore(db_path)
+    store.upsert_candles([
+        candle("2026-08-12T10:00:00", 12_000_000),
+    ])
+    app = create_app(
+        db_path=db_path,
+        market_data_client=MustNotFetchMarketDataClient(),
+        scheduler_enabled=False,
+    )
+
+    with TestClient(app) as client:
+        response = client.get(
+            "/api/monitor/cached-snapshot?symbol=159915.SZ"
+        )
+
+    assert response.status_code == 200
+    assert response.json()["data_status"] == "cached"
+    assert response.json()["latest_candle"]["amount"] == 12_000_000
 
 
 def test_snapshot_returns_only_latest_trading_day_candles(tmp_path):
