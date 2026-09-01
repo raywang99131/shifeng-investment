@@ -109,6 +109,25 @@ def test_scheduler_never_polls_on_closed_day():
     assert scheduler.status().should_poll is False
 
 
+def test_scheduler_caps_idle_checks_at_one_minute():
+    settings = Settings(scheduler_enabled=True)
+    service = RecordingService(settings)
+    clock = MutableClock(at(11, 30))
+    scheduler = PollScheduler(
+        service,
+        interval_seconds=300,
+        trading_calendar=StaticCalendar(),
+        now=clock,
+    )
+
+    scheduler.run_once()
+    assert scheduler.status().next_check_at == at(11, 31)
+
+    clock.value = at(13, 0)
+    scheduler.run_once()
+    assert scheduler.status().next_check_at == at(13, 5)
+
+
 def test_scheduler_stop_interrupts_long_wait():
     settings = Settings(scheduler_enabled=True)
     service = RecordingService(settings)

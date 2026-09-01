@@ -82,6 +82,7 @@ class PollScheduler:
         decision = market_session_at(local_now, resolution, self.settings)
         is_final_poll = self._needs_final_poll(local_now, decision.phase)
         should_execute = decision.should_poll or is_final_poll
+        wait_seconds = self._wait_seconds_for(decision.should_poll)
         poll_succeeded = False
         poll_error: str | None = None
 
@@ -91,7 +92,7 @@ class PollScheduler:
             self._calendar_quality = decision.calendar_quality
             self._calendar_error = decision.calendar_error
             self._last_cycle_at = local_now
-            self._next_check_at = local_now + timedelta(seconds=self.interval_seconds)
+            self._next_check_at = local_now + timedelta(seconds=wait_seconds)
             if should_execute:
                 self._last_poll_attempt = local_now
 
@@ -146,11 +147,17 @@ class PollScheduler:
         )
         return local_now >= finalization_at
 
+    def _wait_seconds_for(self, should_poll: bool) -> int:
+        active_wait = max(1, self.interval_seconds)
+        return active_wait if should_poll else min(active_wait, 60)
+
     def _run(self) -> None:
         try:
             while not self._stop.is_set():
                 self.run_once()
-                if self._stop.wait(self.interval_seconds):
+                with self._lock:
+                    should_poll = self._should_poll
+                if self._stop.wait(self._wait_seconds_for(should_poll)):
                     break
         finally:
             with self._lock:
