@@ -97,6 +97,7 @@ function startServer(port, extraEnv = {}, entrypoint = 'server/index.js') {
       env: {
         ...process.env,
         DISABLE_BACKGROUND_JOBS: '1',
+        ETF_MONITOR_ENABLED: '0',
         HOST: '127.0.0.1',
         PORT: String(port),
         RESEARCH_DATA_DIR: researchDataDir,
