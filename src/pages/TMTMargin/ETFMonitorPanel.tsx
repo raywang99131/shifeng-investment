@@ -25,6 +25,11 @@ import {
 } from '@ant-design/icons';
 import ReactECharts from 'echarts-for-react';
 import dayjs from 'dayjs';
+import {
+  etfMonitoringCopy,
+  type EtfCalendarQuality,
+  type EtfMarketPhase,
+} from './etfMonitorState';
 
 const { Text } = Typography;
 const AUTO_REFRESH_MS = 60_000;
@@ -79,6 +84,12 @@ interface EtfOverview {
   generated_at?: string;
   data_status: DataStatus;
   last_updated?: string | null;
+  market_phase?: EtfMarketPhase;
+  monitoring_active?: boolean;
+  calendar_quality?: EtfCalendarQuality;
+  calendar_error?: string | null;
+  last_poll_attempt?: string | null;
+  last_poll_success?: string | null;
   error?: string;
   items: EtfMonitorItem[];
 }
@@ -231,6 +242,11 @@ const ETFMonitorPanel: React.FC = () => {
   const selectedMaxRatio = useMemo(
     () => maxAlertRatio(selectedDayAlerts),
     [selectedDayAlerts],
+  );
+  const monitoringState = etfMonitoringCopy(
+    overview?.market_phase || 'unknown',
+    Boolean(overview?.monitoring_active),
+    overview?.calendar_quality || 'unknown',
   );
   const chartOption = useMemo(() => {
     const alertTimes = new Set(selectedDayAlerts.map((alert) => alert.candle_time));
@@ -401,6 +417,7 @@ const ETFMonitorPanel: React.FC = () => {
             <Tag color={STATUS_META[overview?.data_status || 'degraded'].color}>
               {STATUS_META[overview?.data_status || 'degraded'].text}
             </Tag>
+            <Tag color={monitoringState.tone}>{monitoringState.label}</Tag>
           </Space>
           <Text type="secondary" style={{ fontSize: 12 }}>
             15分钟监控；14:30后切换5分钟。9:45放大1.15倍触发，其余时段放大1.30倍触发。
@@ -408,7 +425,7 @@ const ETFMonitorPanel: React.FC = () => {
         </Space>
         <Space wrap>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            <ClockCircleOutlined /> 更新 {formatDateTime(overview?.last_updated)}
+            <ClockCircleOutlined /> 数据 {formatDateTime(overview?.last_updated)} · 自动轮询 {formatDateTime(overview?.last_poll_success)}
           </Text>
           <Button icon={<ReloadOutlined />} loading={refreshing} onClick={refreshAll} type="primary">
             立即刷新
@@ -423,6 +440,16 @@ const ETFMonitorPanel: React.FC = () => {
           style={{ marginBottom: 16 }}
           title="ETF监控服务异常，当前继续展示最近一次缓存"
           description={error}
+        />
+      ) : null}
+
+      {monitoringState.detail ? (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+          title={monitoringState.detail}
+          description={overview?.calendar_error || undefined}
         />
       ) : null}
 

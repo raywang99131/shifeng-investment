@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import threading
 from datetime import date, datetime
+from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 from app.config import Settings
@@ -39,7 +40,7 @@ class RecordingService:
     def poll_all(self):
         self.poll_count += 1
         self.polled.set()
-        return []
+        return [SimpleNamespace(error=None)]
 
 
 def at(hour: int, minute: int, second: int = 0) -> datetime:
@@ -63,6 +64,9 @@ def test_scheduler_polls_only_during_sessions_and_once_after_close():
     scheduler.run_once()
     assert service.poll_count == 1
     assert scheduler.status().phase == "morning_session"
+    assert scheduler.status().monitoring_active is True
+    assert scheduler.status().last_poll_attempt == at(10, 0)
+    assert scheduler.status().last_poll_success == at(10, 0)
 
     clock.value = at(11, 30)
     scheduler.run_once()

@@ -31,7 +31,19 @@ function createFetchStub(calls) {
       return jsonResponse({ symbols: [{ symbol: '159915.SZ', name: '创业板ETF易方达' }] });
     }
     if (parsed.pathname === '/api/health') {
-      return jsonResponse({ status: 'ok', data_status: 'live', last_updated: '2026-08-10T10:00:00' });
+      return jsonResponse({
+        status: 'ok',
+        data_status: 'live',
+        last_updated: '2026-08-10T10:00:00',
+        scheduler: {
+          phase: 'morning_session',
+          monitoring_active: true,
+          calendar_quality: 'confirmed',
+          calendar_error: null,
+          last_poll_attempt: '2026-08-10T10:00:00+08:00',
+          last_poll_success: '2026-08-10T10:00:00+08:00',
+        },
+      });
     }
     if (parsed.pathname === '/api/monitor/cached-snapshot') {
       return jsonResponse({
@@ -73,8 +85,62 @@ test('overview reads cached snapshots and alerts through one platform endpoint',
   assert.equal(payload.success, true);
   assert.equal(payload.data_status, 'live');
   assert.equal(payload.items[0].symbol, '159915.SZ');
+  assert.equal(payload.market_phase, 'morning_session');
+  assert.equal(payload.monitoring_active, true);
+  assert.equal(payload.calendar_quality, 'confirmed');
+  assert.equal(payload.last_poll_success, '2026-08-10T10:00:00+08:00');
   assert.ok(calls.some((call) => call.path.startsWith('/api/monitor/cached-snapshot?')));
   assert.ok(!calls.some((call) => call.path.startsWith('/api/monitor/snapshot?')));
+});
+
+test('overview keeps healthy symbols when one cached snapshot fails', async (t) => {
+  const app = express();
+  app.use('/api/etf-monitor', createEtfMonitorRouter({
+    baseUrl: 'http://etf-monitor.test',
+    fetchImpl: async (url) => {
+      const parsed = new URL(url);
+      if (parsed.pathname === '/api/monitor/symbols') {
+        return jsonResponse({
+          symbols: [
+            { symbol: '159915.SZ', name: '创业板ETF易方达' },
+            { symbol: '510300.SH', name: '沪深300ETF华泰柏瑞' },
+          ],
+        });
+      }
+      if (parsed.pathname === '/api/health') {
+        return jsonResponse({ status: 'ok', data_status: 'cached', scheduler: {} });
+      }
+      if (parsed.pathname === '/api/monitor/cached-snapshot') {
+        if (parsed.searchParams.get('symbol') === '510300.SH') {
+          return jsonResponse({ detail: 'snapshot read failed' }, 500);
+        }
+        return jsonResponse({
+          symbol: '159915.SZ',
+          name: '创业板ETF易方达',
+          data_status: 'cached',
+          latest_candle: { time: '2026-08-10T10:00:00', amount: 120000000 },
+          candles: [],
+          current_alert: null,
+          last_updated: '2026-08-10T10:00:00',
+        });
+      }
+      if (parsed.pathname === '/api/alerts') return jsonResponse({ alerts: [] });
+      return jsonResponse({ detail: 'not found' }, 404);
+    },
+  }));
+  const server = await listen(app);
+  t.after(server.close);
+
+  const response = await fetch(`${server.baseUrl}/api/etf-monitor/overview`);
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.success, true);
+  assert.equal(payload.data_status, 'degraded');
+  assert.equal(payload.items.length, 2);
+  assert.equal(payload.items[0].latest_candle.amount, 120000000);
+  assert.equal(payload.items[1].data_status, 'degraded');
+  assert.match(payload.items[1].error, /snapshot read failed/);
 });
 
 test('manual refresh polls all monitored ETFs before returning the latest overview', async (t) => {

@@ -93,9 +93,12 @@ class SchedulerHealth(BaseModel):
         "closed_day",
     ]
     should_poll: bool
+    monitoring_active: bool
     calendar_quality: Literal["confirmed", "cached", "weekday_fallback"] | None
     calendar_error: str | None = None
     last_cycle_at: datetime | None = None
+    last_poll_attempt: datetime | None = None
+    last_poll_success: datetime | None = None
     last_poll_at: datetime | None = None
     next_check_at: datetime | None = None
     finalized_for_date: date | None = None

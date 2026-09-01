@@ -214,7 +214,10 @@ def test_health_exposes_scheduler_market_phase(tmp_path):
     assert scheduler["enabled"] is False
     assert scheduler["phase"] == "lunch_break"
     assert scheduler["should_poll"] is False
+    assert scheduler["monitoring_active"] is False
     assert scheduler["calendar_quality"] == "confirmed"
+    assert "last_poll_attempt" in scheduler
+    assert "last_poll_success" in scheduler
 
 
 def test_poll_all_polls_every_configured_symbol(tmp_path):

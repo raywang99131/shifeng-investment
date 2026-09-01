@@ -43,6 +43,8 @@ class PollScheduler:
         self._calendar_quality = None
         self._calendar_error: str | None = None
         self._last_cycle_at: datetime | None = None
+        self._last_poll_attempt: datetime | None = None
+        self._last_poll_success: datetime | None = None
         self._last_poll_at: datetime | None = None
         self._next_check_at: datetime | None = None
         self._finalized_for_date: date | None = None
@@ -79,16 +81,9 @@ class PollScheduler:
         resolution = self.trading_calendar.resolve(local_now.date())
         decision = market_session_at(local_now, resolution, self.settings)
         is_final_poll = self._needs_final_poll(local_now, decision.phase)
+        should_execute = decision.should_poll or is_final_poll
         poll_succeeded = False
         poll_error: str | None = None
-
-        if decision.should_poll or is_final_poll:
-            try:
-                self.service.poll_all()
-            except Exception as exc:
-                poll_error = str(exc)
-            else:
-                poll_succeeded = True
 
         with self._lock:
             self._phase = decision.phase
@@ -97,12 +92,27 @@ class PollScheduler:
             self._calendar_error = decision.calendar_error
             self._last_cycle_at = local_now
             self._next_check_at = local_now + timedelta(seconds=self.interval_seconds)
-            if decision.should_poll or is_final_poll:
+            if should_execute:
+                self._last_poll_attempt = local_now
+
+        if should_execute:
+            try:
+                results = self.service.poll_all()
+            except Exception as exc:
+                poll_error = str(exc)
+            else:
+                poll_succeeded = any(
+                    getattr(result, "error", None) is None for result in results
+                )
+
+        with self._lock:
+            if should_execute:
                 self._error = poll_error
             if poll_succeeded:
+                self._last_poll_success = local_now
                 self._last_poll_at = local_now
-                if is_final_poll:
-                    self._finalized_for_date = local_now.date()
+            if is_final_poll:
+                self._finalized_for_date = local_now.date()
 
     def status(self) -> SchedulerHealth:
         with self._lock:
@@ -111,9 +121,12 @@ class PollScheduler:
                 running=self._running,
                 phase=self._phase,
                 should_poll=self._should_poll,
+                monitoring_active=self.enabled and self._should_poll,
                 calendar_quality=self._calendar_quality,
                 calendar_error=self._calendar_error,
                 last_cycle_at=self._last_cycle_at,
+                last_poll_attempt=self._last_poll_attempt,
+                last_poll_success=self._last_poll_success,
                 last_poll_at=self._last_poll_at,
                 next_check_at=self._next_check_at,
                 finalized_for_date=self._finalized_for_date,

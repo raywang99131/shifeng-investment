@@ -80,18 +80,8 @@ def create_app(
     def health() -> HealthResponse:
         data_status, last_updated, error = service.health()
         scheduler_health = scheduler.status()
-        expected_idle = scheduler_health.phase in {
-            "pre_open",
-            "lunch_break",
-            "post_close",
-            "closed_day",
-        }
-        is_healthy = (
-            data_status in {"live", "cached"}
-            or (expected_idle and scheduler_health.error is None)
-        )
         return HealthResponse(
-            status="ok" if is_healthy else "degraded",
+            status="ok",
             symbol=resolved_settings.symbol,
             data_status=data_status,
             last_updated=last_updated,
