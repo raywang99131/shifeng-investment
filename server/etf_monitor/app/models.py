@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
@@ -80,9 +80,32 @@ class PollAllResponse(BaseModel):
     results: list[PollResponse]
 
 
+class SchedulerHealth(BaseModel):
+    enabled: bool
+    running: bool
+    phase: Literal[
+        "initializing",
+        "pre_open",
+        "morning_session",
+        "lunch_break",
+        "afternoon_session",
+        "post_close",
+        "closed_day",
+    ]
+    should_poll: bool
+    calendar_quality: Literal["confirmed", "cached", "weekday_fallback"] | None
+    calendar_error: str | None = None
+    last_cycle_at: datetime | None = None
+    last_poll_at: datetime | None = None
+    next_check_at: datetime | None = None
+    finalized_for_date: date | None = None
+    error: str | None = None
+
+
 class HealthResponse(BaseModel):
     status: Literal["ok", "degraded"]
     symbol: str
     data_status: DataStatus
     last_updated: datetime | None
     error: str | None = None
+    scheduler: SchedulerHealth

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from datetime import datetime
 from pathlib import Path
+from typing import Callable
 
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,6 +21,7 @@ from app.models import (
 from app.notifier import AlertNotifier, SMTPAlertNotifier
 from app.scheduler import PollScheduler
 from app.service import MonitorService
+from app.trading_calendar import TradingDayCalendar
 
 
 def create_app(
@@ -27,6 +30,8 @@ def create_app(
     scheduler_enabled: bool | None = None,
     settings: Settings | None = None,
     notifier: AlertNotifier | None = None,
+    trading_calendar: TradingDayCalendar | None = None,
+    scheduler_now: Callable[[], datetime] | None = None,
 ) -> FastAPI:
     resolved_settings = settings or Settings()
     resolved_db_path = Path(db_path or resolved_settings.db_path)
@@ -45,7 +50,13 @@ def create_app(
         if scheduler_enabled is None
         else scheduler_enabled
     )
-    scheduler = PollScheduler(service, resolved_settings.poll_interval_seconds)
+    scheduler = PollScheduler(
+        service,
+        resolved_settings.poll_interval_seconds,
+        trading_calendar=trading_calendar,
+        now=scheduler_now,
+        enabled=should_run_scheduler,
+    )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -63,16 +74,29 @@ def create_app(
         allow_headers=["*"],
     )
     app.state.monitor_service = service
+    app.state.poll_scheduler = scheduler
 
     @app.get("/api/health", response_model=HealthResponse)
     def health() -> HealthResponse:
         data_status, last_updated, error = service.health()
+        scheduler_health = scheduler.status()
+        expected_idle = scheduler_health.phase in {
+            "pre_open",
+            "lunch_break",
+            "post_close",
+            "closed_day",
+        }
+        is_healthy = (
+            data_status in {"live", "cached"}
+            or (expected_idle and scheduler_health.error is None)
+        )
         return HealthResponse(
-            status="ok" if data_status in {"live", "cached"} else "degraded",
+            status="ok" if is_healthy else "degraded",
             symbol=resolved_settings.symbol,
             data_status=data_status,
             last_updated=last_updated,
             error=error,
+            scheduler=scheduler_health,
         )
 
     @app.get("/api/monitor/snapshot", response_model=MonitorSnapshot)

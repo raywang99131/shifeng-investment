@@ -1,4 +1,5 @@
-from datetime import datetime, time
+from datetime import date, datetime, time
+from zoneinfo import ZoneInfo
 
 from fastapi.testclient import TestClient
 
@@ -7,6 +8,7 @@ from app.config import EtfSymbolConfig, Settings
 from app.main import create_app
 from app.models import Candle
 from app.store import AlertStore
+from app.trading_calendar import TradingDayResolution
 
 
 def candle(
@@ -55,6 +57,11 @@ class FakeMarketDataClient:
 class MustNotFetchMarketDataClient:
     def fetch_intraday_candles(self, symbol: str):
         raise AssertionError("cached snapshot must not fetch market data")
+
+
+class StaticTradingCalendar:
+    def resolve(self, target_date: date) -> TradingDayResolution:
+        return TradingDayResolution(True, "confirmed")
 
 
 class SymbolAwareMarketDataClient:
@@ -187,6 +194,27 @@ def test_symbols_endpoint_returns_configured_etfs(tmp_path):
         {"symbol": "510310.SH", "name": "沪深300ETF易方达"},
         {"symbol": "588080.SH", "name": "科创50ETF易方达"},
     ]
+
+
+def test_health_exposes_scheduler_market_phase(tmp_path):
+    shanghai = ZoneInfo("Asia/Shanghai")
+    app = create_app(
+        db_path=tmp_path / "alerts.db",
+        market_data_client=FakeMarketDataClient(),
+        scheduler_enabled=False,
+        trading_calendar=StaticTradingCalendar(),
+        scheduler_now=lambda: datetime(2026, 8, 12, 11, 45, tzinfo=shanghai),
+    )
+    app.state.poll_scheduler.run_once()
+
+    response = TestClient(app).get("/api/health")
+
+    assert response.status_code == 200
+    scheduler = response.json()["scheduler"]
+    assert scheduler["enabled"] is False
+    assert scheduler["phase"] == "lunch_break"
+    assert scheduler["should_poll"] is False
+    assert scheduler["calendar_quality"] == "confirmed"
 
 
 def test_poll_all_polls_every_configured_symbol(tmp_path):
