@@ -46,6 +46,7 @@ server/data/ai-dashboard/
 !server/data/ai-dashboard/
 server/data/ai-dashboard/*
 !server/data/ai-dashboard/cds-5y.json
+!server/data/ai-dashboard/growth-reference.json
 server/data/tungsten-price-history.json
 server/data/x-followers.json
 server/data/research/completed.json

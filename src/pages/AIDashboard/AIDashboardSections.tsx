@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
+import { arrChartSeries, arrSourceCategory, arrValueLabel, primaryArrMetrics, historicalValuations } from './arrChart';
 import {
   Alert,
   Button,
@@ -66,7 +67,7 @@ import {
   topBenchmarkScoreRows,
 } from './viewModel';
 
-const { Text, Title, Paragraph, Link } = Typography;
+const { Text, Title, Link } = Typography;
 
 type DashboardProps = { data: AiDashboardSnapshot };
 
@@ -349,77 +350,52 @@ function CombinedArrChart({ metrics, height = 360 }: { metrics: ArrCompanyMetric
   const screens = Grid.useBreakpoint();
   const compact = !screens.sm;
   const option = useMemo(() => {
-    const selected = metrics.filter((metric) => ['Anthropic', 'OpenAI'].includes(metric.company));
-    const months = [...new Set(selected.flatMap((metric) => metric.actualPoints.map((point) => point.month)))].sort();
-    const colors = [palette.blue, palette.orange, palette.cyan, palette.red];
+    const series = arrChartSeries(metrics);
+    const companyColor = (company: string) => company === 'Anthropic' ? palette.cyan : palette.red;
+    const dotColor = (point: ArrPoint) => arrSourceCategory(point) === 'official' ? palette.blue : arrSourceCategory(point) === 'yipit' ? palette.orange : '#929aaa';
     return {
-      animationDuration: 350,
+      useUTC: true,
+      animationDuration: 250,
       tooltip: {
-        trigger: 'axis',
-        formatter: (params: Array<{
-          marker: string;
-          seriesName: string;
-          data?: { value: number; point: ArrPoint } | null;
-        }>) => {
-          const month = params.find((item) => item.data)?.data?.point.month || '';
-          const rows = params.filter((item) => item.data).map((item) => {
-            const point = item.data!.point;
-            const change = formatArrDelta(point.momAbsolute, point.momPercent);
-            const note = point.provenance?.commentary || point.commentary || point.note;
-            const period = point.comparisonLabel
-              ? `${point.consecutiveMonth ? '月环比' : '相邻观测变化'}：${escapeHtml(point.comparisonLabel)}`
-              : '首次观测';
-            const sourceLink = point.sourceUrl?.startsWith('https://')
-              ? `<a href="${escapeHtml(point.sourceUrl)}" target="_blank" rel="noreferrer">原始来源</a>`
-              : '';
-            return [
-              `${item.marker}<b>${escapeHtml(item.seriesName)}</b>`,
-              `ARR：${escapeHtml(compactNumber(point.value))} 亿美元`,
-              `${period} · ${escapeHtml(change)}`,
-              `口径：${escapeHtml(point.methodology || point.provenance?.methodology || '未标注')}`,
-              note ? `点评：${escapeHtml(note)}` : '',
-              sourceLink,
-            ].filter(Boolean).join('<br/>');
-          });
-          return [`<b>${escapeHtml(month)}</b>`, ...rows].join('<br/><br/>');
+        trigger: 'item', confine: true, enterable: true,
+        formatter: (item: { marker: string; seriesName: string; data: { point: ArrPoint } }) => {
+          const point = item.data.point;
+          const date = point.datePrecision === 'month' ? point.month : point.datePrecision === 'month-start' ? `${point.month} 月初` : point.observedAt;
+          const sourceLink = point.sourceUrl?.startsWith('https://')
+            ? `<a href="${escapeHtml(point.sourceUrl)}" target="_blank" rel="noreferrer">来源 ${escapeHtml(point.sourceCell || '')}</a>` : '';
+          return [
+            `${item.marker}<b>${escapeHtml(item.seriesName)}</b>`,
+            `${escapeHtml(date)} · 历史观测`,
+            `来源：${escapeHtml(point.sourceLabel)} · ${{ official: '官方口径', yipit: 'Yipit', unspecified: '原表未注明来源' }[arrSourceCategory(point)]}`,
+            `ARR：${escapeHtml(arrValueLabel(point))} 亿美元`,
+            point.valueHigh !== undefined ? '图中以区间中点定位，原始区间见上方。' : '',
+            point.kind === 'actual' && point.comparisonLabel ? `${point.consecutiveMonth ? '月环比' : '相邻观测变化'}：${escapeHtml(formatArrDelta(point.momAbsolute, point.momPercent))}<br/>${escapeHtml(point.comparisonLabel)}` : '',
+            `口径：${escapeHtml(point.methodology || point.provenance?.methodology || point.sourceLabel)}`,
+            point.commentary ? `备注：${escapeHtml(point.commentary)}` : '', sourceLink,
+          ].filter(Boolean).join('<br/>');
         },
       },
-      legend: { top: 0, type: 'scroll', textStyle: { color: palette.text } },
-      grid: { left: compact ? 42 : 64, right: compact ? 8 : 24, top: 58, bottom: 42 },
-      xAxis: { type: 'category', data: months, axisLabel: { color: palette.text, fontSize: compact ? 9 : 12 }, axisLine: { lineStyle: { color: palette.line } } },
-      yAxis: { type: 'value', name: compact ? '' : '亿美元', nameTextStyle: { color: palette.text }, axisLabel: { color: palette.text, fontSize: compact ? 9 : 12 }, splitLine: { lineStyle: { color: palette.line } } },
-      series: selected.map((metric, index) => {
-        const byMonth = new Map(metric.actualPoints.map((point) => [point.month, point]));
-        const color = colors[index % colors.length];
-        return {
-          name: `${metric.company} · ${metric.sourceLabel}${metric.seriesKind === 'estimate' ? '（估算）' : '（官方）'}`,
-          type: 'line',
-          smooth: true,
-          symbolSize: 7,
-          connectNulls: true,
-          data: months.map((month) => {
-            const point = byMonth.get(month);
-            return point ? { value: point.value, point } : null;
-          }),
-          itemStyle: { color },
-          lineStyle: { color, width: 2.5, type: metric.seriesKind === 'estimate' ? 'dashed' : 'solid' },
-          label: {
-            show: true,
-            position: 'top',
-            color: palette.text,
-            formatter: (params: { data?: { point: ArrPoint } | null }) => {
-              const point = params.data?.point;
-              return point?.momAbsolute === null || point?.momAbsolute === undefined ? '' : `${point.momAbsolute >= 0 ? '+' : ''}${compactNumber(point.momAbsolute)}`;
-            },
-          },
-        };
-      }),
+      legend: { top: 0, type: 'scroll', textStyle: { color: palette.text },
+
+      },
+      grid: { left: compact ? 44 : 64, right: 36, top: 60, bottom: 72 },
+      dataZoom: [{ type: 'slider', bottom: 0, height: 22 }, { type: 'inside' }],
+      xAxis: { type: 'time', axisLabel: { color: palette.text, fontSize: compact ? 9 : 12, hideOverlap: true }, axisLine: { lineStyle: { color: palette.line } } },
+      yAxis: { type: 'value', name: '亿美元', nameTextStyle: { color: palette.text }, axisLabel: { color: palette.text }, splitLine: { lineStyle: { color: palette.line } } },
+      series: series.map((series) => ({
+        ...series,
+        lineStyle: { color: companyColor(series.company), width: 2.5 },
+        itemStyle: { color: companyColor(series.company) },
+        data: series.data.map((item) => ({ ...item, itemStyle: { color: dotColor(item.point) } })),
+        label: { show: true, position: 'top', color: palette.text, fontSize: compact ? 9 : 11,
+          formatter: (params: { data: { point: ArrPoint } }) => arrValueLabel(params.data.point) },
+        labelLayout: { hideOverlap: true },
+        emphasis: { focus: 'series' },
+      })),
     };
   }, [compact, metrics, palette]);
-  if (!metrics.some((metric) => ['Anthropic', 'OpenAI'].includes(metric.company) && metric.actualPoints.length > 0)) {
-    return <NoData description="暂无 Anthropic / OpenAI ARR 数据" />;
-  }
-  return <ReactECharts option={option} style={{ height }} notMerge />;
+  if (!metrics.some((metric) => metric.actualPoints.length || metric.forecastPoints.length)) return <NoData description="暂无 ARR 数据" />;
+  return <><Space wrap size={12}><Text type="secondary">● Anthropic · ◆ OpenAI</Text><Tag color="blue">官方披露</Tag><Tag color="orange">Yipit</Tag><Tag>原表未注明来源</Tag></Space><ReactECharts option={option} style={{ height }} notMerge /></>;
 }
 
 function OpenRouterTopChart({ data, height = 350 }: { data: AiDashboardSnapshot['openRouter']; height?: number }) {
@@ -491,7 +467,7 @@ function ParrHistoryChart({ valuations }: { valuations: AiDashboardSnapshot['arr
   const palette = useChartPalette();
   const screens = Grid.useBreakpoint();
   const compact = !screens.sm;
-  const { comparable, dates, groups } = useMemo(() => {
+  const { comparable, groups } = useMemo(() => {
     const filtered = valuations.filter((row) => ['Anthropic', 'OpenAI'].includes(row.company) && row.parrLow !== null && row.parrHigh !== null);
     const resolvedGroups = new Map<string, typeof filtered>();
     for (const row of filtered) {
@@ -500,12 +476,13 @@ function ParrHistoryChart({ valuations }: { valuations: AiDashboardSnapshot['arr
     }
     return {
       comparable: filtered,
-      dates: [...new Set(filtered.map((row) => row.asOf))].sort(),
       groups: resolvedGroups,
     };
   }, [valuations]);
   const option = useMemo(() => ({
+    useUTC: true,
     tooltip: {
+      confine: true,
       trigger: 'axis',
       formatter: (params: Array<{ marker: string; seriesName: string; data?: { value: number; row: typeof comparable[number] } | null }>) => {
         const date = params.find((item) => item.data)?.data?.row.asOf || '';
@@ -525,38 +502,35 @@ function ParrHistoryChart({ valuations }: { valuations: AiDashboardSnapshot['arr
     },
     legend: { top: 0, type: 'scroll', textStyle: { color: palette.text } },
     grid: { left: compact ? 42 : 60, right: compact ? 8 : 24, top: 48, bottom: 42 },
-    xAxis: { type: 'category', data: dates, axisLabel: { color: palette.text, rotate: 30, fontSize: compact ? 8 : 12 }, axisLine: { lineStyle: { color: palette.line } } },
+    xAxis: { type: 'time', axisLabel: { color: palette.text, rotate: 30, fontSize: compact ? 8 : 12 }, axisLine: { lineStyle: { color: palette.line } } },
     yAxis: { type: 'value', name: compact ? '' : 'P/ARR（x）', axisLabel: { color: palette.text, formatter: (value: number) => `${value.toFixed(0)}x` }, splitLine: { lineStyle: { color: palette.line } } },
     series: [...groups.entries()].map(([name, rows], index) => {
-      const byDate = new Map(rows.map((row) => [row.asOf, row]));
       const color = [palette.blue, palette.orange, palette.cyan, palette.red][index % 4];
       return {
         name,
         type: 'line',
-        connectNulls: true,
+        connectNulls: false,
+        smooth: false,
         symbolSize: 7,
-        data: dates.map((date) => {
-          const row = byDate.get(date);
-          return row ? { value: ((row.parrLow || 0) + (row.parrHigh || 0)) / 2, row } : null;
-        }),
+        data: rows.toSorted((a, b) => a.asOf.localeCompare(b.asOf)).map((row) => ({ value: [Date.parse(`${row.asOf}T00:00:00Z`), ((row.parrLow || 0) + (row.parrHigh || 0)) / 2], row })),
         itemStyle: { color },
         lineStyle: { color, width: 2.5, type: rows[0]?.arrSeriesKind === 'estimate' ? 'dashed' : 'solid' },
       };
     }),
-  }), [compact, dates, groups, palette]);
+  }), [compact, groups, palette]);
   if (comparable.length === 0) return <NoData description="暂无 Anthropic / OpenAI P/ARR 历史" />;
   return <ReactECharts option={option} style={{ height: 340 }} notMerge />;
 }
 
 function latestArrCompany(data: AiDashboardSnapshot) {
-  return data.arrAndValuation.companies.toSorted((left, right) => (right.latestActual?.observedAt || '').localeCompare(left.latestActual?.observedAt || ''))[0] || null;
+  return primaryArrMetrics(data.arrAndValuation.companies).toSorted((left, right) => (right.latestActual?.observedAt || '').localeCompare(left.latestActual?.observedAt || ''))[0] || null;
 }
 
 export function OverviewSection({ data }: DashboardProps) {
   const arr = latestArrCompany(data);
   const arrPoint = arr?.latestActual;
   const capital = data.capitalEvents?.[0] || data.debtFinancing?.[0];
-  const valuation = data.arrAndValuation.valuations[0];
+  const valuation = historicalValuations(data.arrAndValuation.valuations).filter((row) => ['Anthropic', 'OpenAI'].includes(row.company) && row.parrLow !== null).at(-1);
   return (
     <div className="ai-section-stack">
       <Row gutter={[16, 16]}>
@@ -569,7 +543,7 @@ export function OverviewSection({ data }: DashboardProps) {
               precision={arr ? 2 : undefined}
               prefix={<LineChartOutlined />}
             />
-            <Text type="secondary">{arrPoint ? `${arr.sourceLabel} · ${formatArrDelta(arrPoint.momAbsolute, arrPoint.momPercent)}` : '暂无环比观测'}</Text>
+            <Text type="secondary">{arrPoint ? `${arr.sourceLabel} · ${arrPoint.observedAt} · 较上次 ${formatArrDelta(arrPoint.momAbsolute, arrPoint.momPercent)}` : '暂无环比观测'}</Text>
           </Card>
         </Col>
         <Col xs={24} sm={12} xl={6}>
@@ -587,14 +561,14 @@ export function OverviewSection({ data }: DashboardProps) {
         <Col xs={24} sm={12} xl={6}>
           <Card className="ai-kpi-card">
             <Statistic title={`最新 P/ARR${valuation ? ` · ${valuation.company}` : ''}`} value={valuation ? formatMultiple(valuation.parrLow, valuation.parrHigh) : '—'} />
-            <Text type="secondary">估值日 {dateLabel(valuation?.asOf)} · ARR 匹配 {dateLabel(valuation?.arrAsOf)}</Text>
+            <Text type="secondary">估值期间 {valuation?.datePrecision === 'month' ? valuation.asOf.slice(0, 7) : dateLabel(valuation?.asOf)} · ARR 匹配 {valuation?.datePrecision === 'month' ? valuation.arrAsOf?.slice(0, 7) : dateLabel(valuation?.arrAsOf)}</Text>
           </Card>
         </Col>
       </Row>
       <Row gutter={[16, 16]}>
         <Col xs={24} xl={12}>
-          <ChartCard title="Anthropic 与 OpenAI ARR · 官方 / 估算分列" extra={arr?.stale ? <Tag color="warning">部分观测超过 18 天</Tag> : <Tag color="success">观测有效</Tag>}>
-            <CombinedArrChart metrics={data.arrAndValuation.companies} height={340} />
+          <ChartCard title="OpenAI 与 Anthropic · 历史 ARR" extra={arr?.stale ? <Tag color="warning">部分观测超过 18 天</Tag> : <Tag color="success">观测有效</Tag>}>
+            <CombinedArrChart metrics={primaryArrMetrics(data.arrAndValuation.companies)} height={340} />
           </ChartCard>
         </Col>
         <Col xs={24} xl={12}>
@@ -620,7 +594,7 @@ export function OverviewSection({ data }: DashboardProps) {
         </Col>
         <Col xs={24} xl={12}>
           <ChartCard title="P/ARR 估值配对">
-            <ValuationTable data={data.arrAndValuation.valuations.slice(0, 6)} compact />
+            <ValuationTable data={historicalValuations(data.arrAndValuation.valuations).filter((v) => ['Anthropic', 'OpenAI'].includes(v.company) && v.parrLow !== null).slice(-6).reverse()} compact />
           </ChartCard>
         </Col>
       </Row>
@@ -629,80 +603,94 @@ export function OverviewSection({ data }: DashboardProps) {
 }
 
 function ValuationTable({ data, compact = false }: { data: AiDashboardSnapshot['arrAndValuation']['valuations']; compact?: boolean }) {
-  return (
-    <Table
-      rowKey={(row) => `${row.company}-${row.asOf}-${row.arrSourceLabel || row.arrSeriesKind || 'arr'}`}
-      size="small"
-      pagination={compact ? false : { pageSize: 10 }}
-      scroll={{ x: 820 }}
-      locale={{ emptyText: <NoData description="暂无估值数据" /> }}
-      dataSource={data}
-      columns={[
-        { title: '公司', dataIndex: 'company', fixed: 'left', width: 130 },
-        { title: '估值日期', dataIndex: 'asOf', width: 112, render: dateLabel },
-        { title: '估值（亿美元）', width: 140, render: (_, row) => row.valuationLow === row.valuationHigh ? compactNumber(row.valuationLow) : `${compactNumber(row.valuationLow)}–${compactNumber(row.valuationHigh)}` },
-        { title: '匹配 ARR', width: 115, render: (_, row) => row.arrValue === null ? '—' : compactNumber(row.arrValue) },
-        { title: 'ARR 日期', dataIndex: 'arrAsOf', width: 112, render: dateLabel },
-        { title: 'ARR 口径', width: 145, render: (_, row) => row.arrSourceLabel ? `${row.arrSourceLabel}${row.arrSeriesKind === 'estimate' ? '（估算）' : '（官方）'}` : '—' },
-        { title: 'P/ARR', width: 110, render: (_, row) => <Text strong>{formatMultiple(row.parrLow, row.parrHigh)}</Text> },
-        { title: '点评', dataIndex: 'note', ellipsis: { showTitle: false }, render: (value) => <Tooltip title={value}><span>{value || '—'}</span></Tooltip> },
-      ]}
-    />
-  );
+  return <Table
+    rowKey={(row) => `${row.company}-${row.asOf}-${row.sourceCell || row.arrSourceLabel || 'arr'}`}
+    size="small" pagination={compact ? false : { pageSize: 10 }} scroll={{ x: compact ? 820 : 1450 }}
+    locale={{ emptyText: <NoData description="暂无估值数据" /> }} dataSource={data}
+    columns={[
+      { title: '公司', dataIndex: 'company', fixed: 'left', width: 110 },
+      { title: '估值期间', width: 110, render: (_, row) => row.datePrecision === 'month' ? row.asOf.slice(0, 7) : dateLabel(row.asOf) },
+      { title: '估值（亿美元）', width: 145, render: (_, row) => row.valuationLow === row.valuationHigh ? compactNumber(row.valuationLow) : `${compactNumber(row.valuationLow)}–${compactNumber(row.valuationHigh)}` },
+      { title: compact ? '匹配 ARR' : '原公式分母', width: 110, render: (_, row) => row.arrValue === null ? '—' : compactNumber(row.arrValue) },
+      { title: '分母期间', width: 112, render: (_, row) => row.arrAsOf ? row.datePrecision === 'month' ? row.arrAsOf.slice(0, 7) : dateLabel(row.arrAsOf) : '未标明' },
+      { title: compact ? 'P/ARR' : '原表倍数', width: 140, render: (_, row) => <><Text strong>{formatMultiple(row.parrLow, row.parrHigh)}</Text>{!compact && <Text type="secondary"> {row.multipleKind || 'P/ARR'}</Text>}</> },
+      ...(!compact ? [
+        { title: '配对说明', width: 160, render: (_: unknown, row: typeof data[number]) => <Space wrap size={2}>
+          {row.forwardDenominator && <Tag color="orange">前瞻分母</Tag>}
+          {row.valuationBasis === 'formula-assumption' && <Tag color="orange">公式假设</Tag>}
+          {row.arrValue !== null && !row.arrAsOf && <Tag>分母假设</Tag>}
+          {row.multipleKind === 'P/S' && <Tag>收入口径</Tag>}
+          {!row.forwardDenominator && row.arrAsOf && <Tag color="blue">同月 / 此前</Tag>}
+        </Space> },
+        { title: '历史 P/ARR', width: 185, render: (_: unknown, row: typeof data[number]) => <>
+          <Text strong>{formatMultiple(row.historicalParrLow ?? null, row.historicalParrHigh ?? null)}</Text>
+          {row.historicalArrAsOf && <div><Text type="secondary">{row.historicalArrAsOf.slice(0, 7)} · ARR {compactNumber(row.historicalArrValue!)}</Text></div>}
+        </> },
+        { title: '来源 / 公式', width: 145, render: (_: unknown, row: typeof data[number]) => <><Link href={row.sourceUrl} target="_blank" rel="noreferrer">{row.sourceCell || row.sourceLabel}</Link><div>{row.formula || '—'}</div></> },
+      ] : []),
+      { title: '备注', dataIndex: 'note', width: 235, ellipsis: { showTitle: false }, render: (value) => <Tooltip title={value}><span>{value || '—'}</span></Tooltip> },
+    ]}
+  />;
 }
 
 export function ArrValuationSection({ data }: DashboardProps) {
-  const metrics = data.arrAndValuation.companies.filter((item) => ['Anthropic', 'OpenAI'].includes(item.company));
-  const latestPoints = metrics.map((metric) => ({ metric, point: metric.latestActual })).filter((item) => item.point);
-  const detailRows = metrics.flatMap((metric) => metric.actualPoints.map((point) => ({ ...point, seriesId: metric.seriesId })))
+  const metrics = data.arrAndValuation.companies;
+  const primary = primaryArrMetrics(metrics);
+  const latest = ['Anthropic', 'OpenAI'].map((company) => primary.filter((m) => m.company === company && m.latestActual).toSorted((a, b) => b.latestActual!.observedAt.localeCompare(a.latestActual!.observedAt))[0]).filter(Boolean);
+  const detailRows = primary.flatMap((metric) => metric.actualPoints.map((point) => ({ ...point, seriesId: metric.seriesId })))
     .toSorted((left, right) => right.observedAt.localeCompare(left.observedAt));
+  const reference = data.arrAndValuation.reference;
   return (
     <div className="ai-section-stack">
-      <ChartCard title="Anthropic 与 OpenAI ARR · 官方披露和 Yipit 估算不合并">
+      {reference && <Alert type="info" showIcon title="数据已按飞书表格核对" description={<>
+        <Link href={reference.url} target="_blank" rel="noreferrer">{reference.title} · {reference.sheet}</Link>
+        <span> · 导入 {reference.retrievedAt.slice(0, 10)} · 表格修改 {reference.sourceUpdatedAt}。{reference.note}</span>
+      </>} />}
+      <ChartCard title="OpenAI 与 Anthropic · 历史 ARR" extra={<Text type="secondary">单位：亿美元</Text>}>
         <Row gutter={[20, 12]}>
-          <Col xs={24} lg={18}><CombinedArrChart metrics={metrics} height={390} /></Col>
+          <Col xs={24} lg={18}><CombinedArrChart metrics={primary} height={370} /></Col>
           <Col xs={24} lg={6}>
             <Flex vertical gap={14} className="ai-arr-aside">
-              {latestPoints.map(({ metric, point }) => (
-                <Card size="small" key={metric.seriesId}>
-                  <Statistic
-                    title={<Space size={6}><span>{metric.company} · {metric.seriesKind === 'estimate' ? '估算' : '官方'}</span><MetricHelp point={point} /></Space>}
-                    value={point?.value ?? '—'}
-                    precision={2}
-                    suffix="亿美元"
-                  />
-                  <Text type="secondary">{metric.sourceLabel} · {formatArrDelta(point?.momAbsolute, point?.momPercent)}</Text>
-                </Card>
-              ))}
-              {metrics.some((metric) => metric.stale) && <Alert type="warning" showIcon title="更新提醒" description="部分 ARR 观测已超过 18 天，请查看各点来源日期。" />}
-              <Paragraph type="secondary">实线为公司官方披露，虚线为估算。非连续月份明确标为“相邻观测变化”，不伪称单月环比。</Paragraph>
+              {latest.map((metric) => metric.latestActual && <Card size="small" key={metric.seriesId}>
+                <Statistic title={`${metric.company} · ${metric.sourceLabel}`} value={arrValueLabel(metric.latestActual)} suffix="亿美元" />
+                <Text type="secondary">观测 {metric.latestActual.observedAt}</Text><br/>
+                <Text type="secondary">较上次 {formatArrDelta(metric.latestActual.momAbsolute, metric.latestActual.momPercent)}</Text>
+              </Card>)}
+              <Text type="secondary">汇集两家公司全部历史观测。点颜色区分来源，形状区分公司；拖动下方时间条可放大查看。Yipit 已乘 10 换算为亿美元。</Text>
+              {primary.some((m) => m.stale) && <Tag color="warning">最近观测超过 18 天</Tag>}
             </Flex>
           </Col>
         </Row>
       </ChartCard>
-      <ChartCard title="ARR 观测明细" extra={<Text type="secondary">环比同时显示绝对增量和百分比</Text>}>
-        <Table
-          size="small"
-          rowKey={(row) => `${row.seriesId}-${row.month}`}
-          pagination={false}
-          scroll={{ x: 1080 }}
-          locale={{ emptyText: <NoData description="暂无 ARR 实测数据" /> }}
-          dataSource={detailRows}
+      <ChartCard title="历史 ARR 明细" extra={<Text type="secondary">保留每次观测与原始来源</Text>}>
+        <Table size="small" rowKey={(row) => `${row.seriesId}-${row.observedAt}-${row.kind}`} pagination={{ pageSize: 12 }} scroll={{ x: 1250 }} dataSource={detailRows}
           columns={[
-            { title: '公司', dataIndex: 'company', width: 110, fixed: 'left' },
-            { title: '口径', dataIndex: 'seriesKind', width: 90, render: (value) => value === 'estimate' ? <Tag color="orange">估算</Tag> : <Tag color="blue">官方</Tag> },
-            { title: '月份', dataIndex: 'month', width: 110 },
-            { title: '实测 ARR（亿美元）', dataIndex: 'value', width: 165, render: compactNumber },
-            { title: '环比变化', width: 205, render: (_, row) => <Text className={(row.momAbsolute || 0) >= 0 ? 'ai-change-up' : 'ai-change-down'}>{formatArrDelta(row.momAbsolute, row.momPercent)}</Text> },
-            { title: '比较区间', dataIndex: 'comparisonLabel', width: 210, render: (value, row) => value ? `${value}${row.consecutiveMonth ? '' : ' · 非连续观测'}` : '首次观测' },
-            { title: '实测日期', dataIndex: 'observedAt', width: 112 },
-            { title: '来源', dataIndex: 'sourceLabel', width: 110 },
-            { title: '口径 / 点评', render: (_, row) => <Tooltip title={row.provenance?.commentary || row.commentary || row.note}><span>{row.methodology || row.provenance?.methodology || '—'}</span></Tooltip> },
-          ]}
-        />
+            { title: '公司', dataIndex: 'company', width: 115, fixed: 'left', filters: [...new Set(primary.map((m) => m.company))].map((company) => ({ text: company, value: company })), onFilter: (value, row) => row.company === value },
+            { title: '期间', width: 115, render: (_, row) => row.datePrecision === 'month' ? row.month : row.observedAt },
+            { title: '类型', width: 90, render: (_, row) => <Tag color={row.kind === 'forecast' ? 'orange' : 'blue'}>{row.kind === 'forecast' ? '预测' : '历史跟踪'}</Tag> },
+            { title: 'ARR（亿美元）', width: 150, render: (_, row) => arrValueLabel(row) },
+            { title: '较上次观测', width: 205, render: (_, row) => formatArrDelta(row.momAbsolute, row.momPercent) },
+            { title: '比较区间', width: 240, render: (_, row) => row.comparisonLabel ? `${row.comparisonLabel} · ${row.consecutiveMonth ? '月环比' : '观测间'}` : '—' },
+            { title: '来源', width: 170, render: (_, row) => <Link href={row.sourceUrl} target="_blank" rel="noreferrer">{row.sourceLabel} {row.sourceCell}</Link> },
+            { title: '口径与备注', width: 240, render: (_, row) => <Tooltip title={row.commentary || row.note}><span>{row.methodology || '—'}</span></Tooltip> },
+          ]} />
       </ChartCard>
-      <ChartCard title="Anthropic 与 OpenAI P/ARR 完整历史"><ParrHistoryChart valuations={data.arrAndValuation.valuations} /></ChartCard>
-      <ChartCard title="估值与 P/ARR"><ValuationTable data={data.arrAndValuation.valuations} /></ChartCard>
+      <ChartCard title="Anthropic 与 OpenAI · 历史 P/ARR">
+        <ParrHistoryChart valuations={historicalValuations(data.arrAndValuation.valuations)} />
+        <Text type="secondary">按估值月份匹配同月或此前的历史 ARR，排除预测和公式中的估值假设。原表只有月份，不能视作精确融资日配对。</Text>
+      </ChartCard>
+      <ChartCard title="估值与倍数 · 原表公式核对">
+        <Text type="secondary">原表倍数单独展示；“前瞻分母”“公式假设”和 P/S 不作为历史 P/ARR。区间保留，缺失公式不补值。</Text>
+        <ValuationTable data={data.arrAndValuation.valuations} />
+      </ChartCard>
+      {Boolean(data.arrAndValuation.otherRevenue?.length) && <ChartCard title="原表中的全年收入与指引">
+        <Table size="small" rowKey={(row) => row.sourceCell!} pagination={false} scroll={{ x: 650 }} dataSource={data.arrAndValuation.otherRevenue} columns={[
+          { title: '公司 / 产品', dataIndex: 'company' }, { title: '期间', dataIndex: 'month' },
+          { title: '收入（亿美元）', render: (_, row) => arrValueLabel(row) },
+          { title: '状态', render: (_, row) => row.kind === 'forecast' ? '预测 / 指引' : '历史收入' },
+          { title: '原表备注', dataIndex: 'commentary' },
+        ]} />
+      </ChartCard>}
     </div>
   );
 }
@@ -849,22 +837,16 @@ function TokenPricing({ data }: DashboardProps) {
           rowKey={(row) => `${row.vendor}-${row.model}-${row.contextTier}-${row.serviceTier}-${row.currency}-${row.asOf}`}
           size="small"
           pagination={{ pageSize: 25, showSizeChanger: false }}
-          scroll={{ x: 1480 }}
+          tableLayout="fixed"
+          scroll={{ x: 760 }}
           locale={{ emptyText: <NoData description="暂无 API Token 价格" /> }}
           dataSource={data.modelPricing.token}
           columns={[
             { title: '厂商', dataIndex: 'vendor', fixed: 'left', width: 110 },
-            { title: '模型', dataIndex: 'model', fixed: 'left', width: 220, className: 'ai-model-name' },
-            { title: '币种', dataIndex: 'currency', width: 80 },
-            { title: '上下文档', dataIndex: 'contextTier', width: 105 },
-            { title: '服务档', dataIndex: 'serviceTier', width: 100 },
-            { title: '输入', dataIndex: 'inputPrice', width: 110, align: 'right', render: (value, row) => formatCurrencyPrice(value, row.currency, 3) },
-            { title: '缓存读取', dataIndex: 'cacheReadPrice', width: 115, align: 'right', render: (value, row) => formatCurrencyPrice(value, row.currency, 3) },
-            { title: '缓存写入', dataIndex: 'cacheWritePrice', width: 115, align: 'right', render: (value, row) => formatCurrencyPrice(value, row.currency, 3) },
-            { title: '输出', dataIndex: 'outputPrice', width: 110, align: 'right', render: (value, row) => formatCurrencyPrice(value, row.currency, 3) },
-            { title: '日期', dataIndex: 'asOf', width: 112, render: dateLabel },
-            { title: '来源', width: 120, render: (_, row) => <a href={row.sourceUrl} target="_blank" rel="noreferrer">{row.sourceLabel}</a> },
-            { title: '说明', dataIndex: 'note', render: (value) => value || '—' },
+            { title: '模型', dataIndex: 'model', width: 260, className: 'ai-model-name', render: (value, row) => <>{value}{row.contextTier && row.contextTier !== 'standard' ? <><br /><Text type="secondary">{row.contextTier}</Text></> : null}</> },
+            { title: '输入', dataIndex: 'inputPrice', width: 130, align: 'right', render: (value, row) => formatCurrencyPrice(value, row.currency, 3) },
+            { title: '缓存', dataIndex: 'cacheReadPrice', width: 130, align: 'right', render: (value, row) => <Tooltip title="缓存读取（命中）价格"><span>{formatCurrencyPrice(value, row.currency, 3)}</span></Tooltip> },
+            { title: '输出', dataIndex: 'outputPrice', width: 130, align: 'right', render: (value, row) => formatCurrencyPrice(value, row.currency, 3) },
           ]}
         />
       </ChartCard>
@@ -878,22 +860,19 @@ function VideoPricing({ data }: DashboardProps) {
       <Table
         rowKey={(row) => `${row.vendor}-${row.model}-${row.mode}-${row.resolution}-${row.durationTier}`}
         size="small"
-        pagination={{ pageSize: 15, showSizeChanger: false }}
-        scroll={{ x: 1250 }}
+        pagination={{ pageSize: 25, showSizeChanger: false }}
+        tableLayout="fixed"
+        scroll={{ x: 1000 }}
         locale={{ emptyText: <NoData description="尚未从厂商官网确认可展示的视频 API 价格" /> }}
-        dataSource={data.modelPricing.video}
+        dataSource={data.modelPricing.video.filter((row) => row.model !== 'MiniMax-Hailuo-02')}
         columns={[
-          { title: '厂商', dataIndex: 'vendor', fixed: 'left', width: 120 },
-          { title: '模型', dataIndex: 'model', width: 200, className: 'ai-model-name' },
-          { title: '生成模式', dataIndex: 'mode', width: 150 },
-          { title: '分辨率', dataIndex: 'resolution', width: 130 },
+          { title: '厂商', dataIndex: 'vendor', fixed: 'left', width: 100 },
+          { title: '模型', dataIndex: 'model', width: 220, className: 'ai-model-name' },
+          { title: '生成模式', dataIndex: 'mode', width: 180 },
+          { title: '分辨率', dataIndex: 'resolution', width: 85 },
           { title: '时长档', dataIndex: 'durationTier', width: 130 },
-          { title: '公开价格', width: 140, align: 'right', render: (_, row) => row.pricingMode === 'fixed' ? <Text strong>{formatCurrencyPrice(row.price, row.currency, 3)}</Text> : <Tag>{row.pricingMode === 'inquiry' ? '询价' : '未公开'}</Tag> },
-          { title: '官网计费单位', dataIndex: 'displayUnit', width: 160 },
-          { title: '可比 USD / 秒', dataIndex: 'comparableUsdPerSecond', width: 140, align: 'right', render: (value) => formatUsd(value, 4) },
-          { title: '日期', dataIndex: 'asOf', width: 112, render: dateLabel },
-          { title: '来源', width: 150, render: (_, row) => <a href={row.sourceUrl} target="_blank" rel="noreferrer">{row.sourceLabel}</a> },
-          { title: '说明', dataIndex: 'note', render: (value) => value || '—' },
+          { title: '公开价格', width: 170, align: 'right', render: (_, row) => row.pricingMode === 'fixed' ? <><Text strong>{formatCurrencyPrice(row.price, row.currency, 3)}</Text><br /><Text type="secondary">{row.displayUnit}</Text></> : <Tag>{row.pricingMode === 'inquiry' ? '询价' : '未公开'}</Tag> },
+          { title: '来源', width: 115, render: (_, row) => <a href={row.sourceUrl} target="_blank" rel="noreferrer">{row.sourceLabel}</a> },
         ]}
       />
     </ChartCard>

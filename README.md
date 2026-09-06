@@ -48,7 +48,7 @@ docker compose up --build
 
 ## AI 投资看板配置
 
-AI 看板位于 `/ai-dashboard`，沿用网站现有访问边界，不再要求单独输入访问口令。看板已停止读取飞书；增长、价格、融资、官网模型卡、算力租赁等板块由服务端从登记过的公开网页读取，每条记录保留来源、口径、数据日期和同步状态。
+AI 看板位于 `/ai-dashboard`，沿用网站现有访问边界，不再要求单独输入访问口令。ARR 与估值使用已核对的表格快照 `server/data/ai-dashboard/growth-reference.json`，同时保留已核验的公司官网历史 ARR。总览和 ARR 页共用 OpenAI、Anthropic 全历史图，每家公司一条线，数据点颜色区分来源，预测不进入历史图。月度区以亿美元计，Yipit 区以十亿美元计；读取时统一单位并重算日期和倍数公式，不使用 Excel 的零值公式缓存。历史 P/ARR 按月份使用同月或此前 ARR，原表的前瞻分母及公式假设另行标注。该文件是人工核对快照，刷新不会重新下载飞书或改变实际观测日期；后续需核对原表并更新该文件。价格、融资、官网模型卡、算力租赁等板块继续读取登记过的公开网页。
 
 OpenRouter 只读取 [官网排行榜网页](https://openrouter.ai/rankings) 的 HTML，不调用 OpenRouter API，也不读取或发送 `OPENROUTER_API_KEY`。每次同步直接获取官网 This Week 榜单，解析公开表格中的 Top 10 模型、Token 显示值、涨跌方向和 `Usage data through` 数据日期；统计窗口为截至该日期的七个完整 UTC 日。点击 OpenRouter 页签会同步一次，服务启动后和每日定时也会同步。
 

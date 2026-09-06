@@ -196,6 +196,76 @@ test('GET keeps only subset-hit US earnings and returns source status', async (t
   assert.equal(body.updatedAt, NOW);
 });
 
+test('GET includes Jin10 and WeChat manual snapshot events', async (t) => {
+  const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'calendar-manual-snapshot-'));
+  t.after(() => fs.promises.rm(dir, { recursive: true, force: true }));
+  const dataFile = await writeFixtureStore(dir, []);
+  const manualUpdatedAt = '2026-08-23T11:00:00.000Z';
+  await fs.promises.writeFile(path.join(dir, 'manual-events.json'), JSON.stringify({
+    schemaVersion: 1,
+    updatedAt: manualUpdatedAt,
+    sources: {
+      jin10: {
+        status: 'manual_import',
+        updatedAt: manualUpdatedAt,
+        message: '金十人工核验快照',
+      },
+      wechat: {
+        status: 'manual_import',
+        updatedAt: manualUpdatedAt,
+        message: '微信公众号人工导入快照',
+      },
+    },
+    events: [{
+      id: 'jin10-us-jobless-claims',
+      kind: 'macro',
+      title: '美国当周初请失业金人数',
+      region: 'US',
+      date: '2026-08-27',
+      startAt: '2026-08-27T12:30:00.000Z',
+      timezone: 'Asia/Shanghai',
+      timePrecision: 'exact',
+      importance: 5,
+      status: 'confirmed',
+      source: source('jin10', 'us-jobless-claims'),
+    }, {
+      id: 'wechat-digital-publishing',
+      kind: 'a_share',
+      title: '中国国际数字出版博览会',
+      region: 'CN',
+      date: '2026-08-27',
+      endDate: '2026-08-29',
+      timezone: 'Asia/Shanghai',
+      timePrecision: 'date',
+      importance: 4,
+      status: 'confirmed',
+      tags: ['数字出版'],
+      source: source('wechat', 'digital-publishing'),
+    }],
+  }), 'utf8');
+
+  const app = express();
+  app.use('/api/calendar', createCalendarRouter({
+    dataFile,
+    fundsFile: TEST_FUNDS_FILE,
+    now: () => new Date(NOW),
+  }));
+  const server = await listen(app);
+  t.after(server.close);
+
+  const response = await fetch(`${server.baseUrl}/api/calendar?start=2026-08-27&end=2026-08-27`);
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.count, 2);
+  assert.deepEqual(body.events.map((event) => event.id), [
+    'jin10-us-jobless-claims',
+    'wechat-digital-publishing',
+  ]);
+  assert.equal(body.sources.jin10.status, 'manual_import');
+  assert.equal(body.sources.wechat.status, 'manual_import');
+  assert.equal(body.updatedAt, manualUpdatedAt);
+});
+
 test('GET re-matches stored earnings after a new US symbol is added to a subset', async (t) => {
   const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'calendar-dynamic-subset-'));
   t.after(() => fs.promises.rm(dir, { recursive: true, force: true }));

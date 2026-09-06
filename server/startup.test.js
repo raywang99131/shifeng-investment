@@ -212,3 +212,66 @@ test('reports static route honors the isolated research reports directory', asyn
     await rm(tempRoot, { recursive: true, force: true });
   }
 });
+
+test('news API reports content freshness separately from price updates', async () => {
+  const tempRoot = await mkdtemp(join(tmpdir(), 'shifeng-news-api-'));
+  const newsFile = join(tempRoot, 'news.json');
+  await writeFile(newsFile, JSON.stringify({
+    lastUpdated: '2026-08-18T14:43:54.767Z',
+    lastCheckedAt: '2026-08-27T08:14:07.296Z',
+    entries: [
+      {
+        id: 'news-undated',
+        type: 'news-intelligence',
+        createdAt: '2026-08-27T08:20:00.000Z',
+        news: [{
+          title: 'Undated source item',
+          source: 'Fallback source',
+          collectionChannel: 'rss',
+          time: '',
+        }],
+      },
+      {
+        id: 'price-current',
+        type: 'price-watch',
+        createdAt: '2026-08-27T07:44:06.440Z',
+        news: [{
+          title: 'Q5500动力煤价格上涨',
+          source: 'CCTD',
+          collectionChannel: 'price-watch',
+          time: '2026-08-27T15:00:00+08:00',
+        }],
+      },
+      {
+        id: 'news-old',
+        type: 'news-intelligence',
+        createdAt: '2026-08-18T14:43:54.767Z',
+        news: [{
+          title: 'AI industry update',
+          source: 'Official source',
+          collectionChannel: 'rss',
+          time: 'Tue, 18 Aug 2026 22:03:55 +0800',
+        }],
+      },
+    ],
+  }), 'utf8');
+
+  const port = await reservePort();
+  const server = startServer(port, { NEWS_FILE: newsFile });
+  try {
+    await waitForHealth(port, server.child, server.stderr);
+    const { response, body } = await fetchJsonWithTimeout(`http://127.0.0.1:${port}/api/news`);
+
+    assert.equal(response.status, 200);
+    assert.equal(body.latestNewsAt, '2026-08-18T14:03:55.000Z');
+    assert.equal(body.lastCheckedAt, '2026-08-27T08:14:07.296Z');
+    assert.equal(body.contentStale, true);
+    const contentNews = body.news.filter((item) => item.collectionChannel !== 'price-watch');
+    assert.equal(contentNews[0].title, 'AI industry update');
+    assert.equal(contentNews.at(-1).title, 'Undated source item');
+    assert.equal(contentNews.at(-1).time, '');
+  } finally {
+    await stopServer(server);
+    await rm(tempRoot, { recursive: true, force: true });
+  }
+});

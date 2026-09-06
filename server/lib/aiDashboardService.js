@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { createGrowthReferenceCollector } from './aiGrowthReference.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DTCC_PPD_URL, mergePublicCdsObservations } from './aiCdsPublicData.js';
@@ -534,10 +535,10 @@ export function createAiDashboardServiceFromEnv({
     const growthRegistry = AI_GROWTH_SOURCE_REGISTRY.filter((source) => (
       !growthSourceIds || growthSourceIds.includes(source.id)
     ));
-    mergedCollectors.growth = createAiGrowthCollector({
+    mergedCollectors.growth = growthSourceIds ? createAiGrowthCollector({
       documentClient: officialDocumentClient,
       registry: growthRegistry,
-    });
+    }) : createGrowthReferenceCollector();
   }
   if (typeof mergedCollectors.pricing !== 'function') {
     const pricingRegistry = PUBLIC_SOURCE_REGISTRY.filter((source) => (

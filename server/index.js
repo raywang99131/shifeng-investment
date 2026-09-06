@@ -14,6 +14,7 @@ import { createAiDashboardRouter } from './api/ai_dashboard.js';
 import { syncResearch } from './lib/researchSync.js';
 import { markSyncResultCompletions } from './lib/researchCompletion.js';
 import { fetchBlsCpiNews, fetchNewsIntelligence } from './lib/newsIntelligence.js';
+import { getNewsArchiveFreshness, getNewsIncrementalSince } from './lib/newsArchiveFreshness.js';
 import {
   createAiDashboardServiceFromEnv,
   startAiDashboardAutoRefresh,
@@ -46,7 +47,7 @@ const refreshPublicIceCds = () => refreshIceCdsFromPublicSources({
 });
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
-const NEWS_FILE = path.join(__dirname, 'data', 'news.json');
+const NEWS_FILE = process.env.NEWS_FILE || path.join(__dirname, 'data', 'news.json');
 const TUNGSTEN_HISTORY_FILE = path.join(__dirname, 'data', 'tungsten-price-history.json');
 const FUNDS_FILE = path.join(__dirname, 'data', 'funds.json');
 const BUILD_META_FILE = path.join(__dirname, '../dist/build-meta.json');
@@ -1704,6 +1705,7 @@ function isBlockedNewsItem(item) {
 
 function parseArchiveNewsTime(value, archiveCreatedAt) {
   const raw = String(value || '').trim();
+  if (!raw) return null;
   const direct = Date.parse(raw);
   if (Number.isFinite(direct)) return direct;
 
@@ -1724,11 +1726,11 @@ function parseArchiveNewsTime(value, archiveCreatedAt) {
   const hoursAgo = raw.match(/(\d+)\s*小时/);
   if (hoursAgo) return archiveTime - Number(hoursAgo[1]) * 60 * 60 * 1000;
 
-  return archiveTime;
+  return null;
 }
 
 function getArchiveNewsSortTime(item, entry) {
-  return parseArchiveNewsTime(item?.time, entry?.createdAt) || Date.parse(entry?.createdAt || '') || Date.now();
+  return parseArchiveNewsTime(item?.time, entry?.createdAt) || 0;
 }
 
 function flattenNewsForResponse(data, options = {}) {
@@ -1751,7 +1753,7 @@ function flattenNewsForResponse(data, options = {}) {
 
       const candidate = {
         ...item,
-        time: new Date(sortTime).toISOString(),
+        time: sortTime > 0 ? new Date(sortTime).toISOString() : '',
         score,
         sourceCount: 1,
         __baseScore: score,
@@ -1816,26 +1818,6 @@ function collectNewsKeys(data) {
     });
   });
   return keys;
-}
-
-function getNewsIncrementalSince(data) {
-  const lastSuccessfulRefresh = data?.lastCheckedAt || data?.lastUpdated;
-  const lastMs = Date.parse(lastSuccessfulRefresh || '');
-  if (!Number.isFinite(lastMs)) return '24h';
-
-  const diffMs = Date.now() - lastMs;
-  if (!Number.isFinite(diffMs) || diffMs <= 0) return '1h';
-
-  const overlapMs = 10 * 60 * 1000;
-  const lookbackMs = diffMs + overlapMs;
-  const hourMs = 60 * 60 * 1000;
-  const dayMs = 24 * hourMs;
-
-  if (lookbackMs < dayMs) {
-    return `${Math.max(1, Math.ceil(lookbackMs / hourMs))}h`;
-  }
-
-  return `${Math.min(7, Math.max(1, Math.ceil(lookbackMs / dayMs)))}d`;
 }
 
 async function runNewsIncrementalRefresh(options = {}) {
@@ -2257,6 +2239,7 @@ app.post('/api/prices/refresh', (req, res) => {
 
 app.get('/api/news', (req, res) => {
   const data = readNews();
+  const freshness = getNewsArchiveFreshness(data);
   const requestedLimit = Number(req.query.limit);
   const requestedMinScore = Number(req.query.minScore);
   const limit = Number.isFinite(requestedLimit)
@@ -2282,8 +2265,10 @@ app.get('/api/news', (req, res) => {
     type: 'news-archive',
     news: mergedNews,
     createdAt: combinedLatestTime,
-    lastUpdated: combinedLatestTime,
-    lastCheckedAt: combinedLatestTime,
+    lastUpdated: data.lastUpdated || latestArchiveTime,
+    lastCheckedAt: freshness.lastCheckedAt || latestArchiveTime,
+    latestNewsAt: freshness.latestNewsAt,
+    contentStale: freshness.contentStale,
     refreshStatus: combinedRefreshStatus,
     responseMode: 'flat',
     total: flattened.total + Math.max(0, mergedNews.length - flattened.news.length),
@@ -2374,7 +2359,7 @@ app.post('/api/news/refresh', async (req, res) => {
   const mode = requestedMode === 'full' ? 'full' : 'quick';
   const options = {
     mode,
-    since: typeof req.query.since === 'string' ? req.query.since : mode === 'quick' ? '1h' : undefined,
+    since: typeof req.query.since === 'string' ? req.query.since : undefined,
     limit: typeof req.query.limit === 'string' ? Number(req.query.limit) : mode === 'quick' ? 2 : undefined,
     outputPerSource: typeof req.query.outputPerSource === 'string' ? Number(req.query.outputPerSource) : undefined,
   };

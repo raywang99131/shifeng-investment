@@ -2,10 +2,17 @@ import { spawn } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { fileURLToPath } from 'url';
+import { assertNewsChannelsAvailable } from './newsIntelligenceHealth.js';
+import { resolveNewsIntelligenceRoot } from './newsIntelligencePaths.js';
+import { filterNewsItemsSince } from './newsIntelligenceTimeWindow.js';
+import { configureProjectPythonRuntime } from './pythonRuntime.js';
 
-const NEWS_INTELLIGENCE_ROOT = process.env.NEWS_INTELLIGENCE_ROOT || path.join(os.homedir(), 'Documents', '新闻资讯');
+configureProjectPythonRuntime();
+const NEWS_INTELLIGENCE_ROOT = resolveNewsIntelligenceRoot();
 const NEWS_INTELLIGENCE_SCRIPT = process.env.NEWS_INTELLIGENCE_SCRIPT || path.join(NEWS_INTELLIGENCE_ROOT, 'scripts', 'fetch_ai_news.py');
 const NEWS_INTELLIGENCE_PYTHON = process.env.NEWS_INTELLIGENCE_PYTHON || 'python3';
+const NEWS_PYTHON_RUNNER = fileURLToPath(new URL('../scripts/run_legacy_news.py', import.meta.url));
 const OPENCLI_COMMAND = process.env.OPENCLI_COMMAND
   || (fs.existsSync(path.join(os.homedir(), '.npm-global', 'bin', 'opencli')) ? path.join(os.homedir(), '.npm-global', 'bin', 'opencli') : 'opencli');
 const EXTRA_BIN_PATHS = [
@@ -17,7 +24,7 @@ const WX_MP_RSS_CORE_CANDIDATES = [
   process.env.WX_MP_RSS_CORE_PATH,
   path.join(os.homedir(), 'Documents', 'wx-mp-rss-core', 'wx-mp-rss-core'),
   path.join(os.homedir(), 'Documents', 'wx-mp-rss-core'),
-  path.join(os.homedir(), 'Documents', '新闻资讯', 'wx-mp-rss-core'),
+  path.join(NEWS_INTELLIGENCE_ROOT, 'wx-mp-rss-core'),
 ].filter(Boolean);
 const RESOLVED_WX_MP_RSS_CORE_PATH = WX_MP_RSS_CORE_CANDIDATES.find((candidate) => fs.existsSync(candidate));
 const NEWS_CHILD_ENV = {
@@ -50,6 +57,17 @@ const X_FOLLOWER_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const X_FOLLOWER_UPDATE_SCRIPT = path.join(process.cwd(), 'scripts', 'update-x-followers.mjs');
 const BLS_API_URL = 'https://api.bls.gov/publicAPI/v2/timeseries/data/';
 const BLS_CPI_SERIES = ['CUSR0000SA0', 'CUUR0000SA0', 'CUSR0000SA0L1E', 'CUUR0000SA0L1E'];
+
+export function getNewsIntelligenceSourceStatus() {
+  return {
+    root: NEWS_INTELLIGENCE_ROOT,
+    script: NEWS_INTELLIGENCE_SCRIPT,
+  };
+}
+
+export function buildNewsPythonArgs(script, args = []) {
+  return [NEWS_PYTHON_RUNNER, script, ...args];
+}
 
 const RSS_SOURCES = {
   'openai-blog': { name: 'OpenAI Blog', url: 'https://openai.com/blog/rss.xml', type: 'official', lang: 'en' },
@@ -938,7 +956,7 @@ function runAiNewsSkill({ since = '24h', rssLimit, wechatLimit, xLimit, newslett
   if (Number.isFinite(newsletterLimit)) args.push('--newsletter-limit', String(newsletterLimit));
 
   return new Promise((resolve, reject) => {
-    const proc = spawn(NEWS_INTELLIGENCE_PYTHON, args, {
+    const proc = spawn(NEWS_INTELLIGENCE_PYTHON, buildNewsPythonArgs(args[0], args.slice(1)), {
       cwd: NEWS_INTELLIGENCE_ROOT,
       env: NEWS_CHILD_ENV,
     });
@@ -968,7 +986,10 @@ function runAiNewsSkill({ since = '24h', rssLimit, wechatLimit, xLimit, newslett
 
 function runSkillChannel({ channel, script, args, timeoutMs }) {
   return new Promise((resolve) => {
-    const proc = spawn(NEWS_INTELLIGENCE_PYTHON, [path.join(NEWS_INTELLIGENCE_ROOT, 'scripts', script), ...args], {
+    const proc = spawn(NEWS_INTELLIGENCE_PYTHON, buildNewsPythonArgs(
+      path.join(NEWS_INTELLIGENCE_ROOT, 'scripts', script),
+      args,
+    ), {
       cwd: NEWS_INTELLIGENCE_ROOT,
       detached: true,
       env: NEWS_CHILD_ENV,
@@ -1448,6 +1469,7 @@ async function runAiNewsChannels({ since = '24h', rssLimit, wechatLimit, xLimit,
         },
       ];
   const channelSpecs = [...nonXChannelSpecs, ...xSpecs];
+  const warnings = [];
 
   const [nonXResults, xResults, blsCpiItems] = await Promise.all([
     Promise.all(nonXChannelSpecs.map(runSkillChannel)),
@@ -1458,8 +1480,8 @@ async function runAiNewsChannels({ since = '24h', rssLimit, wechatLimit, xLimit,
     }),
   ]);
   const results = [...nonXResults, ...xResults];
+  const channelHealth = assertNewsChannelsAvailable(results);
   const items = [];
-  const warnings = [];
   if (xTargets.warning) warnings.push(`[WARN] x-watch: ${xTargets.warning}`);
   if (!ENABLE_LIVE_X_FETCH && !xDigest.items.length) {
     warnings.push('[WARN] x-watch: digest snapshot has no X posts in the selected time range');
@@ -1518,6 +1540,7 @@ async function runAiNewsChannels({ since = '24h', rssLimit, wechatLimit, xLimit,
     xPerAccountLimit,
     xConcurrency: DEFAULT_X_CONCURRENCY,
     xLiveFetch: ENABLE_LIVE_X_FETCH,
+    channelHealth,
     mode,
   };
 }
@@ -1575,8 +1598,8 @@ function isBlockedSkillArticle(item) {
   return false;
 }
 
-function dedupeSkillNews(news) {
-  const seen = new Set();
+export function dedupeSkillNews(news) {
+  const resultIndexByKey = new Map();
   const result = [];
 
   for (const item of news) {
@@ -1584,8 +1607,17 @@ function dedupeSkillNews(news) {
     const urlKey = item.url ? canonicalUrl(item.url) : '';
     const titleKey = fingerprint(item.title);
     const key = urlKey || titleKey;
-    if (key && seen.has(key)) continue;
-    if (key) seen.add(key);
+    const duplicateIndex = key ? resultIndexByKey.get(key) : undefined;
+    if (duplicateIndex !== undefined) {
+      const existing = result[duplicateIndex];
+      const existingType = existing.sourceCategory || existing.source_type;
+      const candidateType = item.sourceCategory || item.source_type;
+      const existingWeight = SOURCE_PRIORITY_WEIGHTS[existingType] || 500;
+      const candidateWeight = SOURCE_PRIORITY_WEIGHTS[candidateType] || 500;
+      if (candidateWeight > existingWeight) result[duplicateIndex] = item;
+      continue;
+    }
+    if (key) resultIndexByKey.set(key, result.length);
     result.push(item);
   }
 
@@ -1609,6 +1641,7 @@ export async function fetchNewsIntelligence(options = {}) {
     xPerAccountLimit,
     xConcurrency,
     xLiveFetch,
+    channelHealth,
   } = await runAiNewsChannels({
     since,
     mode,
@@ -1618,7 +1651,8 @@ export async function fetchNewsIntelligence(options = {}) {
     newsletterLimit: Number.isFinite(channelLimit) ? channelLimit : undefined,
   });
 
-  const news = dedupeSkillNews(rawItems.filter((item) => !isBlockedSkillArticle(item)).map(normalizeSkillArticle));
+  const timelyItems = filterNewsItemsSince(rawItems, since);
+  const news = dedupeSkillNews(timelyItems.filter((item) => !isBlockedSkillArticle(item)).map(normalizeSkillArticle));
   const channelCounts = news.reduce((acc, item) => {
     const key = item.collectionChannel || item.sourceCategory || 'unknown';
     acc[key] = (acc[key] || 0) + 1;
@@ -1662,6 +1696,7 @@ export async function fetchNewsIntelligence(options = {}) {
       xPerAccountLimit,
       xConcurrency,
       xLiveFetch,
+      collectorStatus: channelHealth,
       warnings: warnings.slice(0, 20),
     },
   };

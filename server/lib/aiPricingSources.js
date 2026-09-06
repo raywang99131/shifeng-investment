@@ -25,7 +25,7 @@ const ADAPTER_CONFIG = Object.freeze({
     currentPattern: /Claude (?:Fable 5|Mythos 5|Opus 5|Sonnet 5|Haiku 4\.5)/gi,
   },
   'gemini-pricing': {
-    vendor: 'Gemini', kinds: ['token'], currency: 'USD', tokenUnit: 'per_million_tokens',
+    vendor: 'Gemini', kinds: ['token', 'video'], currency: 'USD', tokenUnit: 'per_million_tokens',
     currentPattern: /Gemini (?:3\.7 Flash|3\.6 Flash|3\.5 Flash(?:-Lite)?|3\.1 Pro)/gi,
   },
   'zhipu-models': {
@@ -347,6 +347,43 @@ function parseVideoTables(html, definition, document, config) {
   return parsed;
 }
 
+function parseVeoPricingPage(html, definition, document) {
+  const $ = load(html);
+  const parsed = [];
+  $('table').each((_, table) => {
+    const extracted = tableRows($, table);
+    if (!extracted) return;
+    const priceIndex = extracted.rawHeaders.findIndex((header) => /paid tier.*per second.*USD/i.test(header));
+    if (priceIndex < 0) return;
+    for (const row of extracted.rows) {
+      const model = row[0]?.match(/^(Veo 3\.1 (?:Standard|Fast|Lite)) video with audio\b/i)?.[1];
+      if (!model) continue;
+      // One official price can cover both 720p and 1080p. Unsupported
+      // resolutions have no dollar amount and must not become price rows.
+      for (const [, price, resolutionGroup] of String(row[priceIndex] || '').matchAll(/\$(\d+(?:\.\d+)?)\s*\(([^)]+)\)/g)) {
+        for (const resolution of resolutionGroup.match(/\b(?:720p|1080p|4k)\b/gi) || []) {
+          parsed.push(normalizeVideoPrice({
+            vendor: 'Google',
+            model,
+            mode: '含原生音频',
+            resolution: resolution.toLowerCase() === '4k' ? '4K' : resolution.toLowerCase(),
+            durationTier: '按生成秒数',
+            durationSeconds: null,
+            pricingMode: 'fixed',
+            price: Number(price),
+            currency: 'USD',
+            priceUnit: 'per_second',
+            ...sourceFields(definition, document, 'Google Gemini API 官网 Veo 3.1 含音频视频生成价，按生成秒数及分辨率计费'),
+            sourceLabel: 'Google 官网',
+            sourceUrl: `${definition.entryUrl}#veo-3.1`,
+          }));
+        }
+      }
+    }
+  });
+  return parsed;
+}
+
 function codingPriceMode(...values) {
   const text = values.join(' ');
   if (/询价/.test(text)) return 'inquiry';
@@ -500,7 +537,9 @@ export function createOfficialPricingAdapter(definition) {
             : parseTokenTables(document.text, registered, document, config, generations))
           : [],
         video: config.kinds.includes('video')
-          ? parseVideoTables(document.text, registered, document, config)
+          ? (registered.id === 'gemini-pricing'
+            ? parseVeoPricingPage(document.text, registered, document)
+            : parseVideoTables(document.text, registered, document, config))
           : [],
         codingPlans: config.kinds.includes('coding')
           ? parseCodingTables(document.text, registered, document, config)

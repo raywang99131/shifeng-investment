@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { message } from 'antd';
 import { API_BASE } from '../config/api';
+import { readNewsFeedFreshness } from './newsFeedFreshness';
 
 export interface NewsItem {
   category: string;
@@ -50,6 +51,8 @@ interface NewsArchive {
   entries?: NewsEntry[];
   lastUpdated?: string;
   lastCheckedAt?: string;
+  latestNewsAt?: string | null;
+  contentStale?: boolean;
   refreshStatus?: {
     updating?: boolean;
     lastStartedAt?: string | null;
@@ -72,6 +75,9 @@ interface NewsArchive {
 interface UseNewsFeedReturn {
   news: NewsItem[];
   lastUpdated: string | null;
+  lastCheckedAt: string | null;
+  latestNewsAt: string | null;
+  contentStale: boolean;
   loading: boolean;
   apiStatus: 'checking' | 'online' | 'offline';
   error: string | null;
@@ -138,6 +144,7 @@ const parseNewsTime = (value?: string) => {
 
 const parseNewsTimeWithArchiveBase = (value?: string, archiveCreatedAt?: string) => {
   const raw = (value || '').trim();
+  if (!raw) return null;
   const direct = parseNewsTime(raw);
   if (direct) return direct;
 
@@ -162,7 +169,7 @@ const parseNewsTimeWithArchiveBase = (value?: string, archiveCreatedAt?: string)
 };
 
 const getNewsSortTime = (item: NewsItem, entry: NewsEntry) => {
-  return parseNewsTimeWithArchiveBase(item.time, entry.createdAt) || parseNewsTime(entry.createdAt) || Date.now();
+  return parseNewsTimeWithArchiveBase(item.time, entry.createdAt) || 0;
 };
 
 const getNewsKey = (item: NewsItem) => {
@@ -185,7 +192,12 @@ const getNewsKey = (item: NewsItem) => {
 };
 
 const flattenNewsPayload = (payload: NewsEntry | NewsArchive | null) => {
-  if (!payload) return { news: [] as NewsItem[], lastUpdated: new Date().toISOString() };
+  if (!payload) {
+    return {
+      news: [] as NewsItem[],
+      ...readNewsFeedFreshness(null),
+    };
+  }
 
   const entries = Array.isArray((payload as NewsArchive).entries)
     ? (payload as NewsArchive).entries || []
@@ -202,7 +214,7 @@ const flattenNewsPayload = (payload: NewsEntry | NewsArchive | null) => {
       const key = getNewsKey(item);
       const candidate = {
         ...item,
-        time: new Date(sortTime).toISOString(),
+        time: sortTime > 0 ? new Date(sortTime).toISOString() : '',
         __sortTime: sortTime,
       };
       const existing = flattenedByKey.get(key);
@@ -219,13 +231,22 @@ const flattenNewsPayload = (payload: NewsEntry | NewsArchive | null) => {
 
   return {
     news: flattened.slice(0, HISTORY_ITEM_LIMIT).map(({ __sortTime, ...item }) => item),
-    lastUpdated: (payload as NewsArchive).lastCheckedAt || (payload as NewsArchive).lastUpdated || entries[0]?.createdAt || new Date().toISOString(),
+    ...readNewsFeedFreshness({
+      createdAt: entries[0]?.createdAt,
+      lastUpdated: (payload as NewsArchive).lastUpdated,
+      lastCheckedAt: (payload as NewsArchive).lastCheckedAt,
+      latestNewsAt: (payload as NewsArchive).latestNewsAt,
+      contentStale: (payload as NewsArchive).contentStale,
+    }),
   };
 };
 
 export function useNewsFeed(): UseNewsFeedReturn {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
+  const [latestNewsAt, setLatestNewsAt] = useState<string | null>(null);
+  const [contentStale, setContentStale] = useState(true);
   const [loading, setLoading] = useState(false);
   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [error, setError] = useState<string | null>(null);
@@ -256,6 +277,9 @@ export function useNewsFeed(): UseNewsFeedReturn {
     if (flattened.news.length > 0) {
       setNews(flattened.news);
       setLastUpdated(flattened.lastUpdated);
+      setLastCheckedAt(flattened.lastCheckedAt);
+      setLatestNewsAt(flattened.latestNewsAt);
+      setContentStale(flattened.contentStale);
       setIsMockData(false);
       setApiStatus('online');
       consecutiveFailures.current = 0;
@@ -263,7 +287,11 @@ export function useNewsFeed(): UseNewsFeedReturn {
     }
 
     setNews(MOCK_NEWS);
-    setLastUpdated(new Date().toISOString());
+    const checkedAt = new Date().toISOString();
+    setLastUpdated(null);
+    setLastCheckedAt(checkedAt);
+    setLatestNewsAt(null);
+    setContentStale(true);
     setIsMockData(true);
     if (showOfflineAlert) {
       message.warning('当前无可用新闻，已切换到本地离线数据');
@@ -301,7 +329,10 @@ export function useNewsFeed(): UseNewsFeedReturn {
       // 连续失败后使用 mock 数据
       if (consecutiveFailures.current >= MAX_CONSECUTIVE_FAILURES) {
         setNews(MOCK_NEWS);
-        setLastUpdated(new Date().toISOString());
+        setLastUpdated(null);
+        setLastCheckedAt(new Date().toISOString());
+        setLatestNewsAt(null);
+        setContentStale(true);
         setIsMockData(true);
         setApiStatus('offline');
         if (showOfflineAlert) {
@@ -406,7 +437,10 @@ export function useNewsFeed(): UseNewsFeedReturn {
         if (consecutiveFailures.current >= MAX_CONSECUTIVE_FAILURES) {
           if (news.length === 0) {
             setNews(MOCK_NEWS);
-            setLastUpdated(new Date().toISOString());
+            setLastUpdated(null);
+            setLastCheckedAt(new Date().toISOString());
+            setLatestNewsAt(null);
+            setContentStale(true);
             setIsMockData(true);
           }
         }
@@ -423,6 +457,9 @@ export function useNewsFeed(): UseNewsFeedReturn {
   return {
     news,
     lastUpdated,
+    lastCheckedAt,
+    latestNewsAt,
+    contentStale,
     loading,
     apiStatus,
     error,
