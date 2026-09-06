@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { load } from 'cheerio';
+import { readOpenRouterWeeklyHistory } from './openRouterWeeklyHistory.js';
 
 export const OPENROUTER_SOURCE_URL = 'https://openrouter.ai/rankings';
 const DAY_MS = 86_400_000;
@@ -79,7 +80,7 @@ export function parseOpenRouterRankingsHtml(html, { now = new Date() } = {}) {
   };
 }
 
-export function createOpenRouterWebClient({ fetchImpl = fetch, cacheFile, now = () => new Date(), timeoutMs = 30_000 } = {}) {
+export function createOpenRouterWebClient({ fetchImpl = fetch, cacheFile, weeklyHistoryFile, now = () => new Date(), timeoutMs = 30_000 } = {}) {
   return {
     async readRankings() {
       const controller = new AbortController();
@@ -91,6 +92,13 @@ export function createOpenRouterWebClient({ fetchImpl = fetch, cacheFile, now = 
         if (!response.ok) throw new Error(`OpenRouter 网页读取失败：HTTP ${response.status}`);
         if (!/text\/html/i.test(response.headers.get('content-type') || '')) throw new Error('OpenRouter 返回内容不是 HTML 网页');
         const payload = parseOpenRouterRankingsHtml(await response.text(), { now: now() });
+        // The interactive history is absent from the page's HTML. Keep its
+        // browser-observed capture and timestamp separate from this live table.
+        try {
+          payload.weeklyHistory = await readOpenRouterWeeklyHistory(weeklyHistoryFile);
+        } catch {
+          payload.weeklyHistoryError = '周图网页快照读取或校验失败，保留最近一次有效图表。';
+        }
         if (cacheFile) {
           await fs.mkdir(path.dirname(cacheFile), { recursive: true });
           const temp = `${cacheFile}.${process.pid}.tmp`;

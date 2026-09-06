@@ -463,6 +463,11 @@ export function createAiDashboardService({
           top10TotalTokens: payload.top10TotalTokens,
           topModels: payload.topModels,
           history: [],
+          weeklyHistory: payload.weeklyHistory && (!previous.openRouter.weeklyHistory
+            || payload.weeklyHistory.asOf >= previous.openRouter.weeklyHistory.asOf)
+            ? payload.weeklyHistory : previous.openRouter.weeklyHistory || null,
+          weeklyHistoryError: payload.weeklyHistoryError || (payload.weeklyHistory && previous.openRouter.weeklyHistory
+            && payload.weeklyHistory.asOf < previous.openRouter.weeklyHistory.asOf ? '周图网页快照日期回退，保留最近一次有效图表。' : null),
           ...(archivedPlatformData ? { archivedPlatformData } : {}),
           attribution: `Source: OpenRouter (openrouter.ai/rankings), This Week, ${payload.startDate} to ${payload.endDate}. Rounded webpage values. Licensed under CC BY 4.0.`,
         };
@@ -518,6 +523,7 @@ export function createAiDashboardServiceFromEnv({
   fetchImpl = fetch,
   dataFile = DEFAULT_AI_DASHBOARD_FILE,
   openRouterPublicFile = DEFAULT_OPENROUTER_PUBLIC_FILE,
+  openRouterWeeklyHistoryFile,
   collectors = {},
   pricingSourceIds,
   growthSourceIds,
@@ -527,7 +533,7 @@ export function createAiDashboardServiceFromEnv({
   now = () => new Date(),
 } = {}) {
   const openRouterPublicClient = createOpenRouterWebClient({
-    fetchImpl, cacheFile: openRouterPublicFile, now,
+    fetchImpl, cacheFile: openRouterPublicFile, weeklyHistoryFile: openRouterWeeklyHistoryFile, now,
   });
   const mergedCollectors = { ...collectors };
   const officialDocumentClient = createOfficialDocumentClient({ fetchImpl, now });

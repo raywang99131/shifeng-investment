@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { arrChartSeries, arrSourceCategory, arrValueLabel, primaryArrMetrics, historicalValuations } from './arrChart';
+import { arrChartSeries, arrSourceCategory, arrValueLabel, primaryArrMetrics, latestCompanyValuations, type LatestCompanyValuation } from './arrChart';
 import {
   Alert,
   Button,
@@ -463,65 +463,6 @@ function OpenRouterHistoryChart({ data }: { data: AiDashboardSnapshot['openRoute
   return <ReactECharts option={option} style={{ height: 320 }} notMerge />;
 }
 
-function ParrHistoryChart({ valuations }: { valuations: AiDashboardSnapshot['arrAndValuation']['valuations'] }) {
-  const palette = useChartPalette();
-  const screens = Grid.useBreakpoint();
-  const compact = !screens.sm;
-  const { comparable, groups } = useMemo(() => {
-    const filtered = valuations.filter((row) => ['Anthropic', 'OpenAI'].includes(row.company) && row.parrLow !== null && row.parrHigh !== null);
-    const resolvedGroups = new Map<string, typeof filtered>();
-    for (const row of filtered) {
-      const key = `${row.company} · ${row.arrSourceLabel || row.arrSeriesKind || 'ARR'}`;
-      resolvedGroups.set(key, [...(resolvedGroups.get(key) || []), row]);
-    }
-    return {
-      comparable: filtered,
-      groups: resolvedGroups,
-    };
-  }, [valuations]);
-  const option = useMemo(() => ({
-    useUTC: true,
-    tooltip: {
-      confine: true,
-      trigger: 'axis',
-      formatter: (params: Array<{ marker: string; seriesName: string; data?: { value: number; row: typeof comparable[number] } | null }>) => {
-        const date = params.find((item) => item.data)?.data?.row.asOf || '';
-        const rows = params.filter((item) => item.data).map((item) => {
-          const row = item.data!.row;
-          return [
-            `${item.marker}<b>${escapeHtml(item.seriesName)}</b>`,
-            `P/ARR：${escapeHtml(formatMultiple(row.parrLow, row.parrHigh))}`,
-            `估值：${escapeHtml(compactNumber(row.valuationLow))}${row.valuationHigh !== row.valuationLow ? `–${escapeHtml(compactNumber(row.valuationHigh))}` : ''} 亿美元`,
-            `匹配 ARR：${escapeHtml(compactNumber(row.arrValue || 0))} 亿美元（${escapeHtml(dateLabel(row.arrAsOf))}）`,
-            `计算式：估值 ÷ ${escapeHtml(row.arrSourceLabel || 'ARR')} ARR`,
-            row.note ? `点评：${escapeHtml(row.note)}` : '',
-          ].filter(Boolean).join('<br/>');
-        });
-        return [`<b>${escapeHtml(date)}</b>`, ...rows].join('<br/><br/>');
-      },
-    },
-    legend: { top: 0, type: 'scroll', textStyle: { color: palette.text } },
-    grid: { left: compact ? 42 : 60, right: compact ? 8 : 24, top: 48, bottom: 42 },
-    xAxis: { type: 'time', axisLabel: { color: palette.text, rotate: 30, fontSize: compact ? 8 : 12 }, axisLine: { lineStyle: { color: palette.line } } },
-    yAxis: { type: 'value', name: compact ? '' : 'P/ARR（x）', axisLabel: { color: palette.text, formatter: (value: number) => `${value.toFixed(0)}x` }, splitLine: { lineStyle: { color: palette.line } } },
-    series: [...groups.entries()].map(([name, rows], index) => {
-      const color = [palette.blue, palette.orange, palette.cyan, palette.red][index % 4];
-      return {
-        name,
-        type: 'line',
-        connectNulls: false,
-        smooth: false,
-        symbolSize: 7,
-        data: rows.toSorted((a, b) => a.asOf.localeCompare(b.asOf)).map((row) => ({ value: [Date.parse(`${row.asOf}T00:00:00Z`), ((row.parrLow || 0) + (row.parrHigh || 0)) / 2], row })),
-        itemStyle: { color },
-        lineStyle: { color, width: 2.5, type: rows[0]?.arrSeriesKind === 'estimate' ? 'dashed' : 'solid' },
-      };
-    }),
-  }), [compact, groups, palette]);
-  if (comparable.length === 0) return <NoData description="暂无 Anthropic / OpenAI P/ARR 历史" />;
-  return <ReactECharts option={option} style={{ height: 340 }} notMerge />;
-}
-
 function latestArrCompany(data: AiDashboardSnapshot) {
   return primaryArrMetrics(data.arrAndValuation.companies).toSorted((left, right) => (right.latestActual?.observedAt || '').localeCompare(left.latestActual?.observedAt || ''))[0] || null;
 }
@@ -530,7 +471,8 @@ export function OverviewSection({ data }: DashboardProps) {
   const arr = latestArrCompany(data);
   const arrPoint = arr?.latestActual;
   const capital = data.capitalEvents?.[0] || data.debtFinancing?.[0];
-  const valuation = historicalValuations(data.arrAndValuation.valuations).filter((row) => ['Anthropic', 'OpenAI'].includes(row.company) && row.parrLow !== null).at(-1);
+  const currentValuations = latestCompanyValuations(data.arrAndValuation.valuations, data.arrAndValuation.companies);
+  const valuation = currentValuations.find((row) => row.company === 'Anthropic' && row.parrLow !== null);
   return (
     <div className="ai-section-stack">
       <Row gutter={[16, 16]}>
@@ -561,7 +503,7 @@ export function OverviewSection({ data }: DashboardProps) {
         <Col xs={24} sm={12} xl={6}>
           <Card className="ai-kpi-card">
             <Statistic title={`最新 P/ARR${valuation ? ` · ${valuation.company}` : ''}`} value={valuation ? formatMultiple(valuation.parrLow, valuation.parrHigh) : '—'} />
-            <Text type="secondary">估值期间 {valuation?.datePrecision === 'month' ? valuation.asOf.slice(0, 7) : dateLabel(valuation?.asOf)} · ARR 匹配 {valuation?.datePrecision === 'month' ? valuation.arrAsOf?.slice(0, 7) : dateLabel(valuation?.arrAsOf)}</Text>
+            <Text type="secondary">估值期间 {valuation?.datePrecision === 'month' ? valuation.asOf.slice(0, 7) : dateLabel(valuation?.asOf)} · ARR 更新 {valuation?.datePrecision === 'month' ? valuation.arrAsOf?.slice(0, 7) : dateLabel(valuation?.arrAsOf)}</Text>
           </Card>
         </Col>
       </Row>
@@ -593,8 +535,8 @@ export function OverviewSection({ data }: DashboardProps) {
           </ChartCard>
         </Col>
         <Col xs={24} xl={12}>
-          <ChartCard title="P/ARR 估值配对">
-            <ValuationTable data={historicalValuations(data.arrAndValuation.valuations).filter((v) => ['Anthropic', 'OpenAI'].includes(v.company) && v.parrLow !== null).slice(-6).reverse()} compact />
+          <ChartCard title="最新估值与 P/ARR">
+            <ValuationTable data={currentValuations} />
           </ChartCard>
         </Col>
       </Row>
@@ -602,33 +544,24 @@ export function OverviewSection({ data }: DashboardProps) {
   );
 }
 
-function ValuationTable({ data, compact = false }: { data: AiDashboardSnapshot['arrAndValuation']['valuations']; compact?: boolean }) {
+function ValuationTable({ data }: { data: LatestCompanyValuation[] }) {
   return <Table
-    rowKey={(row) => `${row.company}-${row.asOf}-${row.sourceCell || row.arrSourceLabel || 'arr'}`}
-    size="small" pagination={compact ? false : { pageSize: 10 }} scroll={{ x: compact ? 820 : 1450 }}
+    rowKey="company" size="small" pagination={false} scroll={{ x: 620 }}
     locale={{ emptyText: <NoData description="暂无估值数据" /> }} dataSource={data}
     columns={[
-      { title: '公司', dataIndex: 'company', fixed: 'left', width: 110 },
-      { title: '估值期间', width: 110, render: (_, row) => row.datePrecision === 'month' ? row.asOf.slice(0, 7) : dateLabel(row.asOf) },
-      { title: '估值（亿美元）', width: 145, render: (_, row) => row.valuationLow === row.valuationHigh ? compactNumber(row.valuationLow) : `${compactNumber(row.valuationLow)}–${compactNumber(row.valuationHigh)}` },
-      { title: compact ? '匹配 ARR' : '原公式分母', width: 110, render: (_, row) => row.arrValue === null ? '—' : compactNumber(row.arrValue) },
-      { title: '分母期间', width: 112, render: (_, row) => row.arrAsOf ? row.datePrecision === 'month' ? row.arrAsOf.slice(0, 7) : dateLabel(row.arrAsOf) : '未标明' },
-      { title: compact ? 'P/ARR' : '原表倍数', width: 140, render: (_, row) => <><Text strong>{formatMultiple(row.parrLow, row.parrHigh)}</Text>{!compact && <Text type="secondary"> {row.multipleKind || 'P/ARR'}</Text>}</> },
-      ...(!compact ? [
-        { title: '配对说明', width: 160, render: (_: unknown, row: typeof data[number]) => <Space wrap size={2}>
-          {row.forwardDenominator && <Tag color="orange">前瞻分母</Tag>}
-          {row.valuationBasis === 'formula-assumption' && <Tag color="orange">公式假设</Tag>}
-          {row.arrValue !== null && !row.arrAsOf && <Tag>分母假设</Tag>}
-          {row.multipleKind === 'P/S' && <Tag>收入口径</Tag>}
-          {!row.forwardDenominator && row.arrAsOf && <Tag color="blue">同月 / 此前</Tag>}
-        </Space> },
-        { title: '历史 P/ARR', width: 185, render: (_: unknown, row: typeof data[number]) => <>
-          <Text strong>{formatMultiple(row.historicalParrLow ?? null, row.historicalParrHigh ?? null)}</Text>
-          {row.historicalArrAsOf && <div><Text type="secondary">{row.historicalArrAsOf.slice(0, 7)} · ARR {compactNumber(row.historicalArrValue!)}</Text></div>}
-        </> },
-        { title: '来源 / 公式', width: 145, render: (_: unknown, row: typeof data[number]) => <><Link href={row.sourceUrl} target="_blank" rel="noreferrer">{row.sourceCell || row.sourceLabel}</Link><div>{row.formula || '—'}</div></> },
-      ] : []),
-      { title: '备注', dataIndex: 'note', width: 235, ellipsis: { showTitle: false }, render: (value) => <Tooltip title={value}><span>{value || '—'}</span></Tooltip> },
+      { title: '公司', dataIndex: 'company', fixed: 'left', width: 115 },
+      { title: '估值（亿美元）', width: 155, align: 'right', render: (_, row) => row.valuationLow === row.valuationHigh ? compactNumber(row.valuationLow) : `${compactNumber(row.valuationLow)}–${compactNumber(row.valuationHigh)}` },
+      { title: 'ARR', width: 110, align: 'right', render: (_, row) => row.arrPoint ? arrValueLabel(row.arrPoint) : '—' },
+      { title: 'P/ARR', width: 120, align: 'right', render: (_, row) => <Text strong>{row.parrUpperBound && row.parrHigh !== null ? `<${formatMultiple(row.parrHigh, row.parrHigh)}` : formatMultiple(row.parrLow, row.parrHigh)}</Text> },
+      { title: '来源', width: 190, render: (_, row) => <Tooltip title={<>
+        <div>估值：{row.datePrecision === 'month' ? row.asOf.slice(0, 7) : row.asOf} · {row.sourceLabel} {row.sourceCell}</div>
+        <div>ARR：{row.arrPoint?.datePrecision === 'month' ? row.arrPoint.month : row.arrAsOf || '未披露'} · {row.arrSourceLabel} {row.arrPoint?.sourceCell}</div>
+        <div>最新明确估值 ÷ 最新历史 ARR；两项日期可能不同。</div>
+        {row.multipleKind === 'P/S' && <div>原表倍数列为 P/S；此处使用 ARR 跟踪值重新计算。</div>}
+      </>}><Space size={5}>
+        {row.sourceUrl ? <Link href={row.sourceUrl} target="_blank" rel="noreferrer">{row.sourceLabel?.includes('飞书') ? '飞书表格' : row.sourceLabel || '估值来源'}</Link> : <Text>{row.sourceLabel || '未注明'}</Text>}
+        {row.arrSourceLabel && row.arrSourceLabel !== row.sourceLabel && row.arrPoint?.sourceUrl && <><Text type="secondary">/</Text><Link href={row.arrPoint.sourceUrl} target="_blank" rel="noreferrer">{row.arrSourceLabel}</Link></>}
+      </Space></Tooltip> },
     ]}
   />;
 }
@@ -637,15 +570,17 @@ export function ArrValuationSection({ data }: DashboardProps) {
   const metrics = data.arrAndValuation.companies;
   const primary = primaryArrMetrics(metrics);
   const latest = ['Anthropic', 'OpenAI'].map((company) => primary.filter((m) => m.company === company && m.latestActual).toSorted((a, b) => b.latestActual!.observedAt.localeCompare(a.latestActual!.observedAt))[0]).filter(Boolean);
-  const detailRows = primary.flatMap((metric) => metric.actualPoints.map((point) => ({ ...point, seriesId: metric.seriesId })))
-    .toSorted((left, right) => right.observedAt.localeCompare(left.observedAt));
   const reference = data.arrAndValuation.reference;
+  const currentValuations = latestCompanyValuations(data.arrAndValuation.valuations, metrics);
   return (
     <div className="ai-section-stack">
       {reference && <Alert type="info" showIcon title="数据已按飞书表格核对" description={<>
         <Link href={reference.url} target="_blank" rel="noreferrer">{reference.title} · {reference.sheet}</Link>
         <span> · 导入 {reference.retrievedAt.slice(0, 10)} · 表格修改 {reference.sourceUpdatedAt}。{reference.note}</span>
       </>} />}
+      <ChartCard title="最新估值与 P/ARR" extra={<Text type="secondary">金额单位：亿美元</Text>}>
+        <ValuationTable data={currentValuations} />
+      </ChartCard>
       <ChartCard title="OpenAI 与 Anthropic · 历史 ARR" extra={<Text type="secondary">单位：亿美元</Text>}>
         <Row gutter={[20, 12]}>
           <Col xs={24} lg={18}><CombinedArrChart metrics={primary} height={370} /></Col>
@@ -662,35 +597,6 @@ export function ArrValuationSection({ data }: DashboardProps) {
           </Col>
         </Row>
       </ChartCard>
-      <ChartCard title="历史 ARR 明细" extra={<Text type="secondary">保留每次观测与原始来源</Text>}>
-        <Table size="small" rowKey={(row) => `${row.seriesId}-${row.observedAt}-${row.kind}`} pagination={{ pageSize: 12 }} scroll={{ x: 1250 }} dataSource={detailRows}
-          columns={[
-            { title: '公司', dataIndex: 'company', width: 115, fixed: 'left', filters: [...new Set(primary.map((m) => m.company))].map((company) => ({ text: company, value: company })), onFilter: (value, row) => row.company === value },
-            { title: '期间', width: 115, render: (_, row) => row.datePrecision === 'month' ? row.month : row.observedAt },
-            { title: '类型', width: 90, render: (_, row) => <Tag color={row.kind === 'forecast' ? 'orange' : 'blue'}>{row.kind === 'forecast' ? '预测' : '历史跟踪'}</Tag> },
-            { title: 'ARR（亿美元）', width: 150, render: (_, row) => arrValueLabel(row) },
-            { title: '较上次观测', width: 205, render: (_, row) => formatArrDelta(row.momAbsolute, row.momPercent) },
-            { title: '比较区间', width: 240, render: (_, row) => row.comparisonLabel ? `${row.comparisonLabel} · ${row.consecutiveMonth ? '月环比' : '观测间'}` : '—' },
-            { title: '来源', width: 170, render: (_, row) => <Link href={row.sourceUrl} target="_blank" rel="noreferrer">{row.sourceLabel} {row.sourceCell}</Link> },
-            { title: '口径与备注', width: 240, render: (_, row) => <Tooltip title={row.commentary || row.note}><span>{row.methodology || '—'}</span></Tooltip> },
-          ]} />
-      </ChartCard>
-      <ChartCard title="Anthropic 与 OpenAI · 历史 P/ARR">
-        <ParrHistoryChart valuations={historicalValuations(data.arrAndValuation.valuations)} />
-        <Text type="secondary">按估值月份匹配同月或此前的历史 ARR，排除预测和公式中的估值假设。原表只有月份，不能视作精确融资日配对。</Text>
-      </ChartCard>
-      <ChartCard title="估值与倍数 · 原表公式核对">
-        <Text type="secondary">原表倍数单独展示；“前瞻分母”“公式假设”和 P/S 不作为历史 P/ARR。区间保留，缺失公式不补值。</Text>
-        <ValuationTable data={data.arrAndValuation.valuations} />
-      </ChartCard>
-      {Boolean(data.arrAndValuation.otherRevenue?.length) && <ChartCard title="原表中的全年收入与指引">
-        <Table size="small" rowKey={(row) => row.sourceCell!} pagination={false} scroll={{ x: 650 }} dataSource={data.arrAndValuation.otherRevenue} columns={[
-          { title: '公司 / 产品', dataIndex: 'company' }, { title: '期间', dataIndex: 'month' },
-          { title: '收入（亿美元）', render: (_, row) => arrValueLabel(row) },
-          { title: '状态', render: (_, row) => row.kind === 'forecast' ? '预测 / 指引' : '历史收入' },
-          { title: '原表备注', dataIndex: 'commentary' },
-        ]} />
-      </ChartCard>}
     </div>
   );
 }
@@ -913,23 +819,6 @@ export function ModelPricingSection({ data }: DashboardProps) {
         { key: 'video', label: '视频模型', children: <VideoPricing data={data} /> },
         { key: 'coding', label: 'Coding Plan', children: <CodingPlanPricing data={data} /> },
       ]} />
-      <ChartCard title="厂商官网价格源状态" extra={<Text type="secondary">失败源会沿用上一版，不跨来源补值</Text>}>
-        <Table
-          rowKey="sourceId"
-          size="small"
-          pagination={false}
-          locale={{ emptyText: <NoData description="等待首次厂商官网价格同步" /> }}
-          dataSource={data.modelPricing.sourceReports || []}
-          columns={[
-            { title: '来源', dataIndex: 'entity' },
-            { title: '状态', dataIndex: 'status', width: 100, render: (value) => <Tag color={value === 'ready' ? 'success' : 'error'}>{value === 'ready' ? '已同步' : '失败'}</Tag> },
-            { title: '有效行', dataIndex: 'rows', width: 90, align: 'right' },
-            { title: '日期', dataIndex: 'asOf', width: 112, render: dateLabel },
-            { title: '详情', dataIndex: 'message', render: (value) => value || '—' },
-            { title: '官网', width: 80, render: (_, row) => <a href={row.url} target="_blank" rel="noreferrer">打开</a> },
-          ]}
-        />
-      </ChartCard>
     </div>
   );
 }

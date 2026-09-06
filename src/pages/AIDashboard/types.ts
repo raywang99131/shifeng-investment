@@ -119,6 +119,24 @@ export interface OpenRouterHistoryPoint {
   weekOverWeekPercent: number | null;
 }
 
+export interface OpenRouterWeeklyHistory {
+  sourceUrl: string;
+  sourceMode: 'browser-tooltip';
+  asOf: string;
+  capturedAt: string;
+  approximate: boolean;
+  models: Array<{ id: number; name: string; color: string }>;
+  weeks: Array<{
+    startDate: string;
+    endDate: string;
+    partial: boolean;
+    totalTokens: number;
+    totalDisplay: string;
+    segments: Array<{ modelId: number; tokens: number; display: string }>;
+    pace: { totalTokens: number; totalDisplay: string; additionalTokens: number; additionalDisplay: string } | null;
+  }>;
+}
+
 export interface TokenPrice {
   region: string;
   vendor: string;
@@ -537,6 +555,8 @@ export interface AiDashboardSnapshot {
   openRouter: {
     sourceMode?: 'public-webpage';
     top10TotalTokens?: string | null;
+    weeklyHistory?: OpenRouterWeeklyHistory | null;
+    weeklyHistoryError?: string | null;
     startDate: string | null;
     endDate: string | null;
     weekTotalTokens: string | null;

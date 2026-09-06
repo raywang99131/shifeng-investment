@@ -46,7 +46,35 @@ test('OpenRouter refresh replaces obsolete API totals with the current webpage e
   assert.equal(snapshot.openRouter.weekOverWeekAbsolute, null);
   assert.equal(snapshot.openRouter.archivedPlatformData.weekTotalTokens, '123');
   assert.deepEqual(snapshot.openRouter.history, []);
+  assert.equal(snapshot.openRouter.weeklyHistory.weeks.length, 52);
+  assert.equal(snapshot.openRouter.weeklyHistory.weeks.at(-1).totalDisplay, '108T');
+  assert.equal(snapshot.openRouter.weeklyHistory.asOf, '2026-09-05');
   assert.equal(JSON.parse(await fs.readFile(cacheFile, 'utf8')).endDate, '2026-09-05');
+});
+
+test('a later leaderboard refresh preserves the dated browser chart when its capture cannot be loaded', async (t) => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'openrouter-history-'));
+  t.after(() => fs.rm(dir, { recursive: true, force: true }));
+  const captureFile = path.join(dir, 'history.json');
+  await fs.copyFile(new URL('../data/ai-dashboard/openrouter-weekly-history.json', import.meta.url), captureFile);
+  let page = html;
+  const service = createAiDashboardServiceFromEnv({
+    dataFile: path.join(dir, 'snapshot.json'), openRouterPublicFile: path.join(dir, 'public.json'),
+    openRouterWeeklyHistoryFile: captureFile,
+    now: () => new Date('2026-09-07T10:00:00.000Z'),
+    fetchImpl: async (url) => {
+      assert.equal(String(url), 'https://openrouter.ai/rankings');
+      return new Response(page, { headers: { 'Content-Type': 'text/html' } });
+    },
+  });
+  const first = await service.refresh({ sources: ['openRouter'] });
+  await fs.writeFile(captureFile, 'invalid capture');
+  page = html.replaceAll('2026-09-05', '2026-09-06');
+  const updated = await service.refresh({ sources: ['openRouter'] });
+  assert.equal(updated.openRouter.endDate, '2026-09-06');
+  assert.deepEqual(updated.openRouter.weeklyHistory, first.openRouter.weeklyHistory);
+  assert.equal(updated.openRouter.weeklyHistory.asOf, '2026-09-05');
+  assert.match(updated.openRouter.weeklyHistoryError, /周图/);
 });
 
 test('blocked webpage refresh retains last-good values and source date, and never falls back to the old export', async (t) => {

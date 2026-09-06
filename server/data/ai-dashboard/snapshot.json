@@ -1,20 +1,20 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-06T12:35:25.235Z",
+  "generatedAt": "2026-09-06T12:48:59.319Z",
   "sources": {
     "growth": {
       "status": "ready",
       "stale": true,
       "asOf": "2026-07-26",
-      "url": "https://xcn0zaydz11m.feishu.cn/sheets/F9W3s5BBEhRRV8tdZvCchEAfnCf?sheet=0rbUAO&table=tblzvLEtWP2TaYtF&view=vew0i9u3MV",
+      "syncedAt": "2026-09-06T12:35:25.235Z",
       "message": "已核对的表格快照；最近观测 2026-07-26；导入于 2026-09-06，刷新不会视作新增观测",
-      "syncedAt": "2026-09-06T12:35:25.235Z"
+      "url": "https://xcn0zaydz11m.feishu.cn/sheets/F9W3s5BBEhRRV8tdZvCchEAfnCf?sheet=0rbUAO&table=tblzvLEtWP2TaYtF&view=vew0i9u3MV"
     },
     "openRouter": {
       "status": "ready",
       "stale": false,
       "asOf": "2026-09-05",
-      "syncedAt": "2026-09-06T12:34:34.181Z",
+      "syncedAt": "2026-09-06T12:48:59.319Z",
       "url": "https://openrouter.ai/rankings",
       "message": "已读取官网网页 This Week 榜单；数据截至 2026-09-05。Top 10 显示值为约数；网页表格未提供全平台七日总量及对应周环比。"
     },
