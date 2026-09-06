@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildAiDashboardSeedPayload } from '../lib/aiDashboardSeedData.js';
+import { createGrowthReferenceCollector } from '../lib/aiGrowthReference.js';
 import { enqueueIceCdsSnapshotWrite } from '../lib/iceCdsSnapshotWriteQueue.js';
 import {
   createAiDashboardServiceFromEnv,
@@ -45,21 +46,21 @@ export async function seedDashboardSnapshot({
     const generatedAt = now.toISOString();
     const ledger = JSON.parse(await fs.promises.readFile(ledgerFile, 'utf8'));
     const payload = buildAiDashboardSeedPayload(ledger, { generatedAt, now });
+    const growth = await createGrowthReferenceCollector()({ now });
     const empty = createEmptyAiDashboardSnapshot(generatedAt);
     const previous = await readExistingSnapshot(dataFile);
     const snapshot = {
       ...empty,
       ...(previous || {}),
       ...payload,
+      ...growth.payload,
       schemaVersion: 2,
       generatedAt,
       sources: {
         ...empty.sources,
         ...(previous?.sources || {}),
         growth: {
-          status: 'ready', stale: true, asOf: localDate(now), syncedAt: generatedAt,
-          url: 'https://www.yipitdata.com/',
-          message: '已从核验台账载入 Yipit 独立估算与公司官网 ARR / run-rate revenue，等待实时官网刷新',
+          ...growth.source, syncedAt: generatedAt,
         },
         capital: {
           status: 'ready', stale: true, asOf: localDate(now), syncedAt: generatedAt,
