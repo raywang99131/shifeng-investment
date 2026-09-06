@@ -38,7 +38,12 @@ export interface ArrPoint {
   observedAt: string;
   value: number;
   kind: 'actual' | 'forecast';
-  seriesKind: 'official' | 'estimate';
+  seriesKind: 'official' | 'estimate' | 'reference';
+  datePrecision?: 'day' | 'month' | 'month-start';
+  sourceCell?: string;
+  valueLow?: number;
+  valueHigh?: number;
+  valueQualifier?: 'lower-bound';
   momAbsolute?: number | null;
   momPercent?: number | null;
   comparisonLabel?: string | null;
@@ -51,7 +56,7 @@ export interface ArrPoint {
   provenance?: MetricProvenance;
   currency?: string;
   unitScale?: number;
-  originalValue?: number;
+  originalValue?: number | string;
   originalUnit?: string;
   note?: string;
 }
@@ -59,7 +64,7 @@ export interface ArrPoint {
 export interface ArrCompanyMetric {
   company: string;
   seriesId: string;
-  seriesKind: 'official' | 'estimate';
+  seriesKind: 'official' | 'estimate' | 'reference';
   sourceLabel: string;
   actualPoints: ArrPoint[];
   forecastPoints: ArrPoint[];
@@ -74,7 +79,18 @@ export interface ValuationMetric {
   valuationHigh: number;
   arrAsOf: string | null;
   arrValue: number | null;
-  arrSeriesKind?: 'official' | 'estimate' | null;
+  arrSeriesKind?: 'official' | 'estimate' | 'reference' | null;
+  datePrecision?: 'month';
+  sourceCell?: string;
+  sourceUrl?: string;
+  multipleKind?: 'P/ARR' | 'P/S';
+  forwardDenominator?: boolean;
+  valuationBasis?: 'reference' | 'formula-assumption';
+  formula?: string;
+  historicalArrAsOf?: string | null;
+  historicalArrValue?: number | null;
+  historicalParrLow?: number | null;
+  historicalParrHigh?: number | null;
   arrSourceLabel?: string | null;
   arrMethodology?: string | null;
   arrProvenance?: MetricProvenance | null;
@@ -89,6 +105,10 @@ export interface OpenRouterModelRank {
   totalTokens: string;
   rank: number;
   approximate?: boolean;
+  modelId?: string;
+  url?: string;
+  tokenDisplay?: string;
+  weekOverWeekPercent?: number | null;
 }
 
 export interface OpenRouterHistoryPoint {
@@ -97,6 +117,24 @@ export interface OpenRouterHistoryPoint {
   totalTokens: string;
   weekOverWeekAbsolute: string | null;
   weekOverWeekPercent: number | null;
+}
+
+export interface OpenRouterWeeklyHistory {
+  sourceUrl: string;
+  sourceMode: 'browser-tooltip';
+  asOf: string;
+  capturedAt: string;
+  approximate: boolean;
+  models: Array<{ id: number; name: string; color: string }>;
+  weeks: Array<{
+    startDate: string;
+    endDate: string;
+    partial: boolean;
+    totalTokens: number;
+    totalDisplay: string;
+    segments: Array<{ modelId: number; tokens: number; display: string }>;
+    pace: { totalTokens: number; totalDisplay: string; additionalTokens: number; additionalDisplay: string } | null;
+  }>;
 }
 
 export interface TokenPrice {
@@ -511,8 +549,14 @@ export interface AiDashboardSnapshot {
   arrAndValuation: {
     companies: ArrCompanyMetric[];
     valuations: ValuationMetric[];
+    otherRevenue?: ArrPoint[];
+    reference?: { title: string; sheet: string; url: string; retrievedAt: string; sourceUpdatedAt: string; note: string };
   };
   openRouter: {
+    sourceMode?: 'public-webpage';
+    top10TotalTokens?: string | null;
+    weeklyHistory?: OpenRouterWeeklyHistory | null;
+    weeklyHistoryError?: string | null;
     startDate: string | null;
     endDate: string | null;
     weekTotalTokens: string | null;

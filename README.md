@@ -8,15 +8,17 @@
 
 ## AI 投资看板配置
 
-AI 看板位于 `/ai-dashboard`，沿用网站现有访问边界，不再要求单独输入访问口令。看板已停止读取飞书；增长、价格、融资、官网模型卡、算力租赁等板块由服务端从登记过的公开网页读取，每条记录保留来源、口径、数据日期和同步状态。
+AI 看板位于 `/ai-dashboard`，沿用网站现有访问边界，不再要求单独输入访问口令。ARR 与估值使用已核对的表格快照 `server/data/ai-dashboard/growth-reference.json`，同时保留已核验的公司官网历史 ARR。总览和 ARR 页共用 OpenAI、Anthropic 全历史图，每家公司一条线，数据点颜色区分来源，预测不进入历史图。月度区以亿美元计，Yipit 区以十亿美元计；读取时统一单位并重算日期和倍数公式，不使用 Excel 的零值公式缓存。历史 P/ARR 按月份使用同月或此前 ARR，原表的前瞻分母及公式假设另行标注。该文件是人工核对快照，刷新不会重新下载飞书或改变实际观测日期；后续需核对原表并更新该文件。价格、融资、官网模型卡、算力租赁等板块继续读取登记过的公开网页。
 
-OpenRouter 只用于公开 Token 流量。若要读取完整的日度排名数据并计算周环比，可配置：
+OpenRouter 数据来自[官网排行榜网页](https://openrouter.ai/rankings)，不调用 OpenRouter API，也不读取或发送 `OPENROUTER_API_KEY`。每次同步读取 HTML 中的 This Week 榜单，解析公开表格中的 Top 10 模型、Token 显示值、涨跌方向和 `Usage data through` 数据日期；统计窗口为截至该日期的七个完整 UTC 日。点击 OpenRouter 页签会同步一次，服务启动后和每日定时也会同步。
 
-```bash
-export OPENROUTER_API_KEY='sk-or-v1-xxx'
-```
+每周模型堆叠图读取 `server/data/ai-dashboard/openrouter-weekly-history.json`：2026-09-06 在浏览器打开官网图表，逐周读取 52 个可见悬浮提示，并从已渲染 SVG 保留模型颜色和堆叠顺序。周区间为周一至周日，包含每周前列模型与 Others；最后一周截至 2026-09-05 尚未完结，108T 为实际约数，116T 为 Weekly Pace 预计整周值，斜纹只画预计增量 7.54T。各分项与 Total 独立四舍五入，校验允许显示精度范围内的差异。
 
-本地开发也可以将同名变量写入仓库根目录的 `.env.local`；`npm run server` 会自动加载该文件，且该文件已被 Git 忽略。系统环境变量优先于 `.env.local` 中的同名配置。未配置 OpenRouter key 时，页面可以读取本地保存的公开榜单 Top 10，但不会把 Top 10 合计冒充全平台总量，也不会伪造周环比。
+历史图不在页面 HTML 内，因此榜单刷新不会伪造历史图的更新日期。已校验的本地周图可在首次联网前读取，榜单联网失败不影响其展示。更新历史图时，需再次在浏览器逐周读取可见提示并替换该文件，保留 `asOf`、`capturedAt`、模型顺序及显示字符串，然后运行 OpenRouter 分片刷新。少于 52 周、缺周、重复模型、合计超出舍入误差等无效快照会被拒绝并保留旧图；榜单日期领先周图时，页面单独提示“周图待更新”。
+
+`server/data/ai-dashboard/openrouter-public.json` 保存最近一次成功解析的网页结果，供核对来源，不再用旧文件冒充实时刷新。官网网页无法读取、表格不完整或日期倒退时保留上次成功快照，显示失败或过期状态。数量与模型周环比为官网约数；Top 10 合计仅覆盖这十个模型，网页表格未提供的全平台七日总量和对应周环比保持缺失，旧平台数据单独保留在 `archivedPlatformData` 供追溯。
+
+仅刷新此分片：`npm run refresh:ai-dashboard -- --sources=openRouter`。
 
 ### Benchmark 数据边界
 
