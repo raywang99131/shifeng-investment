@@ -113,6 +113,36 @@ test('video and Coding Plan adapters preserve non-comparable units and inquiry-o
   assert.equal(plans[1].pricingMode, 'inquiry');
 });
 
+test('Google Veo 3.1 prices preserve every paid audio/resolution tier without inventing Lite 4K', () => {
+  const source = definition('gemini-pricing');
+  const adapter = createOfficialPricingAdapter(source);
+  const { video } = adapter.parsePricing(document(readFixture('veo-pricing.html'), source.entryUrl));
+
+  assert.deepEqual(video.map(({ model, resolution, price }) => [model, resolution, price]), [
+    ['Veo 3.1 Standard', '720p', 0.40],
+    ['Veo 3.1 Standard', '1080p', 0.40],
+    ['Veo 3.1 Standard', '4K', 0.60],
+    ['Veo 3.1 Fast', '720p', 0.10],
+    ['Veo 3.1 Fast', '1080p', 0.12],
+    ['Veo 3.1 Fast', '4K', 0.30],
+    ['Veo 3.1 Lite', '720p', 0.05],
+    ['Veo 3.1 Lite', '1080p', 0.08],
+  ]);
+  for (const row of video) {
+    assert.equal(row.vendor, 'Google');
+    assert.equal(row.mode, '含原生音频');
+    assert.equal(row.durationTier, '按生成秒数');
+    assert.equal(row.durationSeconds, null);
+    assert.equal(row.priceUnit, 'per_second');
+    assert.equal(row.displayUnit, 'USD / 秒');
+    assert.equal(row.comparableUsdPerSecond, row.price);
+    assert.equal(row.sourceUrl, `${source.entryUrl}#veo-3.1`);
+  }
+
+  const withoutUnit = readFixture('veo-pricing.html').replace('per second in USD', 'per request in USD');
+  assert.deepEqual(adapter.parsePricing(document(withoutUnit, source.entryUrl)).video, []);
+});
+
 test('pricing adapters reject unregistered or mismatched source URLs', () => {
   assert.throws(() => createOfficialPricingAdapter({
     ...definition('openai-pricing'), id: 'unknown-pricing', entryUrl: 'https://example.test/pricing', allowedHosts: ['example.test'],

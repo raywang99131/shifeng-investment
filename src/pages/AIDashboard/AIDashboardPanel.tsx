@@ -6,10 +6,12 @@ import {
   Flex,
   Form,
   Input,
+  Modal,
   Popover,
   Result,
   Skeleton,
   Space,
+  Table,
   Tabs,
   Tag,
   Tooltip,
@@ -66,7 +68,10 @@ async function requestDashboard<T = AiDashboardSnapshot>(path = '', init?: Reque
 
 type DashboardSourceEntry = ReturnType<typeof dashboardSourceEntries>[number];
 
-function SourceStatusDetails({ entries }: { entries: DashboardSourceEntry[] }) {
+function SourceStatusDetails({ entries, onOpenPricingSources }: {
+  entries: DashboardSourceEntry[];
+  onOpenPricingSources: () => void;
+}) {
   return (
     <div className="ai-source-popover">
       <Flex align="center" justify="space-between" className="ai-source-popover-header">
@@ -87,6 +92,11 @@ function SourceStatusDetails({ entries }: { entries: DashboardSourceEntry[] }) {
               {source.asOf ? source.asOf.slice(0, 16).replace('T', ' ') : '暂无日期'}
             </Text>
             {source.message ? <Text type="secondary" className="ai-source-popover-message">{source.message}</Text> : null}
+            {key === 'pricing' && (
+              <Button type="link" size="small" style={{ paddingInline: 0 }} onClick={onOpenPricingSources}>
+                查看厂商来源
+              </Button>
+            )}
           </div>
         ))}
       </div>
@@ -130,6 +140,8 @@ export const AIDashboardPanel: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [cdsImportStatus, setCdsImportStatus] = useState<IceCdsImportStatus | null>(null);
   const [cdsImportOpen, setCdsImportOpen] = useState(false);
+  const [sourcePopoverOpen, setSourcePopoverOpen] = useState(false);
+  const [pricingSourcesOpen, setPricingSourcesOpen] = useState(false);
   const [messageApi, messageContext] = message.useMessage();
 
   const load = useCallback(async () => {
@@ -292,7 +304,12 @@ export const AIDashboardPanel: React.FC = () => {
           <Flex align="center" gap={10} wrap>
             <Title level={2}>AI 投资看板</Title>
             <Popover
-              content={<SourceStatusDetails entries={sourceEntries} />}
+              content={<SourceStatusDetails entries={sourceEntries} onOpenPricingSources={() => {
+                setSourcePopoverOpen(false);
+                setPricingSourcesOpen(true);
+              }} />}
+              open={sourcePopoverOpen}
+              onOpenChange={setSourcePopoverOpen}
               placement="bottom"
               trigger={['hover', 'click']}
             >
@@ -318,6 +335,33 @@ export const AIDashboardPanel: React.FC = () => {
       </header>
       {error && <Alert className="ai-page-alert" type="warning" showIcon closable title="数据加载存在异常" description={error} />}
       <Tabs className="ai-primary-tabs" activeKey={activeTab} onChange={(key) => void changeTab(key)} items={tabs} destroyOnHidden={false} />
+      <Modal
+        title="厂商官网价格源状态"
+        open={pricingSourcesOpen}
+        onCancel={() => setPricingSourcesOpen(false)}
+        footer={null}
+        width={1000}
+        destroyOnHidden
+      >
+        <Paragraph type="secondary">失败源会沿用上一版，不跨来源补值。</Paragraph>
+        <Table
+          rowKey="sourceId"
+          size="small"
+          pagination={false}
+          tableLayout="fixed"
+          scroll={{ x: 850, y: 420 }}
+          locale={{ emptyText: '等待首次厂商官网价格同步' }}
+          dataSource={data.modelPricing.sourceReports || []}
+          columns={[
+            { title: '来源', dataIndex: 'entity', width: 130 },
+            { title: '状态', dataIndex: 'status', width: 100, render: (value) => <Tag color={value === 'ready' ? 'success' : 'error'}>{value === 'ready' ? '已同步' : '失败'}</Tag> },
+            { title: '有效行', dataIndex: 'rows', width: 90, align: 'right' },
+            { title: '日期', dataIndex: 'asOf', width: 112, render: (value: string | null) => value ? value.slice(0, 10) : '—' },
+            { title: '详情', dataIndex: 'message', render: (value) => value || '—' },
+            { title: '官网', width: 80, render: (_, row) => <a href={row.url} target="_blank" rel="noreferrer">打开</a> },
+          ]}
+        />
+      </Modal>
       <IceCdsImportModal open={cdsImportOpen} onClose={() => setCdsImportOpen(false)} onImported={completeCdsImport} />
       <footer className="ai-dashboard-footer">
         数据仅供研究参考，不构成投资建议。各分片来自公开来源并独立标注状态；OpenRouter Token 流量不代表全行业使用量或模型质量。

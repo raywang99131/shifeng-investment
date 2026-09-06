@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import {
   Alert,
@@ -43,7 +43,6 @@ import type {
   ComputeRentalQuote,
   IceCdsImportStatus,
   PriceEvent,
-  TokenPrice,
 } from './types';
 import {
   benchmarkDisclosureKey,
@@ -53,7 +52,6 @@ import {
   formatArrDelta,
   formatCurrencyPrice,
   formatMultiple,
-  formatPriceChange,
   formatTaskCostComponents,
   formatTaskTokenBreakdown,
   formatTokenCount,
@@ -65,6 +63,14 @@ import {
   terminalBenchmarkRunLabel,
   topBenchmarkScoreRows,
 } from './viewModel';
+import {
+  buildPricingNews,
+  filterUsdTokenPrices,
+  TOKEN_PRICE_FX,
+  tokenPriceChartLabel,
+  type PricingRegion,
+  type UsdTokenPrice,
+} from './pricingViewModel';
 
 const { Text, Title, Paragraph, Link } = Typography;
 
@@ -749,121 +755,132 @@ export function OpenRouterSection({ data }: DashboardProps) {
   );
 }
 
-function TokenPriceCharts({ prices }: { prices: TokenPrice[] }) {
+function TokenPriceCharts({ prices, region, onRegionChange }: {
+  prices: UsdTokenPrice[];
+  region: PricingRegion;
+  onRegionChange: (region: PricingRegion) => void;
+}) {
   const palette = useChartPalette();
   const screens = Grid.useBreakpoint();
   const compact = !screens.sm;
-  if (prices.length === 0) return <NoData description="暂无 API Token 价格" />;
-  const grouped = prices.reduce((groups, row) => {
-    const currency = row.currency || '未标注';
-    groups.set(currency, [...(groups.get(currency) || []), row]);
-    return groups;
-  }, new Map<string, TokenPrice[]>());
+  const rows = prices.toReversed();
+  const height = Math.max(340, rows.length * 34 + 110);
+  const option = {
+    animation: false,
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      valueFormatter: (value: number) => formatCurrencyPrice(value, 'USD', 4),
+    },
+    legend: { top: 0, textStyle: { color: palette.text }, itemGap: compact ? 8 : 16 },
+    grid: { left: compact ? 112 : 230, right: compact ? 10 : 35, top: compact ? 64 : 44, bottom: 28 },
+    xAxis: {
+      type: 'value',
+      axisLabel: { color: palette.text, fontSize: compact ? 8 : 12, formatter: (value: number) => `$${value}` },
+      splitLine: { lineStyle: { color: palette.line } },
+    },
+    yAxis: {
+      type: 'category',
+      data: rows.map(tokenPriceChartLabel),
+      axisLabel: { color: palette.text, fontSize: compact ? 8 : 12, lineHeight: compact ? 11 : 15, width: compact ? 100 : 205, overflow: 'break', interval: 0 },
+      axisTick: { show: false },
+    },
+    series: [
+      { name: '输入', type: 'bar', data: rows.map(row => row.inputPrice), itemStyle: { color: palette.blue } },
+      { name: '缓存读取', type: 'bar', data: rows.map(row => row.cacheReadPrice), itemStyle: { color: palette.cyan } },
+      { name: '缓存写入', type: 'bar', data: rows.map(row => row.cacheWritePrice), itemStyle: { color: '#722ed1' } },
+      { name: '输出', type: 'bar', data: rows.map(row => row.outputPrice), itemStyle: { color: palette.orange } },
+    ],
+  };
   return (
-    <div className="ai-section-stack">
-      {[...grouped.entries()].map(([currency, currencyPrices]) => {
-        const rows = currencyPrices.slice(0, 30).toReversed();
-        const labels = rows.map((row) => [
-          row.model,
-          row.contextTier && row.contextTier !== 'standard' ? row.contextTier : null,
-          row.serviceTier && row.serviceTier !== 'standard' ? row.serviceTier : null,
-        ].filter(Boolean).join(' · '));
-        const height = Math.max(320, Math.min(760, rows.length * 34 + 90));
-        const option = {
-          tooltip: {
-            trigger: 'axis',
-            axisPointer: { type: 'shadow' },
-            valueFormatter: (value: number) => formatCurrencyPrice(value, currency, 3),
-          },
-          legend: { top: 0, textStyle: { color: palette.text } },
-          grid: { left: compact ? 112 : 230, right: compact ? 10 : 35, top: 44, bottom: 28 },
-          xAxis: {
-            type: 'value',
-            name: compact ? '' : `${currency} / 1M Tokens`,
-            nameTextStyle: { color: palette.text },
-            axisLabel: { color: palette.text, fontSize: compact ? 8 : 12 },
-            splitLine: { lineStyle: { color: palette.line } },
-          },
-          yAxis: {
-            type: 'category',
-            data: labels,
-            axisLabel: { color: palette.text, fontSize: compact ? 8 : 12, lineHeight: compact ? 11 : 15, width: compact ? 100 : 205, overflow: 'break', interval: 0 },
-            axisTick: { show: false },
-          },
-          series: [
-            { name: '输入', type: 'bar', data: rows.map((row) => row.inputPrice), itemStyle: { color: palette.blue } },
-            { name: '缓存读取', type: 'bar', data: rows.map((row) => row.cacheReadPrice), itemStyle: { color: palette.cyan } },
-            { name: '缓存写入', type: 'bar', data: rows.map((row) => row.cacheWritePrice), itemStyle: { color: '#722ed1' } },
-            { name: '输出', type: 'bar', data: rows.map((row) => row.outputPrice), itemStyle: { color: palette.orange } },
-          ],
-        };
-        return <ChartCard key={currency} title={`当前代际公开价 · ${currency}`}><ReactECharts option={option} style={{ height }} notMerge /></ChartCard>;
-      })}
-    </div>
-  );
-}
-
-const PRICE_FIELD_LABELS: Record<PriceEvent['priceField'], string> = {
-  inputPrice: '输入',
-  cacheReadPrice: '缓存读取',
-  cacheWritePrice: '缓存写入',
-  outputPrice: '输出',
-};
-
-function PriceEventsCard({ events }: { events: PriceEvent[] }) {
-  return (
-    <ChartCard title="近期官方调价" extra={<Text type="secondary">仅同一 SKU 可比</Text>}>
-      <Table
-        rowKey="id"
-        size="small"
-        pagination={{ pageSize: 8, showSizeChanger: false }}
-        locale={{ emptyText: <NoData description="尚无可确认的同 SKU 调价记录" /> }}
-        dataSource={events}
-        columns={[
-          { title: '日期', dataIndex: 'asOf', width: 100, render: dateLabel },
-          { title: '模型 / 价格项', render: (_, row) => <><Text strong>{row.model}</Text><br /><Text type="secondary">{PRICE_FIELD_LABELS[row.priceField]} · {row.contextTier}</Text></> },
-          { title: '变化', width: 190, render: (_, row) => <Text className={row.absoluteDelta > 0 ? 'ai-change-up' : 'ai-change-down'}>{formatPriceChange(row)}</Text> },
-          { title: '原始来源', width: 90, render: (_, row) => <a href={row.sourceUrl} target="_blank" rel="noreferrer">官网</a> },
+    <ChartCard title="当前代际公开价 · USD" extra={(
+      <Select
+        aria-label="模型范围"
+        value={region}
+        onChange={onRegionChange}
+        style={{ minWidth: 130 }}
+        options={[
+          { value: 'all', label: '全部' },
+          { value: 'domestic', label: '国内模型' },
+          { value: 'overseas', label: '海外模型' },
         ]}
       />
+    )}>
+      {prices.length ? <ReactECharts key={region} option={option} style={{ height }} notMerge /> : <NoData description="该范围暂无 API Token 价格" />}
+      <Text type="secondary" className="ai-attribution">USD / 1M Tokens · {prices.length} 个报价档位</Text>
     </ChartCard>
   );
 }
 
+function PriceEventsCard({ events }: { events: PriceEvent[] }) {
+  const news = useMemo(() => buildPricingNews(events), [events]);
+  return (
+    <ChartCard title="近期官方调价" extra={<Text type="secondary">按时间排序</Text>}>
+      <div className="ai-pricing-news-list">
+        {news.map(item => (
+          <article className="ai-pricing-news-item" key={item.id}>
+            <Flex gap={8} align="center" wrap className="ai-pricing-news-meta">
+              <Tag color={item.kind === 'announcement' ? 'blue' : 'default'}>{item.kind === 'announcement' ? '官方公告' : '价格观测'}</Tag>
+              <span>{item.vendor}</span>
+              <time dateTime={item.publishedAt}>{item.publishedAt.slice(0, 10)}</time>
+            </Flex>
+            <Title level={4}><a href={item.sourceUrl} target="_blank" rel="noreferrer">{item.title}</a></Title>
+            {item.paragraphs.map(paragraph => <p key={paragraph}>{paragraph}</p>)}
+            {item.details.map(detail => <p className="ai-pricing-news-change" key={detail}>{detail}</p>)}
+            {item.effectiveAt && <Text type="secondary" className="ai-pricing-news-effective">生效：{item.effectiveAt.slice(0, 16).replace('T', ' ')}（北京时间）</Text>}
+            <Flex gap={16} wrap className="ai-pricing-news-links">
+              <Link href={item.sourceUrl} target="_blank" rel="noreferrer">{item.kind === 'announcement' ? '阅读官方公告' : '查看官网价格'} ↗</Link>
+              {item.pricingUrl && <Link href={item.pricingUrl} target="_blank" rel="noreferrer">最新价目表 ↗</Link>}
+            </Flex>
+          </article>
+        ))}
+      </div>
+    </ChartCard>
+  );
+}
+
+function TokenPriceValue({ row, field }: { row: UsdTokenPrice; field: 'inputPrice' | 'cacheReadPrice' | 'outputPrice' }) {
+  const label = field === 'cacheReadPrice' ? '缓存读取（命中）原价' : '原价';
+  return (
+    <Tooltip title={`${label} ${formatCurrencyPrice(row.originalPrices[field], row.originalCurrency, 4)} / 1M Tokens${row.originalCurrency === 'CNY' ? `；按 ${TOKEN_PRICE_FX.asOf} 参考汇率折算` : ''}`}>
+      <span>{formatCurrencyPrice(row[field], 'USD', 4)}</span>
+    </Tooltip>
+  );
+}
+
 function TokenPricing({ data }: DashboardProps) {
+  const [region, setRegion] = useState<PricingRegion>('all');
+  const prices = useMemo(() => filterUsdTokenPrices(data.modelPricing.token, region), [data.modelPricing.token, region]);
   return (
     <div className="ai-section-stack">
       <Alert
         type="info"
         showIcon
-        title="最新代际与可比口径"
-        description="主图只展示各厂商当前代际、标准服务档的官网公开价；上下文档位分别保留。USD 与 CNY 分图展示，不做隐含汇率换算。旧代际保存在历史中，仅用于识别同 SKU 调价。"
+        title="统一美元口径 · USD / 1M Tokens"
+        description={<>
+          人民币报价按 1 USD = {TOKEN_PRICE_FX.cnyPerUsd} CNY 折算（{TOKEN_PRICE_FX.asOf} 参考汇率）。国内／海外按厂商归属划分，图表与明细同步筛选。{' '}
+          <Link href={TOKEN_PRICE_FX.sourceUrl} target="_blank" rel="noreferrer">汇率来源</Link>
+        </>}
       />
       <Row gutter={[16, 16]}>
-        <Col xs={24} xl={15}><TokenPriceCharts prices={data.modelPricing.token} /></Col>
+        <Col xs={24} xl={15}><TokenPriceCharts prices={prices} region={region} onRegionChange={setRegion} /></Col>
         <Col xs={24} xl={9}><PriceEventsCard events={data.modelPricing.priceEvents || []} /></Col>
       </Row>
-      <ChartCard title="当前代际 API Token 价格明细" extra={<Text type="secondary">各币种 / 1M Tokens</Text>}>
+      <ChartCard title="当前代际 API Token 价格明细" extra={<Text type="secondary">USD / 1M Tokens</Text>}>
         <Table
-          rowKey={(row) => `${row.vendor}-${row.model}-${row.contextTier}-${row.serviceTier}-${row.currency}-${row.asOf}`}
+          rowKey={(row) => `${row.vendor}-${row.model}-${row.contextTier}-${row.serviceTier}-${row.region}-${row.originalCurrency}-${row.asOf}`}
           size="small"
           pagination={{ pageSize: 25, showSizeChanger: false }}
-          scroll={{ x: 1480 }}
-          locale={{ emptyText: <NoData description="暂无 API Token 价格" /> }}
-          dataSource={data.modelPricing.token}
+          tableLayout="fixed"
+          scroll={{ x: 760 }}
+          locale={{ emptyText: <NoData description="该范围暂无 API Token 价格" /> }}
+          dataSource={prices}
           columns={[
             { title: '厂商', dataIndex: 'vendor', fixed: 'left', width: 110 },
-            { title: '模型', dataIndex: 'model', fixed: 'left', width: 220, className: 'ai-model-name' },
-            { title: '币种', dataIndex: 'currency', width: 80 },
-            { title: '上下文档', dataIndex: 'contextTier', width: 105 },
-            { title: '服务档', dataIndex: 'serviceTier', width: 100 },
-            { title: '输入', dataIndex: 'inputPrice', width: 110, align: 'right', render: (value, row) => formatCurrencyPrice(value, row.currency, 3) },
-            { title: '缓存读取', dataIndex: 'cacheReadPrice', width: 115, align: 'right', render: (value, row) => formatCurrencyPrice(value, row.currency, 3) },
-            { title: '缓存写入', dataIndex: 'cacheWritePrice', width: 115, align: 'right', render: (value, row) => formatCurrencyPrice(value, row.currency, 3) },
-            { title: '输出', dataIndex: 'outputPrice', width: 110, align: 'right', render: (value, row) => formatCurrencyPrice(value, row.currency, 3) },
-            { title: '日期', dataIndex: 'asOf', width: 112, render: dateLabel },
-            { title: '来源', width: 120, render: (_, row) => <a href={row.sourceUrl} target="_blank" rel="noreferrer">{row.sourceLabel}</a> },
-            { title: '说明', dataIndex: 'note', render: (value) => value || '—' },
+            { title: '模型', dataIndex: 'model', width: 260, className: 'ai-model-name', render: (value, row) => <>{value}{row.contextTier && row.contextTier !== 'standard' ? <><br /><Text type="secondary">{row.contextTier}</Text></> : null}{row.marketLabel ? <><br /><Text type="secondary">{row.marketLabel}</Text></> : null}</> },
+            { title: '输入', width: 130, align: 'right', render: (_, row) => <TokenPriceValue row={row} field="inputPrice" /> },
+            { title: '缓存', width: 130, align: 'right', render: (_, row) => <TokenPriceValue row={row} field="cacheReadPrice" /> },
+            { title: '输出', width: 130, align: 'right', render: (_, row) => <TokenPriceValue row={row} field="outputPrice" /> },
           ]}
         />
       </ChartCard>
@@ -877,22 +894,19 @@ function VideoPricing({ data }: DashboardProps) {
       <Table
         rowKey={(row) => `${row.vendor}-${row.model}-${row.mode}-${row.resolution}-${row.durationTier}`}
         size="small"
-        pagination={{ pageSize: 15, showSizeChanger: false }}
-        scroll={{ x: 1250 }}
+        pagination={{ pageSize: 25, showSizeChanger: false }}
+        tableLayout="fixed"
+        scroll={{ x: 1000 }}
         locale={{ emptyText: <NoData description="尚未从厂商官网确认可展示的视频 API 价格" /> }}
-        dataSource={data.modelPricing.video}
+        dataSource={data.modelPricing.video.filter((row) => row.model !== 'MiniMax-Hailuo-02')}
         columns={[
-          { title: '厂商', dataIndex: 'vendor', fixed: 'left', width: 120 },
-          { title: '模型', dataIndex: 'model', width: 200, className: 'ai-model-name' },
-          { title: '生成模式', dataIndex: 'mode', width: 150 },
-          { title: '分辨率', dataIndex: 'resolution', width: 130 },
+          { title: '厂商', dataIndex: 'vendor', fixed: 'left', width: 100 },
+          { title: '模型', dataIndex: 'model', width: 220, className: 'ai-model-name' },
+          { title: '生成模式', dataIndex: 'mode', width: 180 },
+          { title: '分辨率', dataIndex: 'resolution', width: 85 },
           { title: '时长档', dataIndex: 'durationTier', width: 130 },
-          { title: '公开价格', width: 140, align: 'right', render: (_, row) => row.pricingMode === 'fixed' ? <Text strong>{formatCurrencyPrice(row.price, row.currency, 3)}</Text> : <Tag>{row.pricingMode === 'inquiry' ? '询价' : '未公开'}</Tag> },
-          { title: '官网计费单位', dataIndex: 'displayUnit', width: 160 },
-          { title: '可比 USD / 秒', dataIndex: 'comparableUsdPerSecond', width: 140, align: 'right', render: (value) => formatUsd(value, 4) },
-          { title: '日期', dataIndex: 'asOf', width: 112, render: dateLabel },
-          { title: '来源', width: 150, render: (_, row) => <a href={row.sourceUrl} target="_blank" rel="noreferrer">{row.sourceLabel}</a> },
-          { title: '说明', dataIndex: 'note', render: (value) => value || '—' },
+          { title: '公开价格', width: 170, align: 'right', render: (_, row) => row.pricingMode === 'fixed' ? <><Text strong>{formatCurrencyPrice(row.price, row.currency, 3)}</Text><br /><Text type="secondary">{row.displayUnit}</Text></> : <Tag>{row.pricingMode === 'inquiry' ? '询价' : '未公开'}</Tag> },
+          { title: '来源', width: 115, render: (_, row) => <a href={row.sourceUrl} target="_blank" rel="noreferrer">{row.sourceLabel}</a> },
         ]}
       />
     </ChartCard>
@@ -901,23 +915,19 @@ function VideoPricing({ data }: DashboardProps) {
 
 function CodingPlanPricing({ data }: DashboardProps) {
   return (
-    <ChartCard title="Coding Plan 价格" extra={<Text type="secondary">套餐价格与额度限制分开记录</Text>}>
+    <ChartCard title="Coding Plan 价格">
       <Table
         rowKey={(row) => `${row.vendor}-${row.plan}`}
         size="small"
         pagination={{ pageSize: 15, showSizeChanger: false }}
-        scroll={{ x: 1200 }}
+        tableLayout="fixed"
+        scroll={{ x: 640 }}
         locale={{ emptyText: <NoData description="尚未从厂商官网确认 Coding Plan 价格" /> }}
         dataSource={data.modelPricing.codingPlans}
         columns={[
           { title: '厂商', dataIndex: 'vendor', fixed: 'left', width: 120 },
-          { title: '套餐', dataIndex: 'plan', width: 180 },
-          { title: '计价状态', dataIndex: 'pricingMode', width: 100, render: (value) => <Tag>{value === 'fixed' ? '公开价' : value === 'inquiry' ? '询价' : '未公开'}</Tag> },
-          { title: '月付', dataIndex: 'monthlyPrice', width: 120, align: 'right', render: (value, row) => row.pricingMode === 'fixed' ? formatCurrencyPrice(value, row.currency) : '—' },
-          { title: '年付折算/月', dataIndex: 'annualMonthlyPrice', width: 145, align: 'right', render: (value, row) => row.pricingMode === 'fixed' ? formatCurrencyPrice(value, row.currency) : '—' },
-          { title: '额度限制', dataIndex: 'allowanceText', width: 260, render: (value) => value || '未公布' },
-          { title: '超量计费', dataIndex: 'overage', width: 180, render: (value) => value || '未公布' },
-          { title: '日期', dataIndex: 'asOf', width: 112, render: dateLabel },
+          { title: '套餐', dataIndex: 'plan', width: 240 },
+          { title: '月付', dataIndex: 'monthlyPrice', width: 130, align: 'right', render: (value, row) => row.pricingMode === 'fixed' ? formatCurrencyPrice(value, row.currency) : <Tag>{row.pricingMode === 'inquiry' ? '询价' : '未公开'}</Tag> },
           { title: '来源', width: 150, render: (_, row) => <a href={row.sourceUrl} target="_blank" rel="noreferrer">{row.sourceLabel}</a> },
         ]}
       />
@@ -933,23 +943,6 @@ export function ModelPricingSection({ data }: DashboardProps) {
         { key: 'video', label: '视频模型', children: <VideoPricing data={data} /> },
         { key: 'coding', label: 'Coding Plan', children: <CodingPlanPricing data={data} /> },
       ]} />
-      <ChartCard title="厂商官网价格源状态" extra={<Text type="secondary">失败源会沿用上一版，不跨来源补值</Text>}>
-        <Table
-          rowKey="sourceId"
-          size="small"
-          pagination={false}
-          locale={{ emptyText: <NoData description="等待首次厂商官网价格同步" /> }}
-          dataSource={data.modelPricing.sourceReports || []}
-          columns={[
-            { title: '来源', dataIndex: 'entity' },
-            { title: '状态', dataIndex: 'status', width: 100, render: (value) => <Tag color={value === 'ready' ? 'success' : 'error'}>{value === 'ready' ? '已同步' : '失败'}</Tag> },
-            { title: '有效行', dataIndex: 'rows', width: 90, align: 'right' },
-            { title: '日期', dataIndex: 'asOf', width: 112, render: dateLabel },
-            { title: '详情', dataIndex: 'message', render: (value) => value || '—' },
-            { title: '官网', width: 80, render: (_, row) => <a href={row.url} target="_blank" rel="noreferrer">打开</a> },
-          ]}
-        />
-      </ChartCard>
     </div>
   );
 }
