@@ -89,6 +89,10 @@ export interface OpenRouterModelRank {
   totalTokens: string;
   rank: number;
   approximate?: boolean;
+  modelId?: string;
+  url?: string;
+  tokenDisplay?: string;
+  weekOverWeekPercent?: number | null;
 }
 
 export interface OpenRouterHistoryPoint {
@@ -513,6 +517,8 @@ export interface AiDashboardSnapshot {
     valuations: ValuationMetric[];
   };
   openRouter: {
+    sourceMode?: 'public-webpage';
+    top10TotalTokens?: string | null;
     startDate: string | null;
     endDate: string | null;
     weekTotalTokens: string | null;

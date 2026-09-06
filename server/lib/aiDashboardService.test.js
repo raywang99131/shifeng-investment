@@ -7,10 +7,13 @@ import {
   createAiDashboardService,
   createAiDashboardServiceFromEnv,
   createEmptyAiDashboardSnapshot,
-  createOpenRouterClient,
   startAiDashboardAutoRefresh,
 } from './aiDashboardService.js';
+import { createOpenRouterWebClient, parseOpenRouterRankingsHtml } from './openRouterWebSource.js';
 import { createIceCdsPipeline } from './iceCdsPipeline.js';
+
+const openRouterHtml = fs.readFileSync(new URL('./fixtures/openrouter/rankings.html', import.meta.url), 'utf8');
+const webRankings = () => parseOpenRouterRankingsHtml(openRouterHtml, { now: new Date('2026-09-06T00:00:00.000Z') });
 
 const ALL_PUBLIC_SLICES = [
   'growth',
@@ -128,7 +131,7 @@ test('missing collectors return an empty public-source snapshot instead of fabri
 
   assert.equal('feishu' in snapshot.sources, false);
   assert.equal(snapshot.sources.growth.status, 'error');
-  assert.equal(snapshot.sources.openRouter.status, 'authorization_required');
+  assert.equal(snapshot.sources.openRouter.status, 'error');
   assert.deepEqual(snapshot.arrAndValuation.companies, []);
   assert.deepEqual(snapshot.openRouter.topModels, []);
 });
@@ -438,75 +441,65 @@ test('environment service keeps Artificial Analysis in its independent named-thi
   assert.deepEqual(snapshot.benchmarks.winners, {});
 });
 
-test('public OpenRouter export seeds the visible weekly Top 10 without fabricating a platform total', async (t) => {
-  const { dir, dataFile } = await tempDashboard(t, 'ai-dashboard-openrouter-public-');
-  const openRouterPublicFile = path.join(dir, 'openrouter-public.json');
-  await fs.promises.writeFile(openRouterPublicFile, JSON.stringify({
-    asOf: '2026-08-22',
-    startDate: '2026-08-16',
-    endDate: '2026-08-22',
-    topModels: [
-      { rank: 1, model: 'DeepSeek V4 Flash 0731', totalTokens: '11600000000000', approximate: true },
-    ],
-  }), 'utf8');
-
-  const service = createAiDashboardServiceFromEnv({
-    dataFile,
-    openRouterPublicFile,
-    now: () => new Date('2026-08-23T00:00:00.000Z'),
-  });
-  const snapshot = await service.refresh({ sources: ['openRouter'] });
-
-  assert.equal(snapshot.sources.openRouter.status, 'ready');
-  assert.equal(snapshot.sources.openRouter.stale, true);
-  assert.match(snapshot.sources.openRouter.message, /Data API/);
-  assert.equal(snapshot.openRouter.weekTotalTokens, null);
-  assert.equal(snapshot.openRouter.topModels[0].model, 'DeepSeek V4 Flash 0731');
-  assert.deepEqual(snapshot.openRouter.history, []);
-});
-
-test('OpenRouter client exposes only rankings and sends the configured server-side API key', async () => {
-  const calls = [];
-  const client = createOpenRouterClient({
-    apiKey: 'openrouter-key',
-    fetchImpl: async (url, options) => {
-      calls.push({ url: String(url), options });
-      return Response.json({
-        data: [{ date: '2026-08-19', model_permaslug: 'vendor/model', total_tokens: '42' }],
-        meta: { as_of: '2026-08-20T01:00:00.000Z', start_date: '2026-05-28', end_date: '2026-08-19' },
+test('failed or unverified webpage refresh preserves the last-good OpenRouter snapshot', async (t) => {
+  for (const { name, total, delta, publicFallback } of [
+    { name: 'public fallback', total: '140', delta: '70', publicFallback: true },
+    { name: 'zero total', total: '0', delta: '-70', publicFallback: true },
+    { name: 'no fallback file', total: '140', delta: '70', publicFallback: false },
+  ]) {
+    await t.test(name, async (t) => {
+      const { dataFile } = await tempDashboard(t, 'ai-dashboard-openrouter-preserve-');
+      const previous = createEmptyAiDashboardSnapshot('2026-08-23T01:00:00.000Z');
+      previous.sources.openRouter = readySource('2026-08-23T01:00:00.000Z');
+      previous.openRouter = {
+        startDate: '2026-08-16', endDate: '2026-08-22',
+        weekTotalTokens: total, priorWeekTotalTokens: '70',
+        weekOverWeekAbsolute: delta, weekOverWeekPercent: total === '0' ? -1 : 1,
+        topModels: [{ model: 'vendor/current', totalTokens: total, rank: 1 }],
+        history: [
+          { startDate: '2026-08-09', endDate: '2026-08-15', totalTokens: '70', weekOverWeekAbsolute: null, weekOverWeekPercent: null },
+          { startDate: '2026-08-16', endDate: '2026-08-22', totalTokens: total, weekOverWeekAbsolute: delta, weekOverWeekPercent: total === '0' ? -1 : 1 },
+        ],
+        attribution: 'Source: OpenRouter. Licensed under CC BY 4.0.',
+      };
+      await fs.promises.writeFile(dataFile, JSON.stringify(previous));
+      const service = createAiDashboardService({
+        dataFile,
+        now: () => new Date('2026-09-06T12:00:00.000Z'),
+        openRouterPublicClient: publicFallback ? {
+          async readRankings() {
+            return {
+              asOf: '2026-08-22', startDate: '2026-08-16', endDate: '2026-08-22',
+              topModels: [{ model: 'vendor/old-rounded-value', totalTokens: '100', rank: 1 }],
+            };
+          },
+        } : undefined,
       });
-    },
-  });
 
-  const payload = await client.fetchRankings({ startDate: '2026-05-28', endDate: '2026-08-19' });
+      const refreshed = await service.refresh({ sources: ['openRouter'], force: true });
 
-  assert.equal(payload.meta.as_of, '2026-08-20T01:00:00.000Z');
-  assert.match(calls[0].url, /start_date=2026-05-28/);
-  assert.equal(calls[0].options.headers.Authorization, 'Bearer openrouter-key');
-  assert.deepEqual(Object.keys(client), ['fetchRankings']);
+      assert.deepEqual(refreshed.openRouter, previous.openRouter);
+      assert.equal(refreshed.sources.openRouter.status, 'error');
+      assert.equal(refreshed.sources.openRouter.stale, true);
+      assert.equal(refreshed.sources.openRouter.asOf, previous.sources.openRouter.asOf);
+      assert.equal(refreshed.sources.openRouter.syncedAt, '2026-09-06T12:00:00.000Z');
+      assert.deepEqual(JSON.parse(await fs.promises.readFile(dataFile, 'utf8')).openRouter, previous.openRouter);
+    });
+  }
 });
 
-test('OpenRouter rankings client reports source-specific HTTP and timeout failures', async () => {
-  const failedClient = createOpenRouterClient({
-    apiKey: 'key',
-    fetchImpl: async () => new Response('', { status: 401 }),
+test('OpenRouter webpage client reports HTTP and timeout failures', async () => {
+  const failedClient = createOpenRouterWebClient({
+    fetchImpl: async () => new Response('', { status: 503 }),
   });
-  await assert.rejects(
-    failedClient.fetchRankings({ startDate: '2026-08-01', endDate: '2026-08-07' }),
-    /OpenRouter Data API failed with HTTP 401/,
-  );
-
-  const timeoutClient = createOpenRouterClient({
-    apiKey: 'key',
+  await assert.rejects(failedClient.readRankings(), /HTTP 503/);
+  const timeoutClient = createOpenRouterWebClient({
     timeoutMs: 5,
     fetchImpl: async (_url, options) => new Promise((_resolve, reject) => {
       options.signal.addEventListener('abort', () => reject(options.signal.reason));
     }),
   });
-  await assert.rejects(
-    timeoutClient.fetchRankings({ startDate: '2026-08-01', endDate: '2026-08-07' }),
-    /timed out/,
-  );
+  await assert.rejects(timeoutClient.readRankings(), /超时/);
 });
 
 test('official Benchmark collector refresh is fresh for 15 minutes and force bypasses freshness', async (t) => {
@@ -546,7 +539,7 @@ test('official Benchmark client publishes only first-party model-card records', 
   let rankingCalls = 0;
   const service = createAiDashboardService({
     dataFile,
-    openRouterClient: { async fetchRankings() { rankingCalls += 1; throw new Error('rankings must not be called'); } },
+    openRouterPublicClient: { async readRankings() { rankingCalls += 1; throw new Error('rankings must not be called'); } },
     officialBenchmarkClient: {
       async readAll() {
         return [{
@@ -715,7 +708,7 @@ test('overlapping public-slice refreshes are serialized without dropping OpenRou
   let openRouterCalls = 0;
   const service = createAiDashboardService({
     dataFile,
-    now: () => new Date('2026-08-20T00:00:00.000Z'),
+    now: () => new Date('2026-09-06T00:00:00.000Z'),
     collectors: {
       async growth() {
         await growthGate;
@@ -725,17 +718,10 @@ test('overlapping public-slice refreshes are serialized without dropping OpenRou
         };
       },
     },
-    openRouterClient: {
-      async fetchRankings() {
+    openRouterPublicClient: {
+      async readRankings() {
         openRouterCalls += 1;
-        return {
-          data: Array.from({ length: 14 }, (_, index) => ({
-            date: `2026-08-${String(6 + index).padStart(2, '0')}`,
-            model_permaslug: 'vendor/model',
-            total_tokens: '6',
-          })),
-          meta: { as_of: '2026-08-20T01:00:00.000Z', end_date: '2026-08-19' },
-        };
+        return webRankings();
       },
     },
   });
@@ -750,8 +736,8 @@ test('overlapping public-slice refreshes are serialized without dropping OpenRou
   assert.equal(openRouterCalls, 1);
   assert.equal(snapshot.sources.growth.status, 'ready');
   assert.equal(snapshot.sources.openRouter.status, 'ready');
-  assert.equal(snapshot.openRouter.weekTotalTokens, '42');
-  assert.equal(snapshot.openRouter.weekOverWeekAbsolute, '0');
+  assert.equal(snapshot.openRouter.topModels[0].model, 'Hy4 preview');
+  assert.equal(snapshot.openRouter.top10TotalTokens, '75560000000000');
 });
 
 test('incomplete OpenRouter responses preserve the last-good week', async (t) => {
@@ -765,8 +751,8 @@ test('incomplete OpenRouter responses preserve the last-good week', async (t) =>
   const service = createAiDashboardService({
     dataFile,
     now: () => new Date('2026-08-20T00:00:00.000Z'),
-    openRouterClient: {
-      async fetchRankings() {
+    openRouterPublicClient: {
+      async readRankings() {
         return {
           data: [{ date: '2026-08-19', model_permaslug: 'vendor/model', total_tokens: '42' }],
           meta: { as_of: '2026-08-20T01:00:00.000Z', end_date: '2026-08-19' },

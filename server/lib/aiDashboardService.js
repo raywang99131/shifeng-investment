@@ -5,7 +5,7 @@ import { DTCC_PPD_URL, mergePublicCdsObservations } from './aiCdsPublicData.js';
 import { AI_CAPITAL_SOURCE_REGISTRY, createAiCapitalCollector } from './aiCapitalSources.js';
 import { AI_COMPUTE_SOURCE_REGISTRY, createAiComputeCollector } from './aiComputeSources.js';
 import { AI_GROWTH_SOURCE_REGISTRY, createAiGrowthCollector } from './aiGrowthSources.js';
-import { aggregateOpenRouterWeekly } from './aiDashboardMetrics.js';
+import { createOpenRouterWebClient, OPENROUTER_SOURCE_URL } from './openRouterWebSource.js';
 import { createAiPricingCollector } from './aiPricingSources.js';
 import { createArtificialAnalysisCollector } from './artificialAnalysisSource.js';
 import { normalizeOfficialBenchmarks } from './officialBenchmarkData.js';
@@ -16,8 +16,6 @@ import { enqueueIceCdsSnapshotWrite } from './iceCdsSnapshotWriteQueue.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const OPENROUTER_SOURCE_URL = 'https://openrouter.ai/rankings';
-const OPENROUTER_DATA_API_URL = 'https://openrouter.ai/api/v1/datasets/rankings-daily';
 const ICE_CDS_EOD_URL = 'https://www.ice.com/cds-settlement-prices/icc/single-name-instruments';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const BENCHMARK_FRESH_MS = 15 * 60 * 1000;
@@ -63,12 +61,12 @@ export function createEmptyAiDashboardSnapshot(generatedAt = new Date().toISOStr
     sources: {
       growth: unavailable(),
       openRouter: {
-        status: 'authorization_required',
+        status: 'error',
         stale: true,
         asOf: null,
         syncedAt: null,
         url: OPENROUTER_SOURCE_URL,
-        message: '需配置 OPENROUTER_API_KEY',
+        message: '等待首次读取 OpenRouter 官网网页',
       },
       pricing: unavailable(),
       capital: unavailable(),
@@ -306,6 +304,10 @@ async function readSnapshotFile(dataFile, now) {
     const hasIceCdsBatch = parsed.creditRisk?.cds5y?.sourceKind === 'ice_eod_isda';
     const sources = migrateSources(parsed.sources, empty.sources);
     if (!hasIceCdsBatch) sources.creditRisk = empty.sources.creditRisk;
+    if (parsed.openRouter?.sourceMode === 'public-webpage'
+      && parsed.openRouter.endDate < utcDateOffset(now(), -1)) {
+      sources.openRouter = { ...sources.openRouter, stale: true };
+    }
     return {
       ...empty,
       ...parsed,
@@ -339,46 +341,6 @@ async function writeSnapshotFile(dataFile, snapshot) {
   const tempFile = `${dataFile}.${process.pid}.tmp`;
   await fs.promises.writeFile(tempFile, `${JSON.stringify(snapshot, null, 2)}\n`, 'utf8');
   await fs.promises.rename(tempFile, dataFile);
-}
-
-function openRouterCoverageError(payload, expectedEndDate) {
-  if (payload.meta?.end_date !== expectedEndDate) {
-    return `OpenRouter 返回的结束日 ${payload.meta?.end_date || '缺失'} 与请求日 ${expectedEndDate} 不一致`;
-  }
-  const dates = new Set((payload.data || [])
-    .filter((row) => row.model_permaslug && /^\d+$/.test(String(row.total_tokens || '')))
-    .map((row) => row.date));
-  const missingDates = Array.from({ length: 14 }, (_, offset) => utcDateOffset(new Date(`${expectedEndDate}T00:00:00.000Z`), -offset))
-    .filter((date) => !dates.has(date));
-  return missingDates.length > 0 ? `OpenRouter 缺少完整 UTC 日：${missingDates.join('、')}` : null;
-}
-
-export function createOpenRouterClient({ apiKey, fetchImpl = fetch, timeoutMs = 15_000 }) {
-  if (!apiKey) throw new Error('OpenRouter API key is required');
-  return {
-    async fetchRankings({ startDate, endDate }) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
-      const params = new URLSearchParams({ start_date: startDate, end_date: endDate });
-      try {
-        const response = await fetchImpl(`${OPENROUTER_DATA_API_URL}?${params}`, {
-          headers: { Authorization: `Bearer ${apiKey}` },
-          signal: controller.signal,
-        });
-        if (!response.ok) throw new Error(`OpenRouter Data API failed with HTTP ${response.status}`);
-        const payload = await response.json();
-        if (!Array.isArray(payload.data) || !payload.meta) {
-          throw new Error('OpenRouter Data API returned an invalid payload');
-        }
-        return payload;
-      } catch (error) {
-        if (controller.signal.aborted) throw new Error(`OpenRouter Data API timed out after ${timeoutMs}ms`);
-        throw error;
-      } finally {
-        clearTimeout(timer);
-      }
-    },
-  };
 }
 
 function validateCollectorResult(sourceKey, result) {
@@ -425,7 +387,6 @@ function validateRefreshSources(sources) {
 export function createAiDashboardService({
   dataFile = DEFAULT_AI_DASHBOARD_FILE,
   collectors = {},
-  openRouterClient,
   openRouterPublicClient,
   officialBenchmarkClient,
   now = () => new Date(),
@@ -476,47 +437,39 @@ export function createAiDashboardService({
     }
 
     if (sources.includes('openRouter')) {
-      const endDate = utcDateOffset(nowDate, -1);
-      const startDate = utcDateOffset(nowDate, -84);
       try {
-        if (openRouterClient) {
-          const payload = await openRouterClient.fetchRankings({ startDate, endDate });
-          const coverageError = openRouterCoverageError(payload, endDate);
-          if (coverageError) throw new Error(coverageError);
-          next.openRouter = {
-            ...aggregateOpenRouterWeekly(payload.data, { endDate: payload.meta.end_date || endDate, weeks: 12 }),
-            attribution: `Source: OpenRouter (openrouter.ai/rankings), as of ${payload.meta.as_of}. Licensed under CC BY 4.0.`,
-          };
-          next.sources.openRouter = {
-            status: 'ready',
-            stale: false,
-            asOf: payload.meta.as_of,
-            syncedAt: generatedAt,
-            url: OPENROUTER_SOURCE_URL,
-            message: 'OpenRouter 公开排名同步成功',
-          };
-        } else if (openRouterPublicClient) {
-          const payload = await openRouterPublicClient.readRankings();
-          next.openRouter = {
-            startDate: payload.startDate,
-            endDate: payload.endDate,
-            weekTotalTokens: null,
-            priorWeekTotalTokens: null,
-            weekOverWeekAbsolute: null,
-            weekOverWeekPercent: null,
-            topModels: payload.topModels,
-            history: [],
-            attribution: `Source: OpenRouter public leaderboard (openrouter.ai/rankings), as of ${payload.asOf}. Rounded display values. Licensed under CC BY 4.0.`,
-          };
-          next.sources.openRouter = {
-            status: 'ready',
-            stale: true,
-            asOf: payload.asOf,
-            syncedAt: generatedAt,
-            url: OPENROUTER_SOURCE_URL,
-            message: '已读取公开榜单 Top 10；全平台周总量和 12 周趋势需配置 OpenRouter Data API 密钥',
-          };
+        if (!openRouterPublicClient) throw new Error('OpenRouter 网页采集器未启用');
+        const payload = await openRouterPublicClient.readRankings();
+        if (payload.sourceMode !== 'public-webpage' || !payload.endDate || payload.topModels?.length !== 10) {
+          throw new Error('OpenRouter 网页榜单未通过完整性校验');
         }
+        if (previous.openRouter.sourceMode === 'public-webpage' && payload.endDate < previous.openRouter.endDate) {
+          throw new Error(`OpenRouter 网页数据日期回退至 ${payload.endDate}；保留上次成功结果`);
+        }
+        const stale = payload.endDate < utcDateOffset(nowDate, -1);
+        // Preserve dated historical platform data for audit, without presenting
+        // totals from a different window as this webpage's current Top 10.
+        const archivedPlatformData = previous.openRouter.archivedPlatformData
+          || (previous.openRouter.weekTotalTokens != null ? previous.openRouter : undefined);
+        next.openRouter = {
+          sourceMode: 'public-webpage',
+          startDate: payload.startDate,
+          endDate: payload.endDate,
+          weekTotalTokens: null,
+          priorWeekTotalTokens: null,
+          weekOverWeekAbsolute: null,
+          weekOverWeekPercent: null,
+          top10TotalTokens: payload.top10TotalTokens,
+          topModels: payload.topModels,
+          history: [],
+          ...(archivedPlatformData ? { archivedPlatformData } : {}),
+          attribution: `Source: OpenRouter (openrouter.ai/rankings), This Week, ${payload.startDate} to ${payload.endDate}. Rounded webpage values. Licensed under CC BY 4.0.`,
+        };
+        next.sources.openRouter = {
+          status: 'ready', stale, asOf: payload.asOf, syncedAt: generatedAt,
+          url: OPENROUTER_SOURCE_URL,
+          message: `已读取官网网页 This Week 榜单；数据截至 ${payload.endDate}${stale ? '（官网数据滞后）' : ''}。Top 10 显示值为约数；网页表格未提供全平台七日总量及对应周环比。`,
+        };
       } catch (error) {
         next.sources.openRouter = failedSource(previous.sources.openRouter, error, generatedAt);
       }
@@ -572,23 +525,9 @@ export function createAiDashboardServiceFromEnv({
   officialBenchmarkClient,
   now = () => new Date(),
 } = {}) {
-  const openRouterClient = process.env.OPENROUTER_API_KEY
-    ? createOpenRouterClient({ apiKey: process.env.OPENROUTER_API_KEY, fetchImpl })
-    : undefined;
-  const openRouterPublicClient = !openRouterClient && openRouterPublicFile && fs.existsSync(openRouterPublicFile)
-    ? {
-        async readRankings() {
-          const payload = JSON.parse(await fs.promises.readFile(openRouterPublicFile, 'utf8'));
-          const topModels = Array.isArray(payload?.topModels)
-            ? payload.topModels.filter((row) => row?.model && /^\d+$/.test(String(row.totalTokens || '')))
-            : [];
-          if (!payload?.asOf || !payload?.startDate || !payload?.endDate || topModels.length === 0) {
-            throw new Error('本地 OpenRouter 公开榜单文件格式无效');
-          }
-          return { ...payload, topModels };
-        },
-      }
-    : undefined;
+  const openRouterPublicClient = createOpenRouterWebClient({
+    fetchImpl, cacheFile: openRouterPublicFile, now,
+  });
   const mergedCollectors = { ...collectors };
   const officialDocumentClient = createOfficialDocumentClient({ fetchImpl, now });
   if (typeof mergedCollectors.growth !== 'function') {
@@ -645,7 +584,6 @@ export function createAiDashboardServiceFromEnv({
   return createAiDashboardService({
     dataFile,
     collectors: mergedCollectors,
-    openRouterClient,
     openRouterPublicClient,
     officialBenchmarkClient,
     now,

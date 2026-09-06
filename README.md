@@ -50,13 +50,11 @@ docker compose up --build
 
 AI 看板位于 `/ai-dashboard`，沿用网站现有访问边界，不再要求单独输入访问口令。看板已停止读取飞书；增长、价格、融资、官网模型卡、算力租赁等板块由服务端从登记过的公开网页读取，每条记录保留来源、口径、数据日期和同步状态。
 
-OpenRouter 只用于公开 Token 流量。若要读取完整的日度排名数据并计算周环比，可配置：
+OpenRouter 只读取 [官网排行榜网页](https://openrouter.ai/rankings) 的 HTML，不调用 OpenRouter API，也不读取或发送 `OPENROUTER_API_KEY`。每次同步直接获取官网 This Week 榜单，解析公开表格中的 Top 10 模型、Token 显示值、涨跌方向和 `Usage data through` 数据日期；统计窗口为截至该日期的七个完整 UTC 日。点击 OpenRouter 页签会同步一次，服务启动后和每日定时也会同步。
 
-```bash
-export OPENROUTER_API_KEY='sk-or-v1-xxx'
-```
+`server/data/ai-dashboard/openrouter-public.json` 保存最近一次成功解析的网页结果，供核对来源，不再用旧文件冒充实时刷新。官网网页无法读取、表格不完整或日期倒退时保留上次成功快照，显示失败或过期状态。数量与模型周环比为官网约数；Top 10 合计仅覆盖这十个模型，网页表格未提供的全平台七日总量和对应周环比保持缺失，旧平台数据单独保留在 `archivedPlatformData` 供追溯。
 
-本地开发也可以将同名变量写入仓库根目录的 `.env.local`；`npm run server` 会自动加载该文件，且该文件已被 Git 忽略。系统环境变量优先于 `.env.local` 中的同名配置。未配置 OpenRouter key 时，页面可以读取本地保存的公开榜单 Top 10，但不会把 Top 10 合计冒充全平台总量，也不会伪造周环比。
+仅刷新此分片：`npm run refresh:ai-dashboard -- --sources=openRouter`。
 
 ### Benchmark 数据边界
 

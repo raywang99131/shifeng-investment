@@ -574,8 +574,8 @@ export function OverviewSection({ data }: DashboardProps) {
         </Col>
         <Col xs={24} sm={12} xl={6}>
           <Card className="ai-kpi-card">
-            <Statistic title="OpenRouter 周环比 Token" value={formatTokenDelta(data.openRouter.weekOverWeekAbsolute, data.openRouter.weekOverWeekPercent)} prefix={<ThunderboltOutlined />} />
-            <Text type="secondary">{data.openRouter.weekTotalTokens === null ? '平台周环比需 Data API 授权' : `本周总量 ${formatTokenCount(data.openRouter.weekTotalTokens)} · 两个完整 UTC 周`}</Text>
+            <Statistic title="OpenRouter Top 10 · 七日 Token" value={formatTokenCount(data.openRouter.top10TotalTokens ?? null)} prefix={<ThunderboltOutlined />} />
+            <Text type="secondary">官网榜单约数合计 · 截至 {dateLabel(data.openRouter.endDate)}</Text>
           </Card>
         </Col>
         <Col xs={24} sm={12} xl={6}>
@@ -707,40 +707,41 @@ export function ArrValuationSection({ data }: DashboardProps) {
   );
 }
 
-export function OpenRouterSection({ data }: DashboardProps) {
+export function OpenRouterSection({ data, refreshing = false }: DashboardProps & { refreshing?: boolean }) {
   return (
     <div className="ai-section-stack">
       <Alert
         type="info"
         showIcon
         title="口径说明"
-        description={data.openRouter.weekTotalTokens === null
-          ? '当前仅展示 OpenRouter 公开榜单 Top 10（页面显示值为约数）。平台周环比需 Data API 授权；不等同于全行业使用量、请求次数或模型质量。'
-          : '周环比使用最近两个完整 UTC 七日窗口，核心指标为 Token 绝对增减；保留 other 计入平台总量，不等同于全行业使用量、请求次数或模型质量。'}
+        description="直接同步 OpenRouter 官网 This Week 榜单：截至最新完整 UTC 数据日的滚动七天，包含输入与输出 Token。数量与模型周环比均为官网显示约数，免费版本单独排名。Top 10 合计仅覆盖这十个模型；网页表格未提供全平台七日总量及对应周环比。"
       />
       <Row gutter={[16, 16]}>
         <Col xs={24} md={12}>
-          <Card className="ai-kpi-card"><Statistic title="平台周环比 Token 增量" value={formatTokenDelta(data.openRouter.weekOverWeekAbsolute, data.openRouter.weekOverWeekPercent)} /></Card>
+          <Card className="ai-kpi-card"><Statistic title="Top 10 · 七日 Token 合计（约）" value={formatTokenCount(data.openRouter.top10TotalTokens ?? null)} /><Text type="secondary">官网显示值相加，仅覆盖榜单前十名</Text></Card>
         </Col>
         <Col xs={24} md={12}>
-          <Card className="ai-kpi-card"><Statistic title="本周 Token 总量（辅助）" value={formatTokenCount(data.openRouter.weekTotalTokens)} /><Text type="secondary">{data.openRouter.weekTotalTokens === null ? '平台周环比需 Data API 授权' : `${dateLabel(data.openRouter.startDate)} → ${dateLabel(data.openRouter.endDate)}`}</Text></Card>
+          <Card className="ai-kpi-card"><Statistic title="官网数据截至（UTC）" value={data.openRouter.endDate || '—'} /><Text type="secondary">统计窗口：{dateLabel(data.openRouter.startDate)} → {dateLabel(data.openRouter.endDate)}</Text></Card>
         </Col>
       </Row>
       <Row gutter={[16, 16]}>
-        <Col xs={24} xl={14}><ChartCard title="Top 10 模型 · 周 Token"><OpenRouterTopChart data={data.openRouter} height={430} /></ChartCard></Col>
-        <Col xs={24} xl={10}><ChartCard title="平台周 Token 总量与周环比增量"><OpenRouterHistoryChart data={data.openRouter} /></ChartCard></Col>
+        <Col xs={24} xl={data.openRouter.history.length ? 14 : 24}><ChartCard title="Top 10 模型 · 七日 Token（官网约数）"><OpenRouterTopChart data={data.openRouter} height={430} /></ChartCard></Col>
+        {data.openRouter.history.length > 0 && <Col xs={24} xl={10}><ChartCard title="已保存的平台周 Token 历史"><OpenRouterHistoryChart data={data.openRouter} /></ChartCard></Col>}
       </Row>
-      <ChartCard title="周排名表" extra={<Text type="secondary">{data.openRouter.weekTotalTokens === null ? '平台合计待 Data API 授权' : `平台合计 ${formatTokenCount(data.openRouter.weekTotalTokens)}`}</Text>}>
+      <ChartCard title="官网周排名表" extra={<Link href="https://openrouter.ai/rankings" target="_blank" rel="noopener noreferrer">查看 OpenRouter 原网页 ↗</Link>}>
         <Table
           size="small"
           rowKey="model"
           pagination={false}
+          loading={refreshing}
+          scroll={{ x: 650 }}
           locale={{ emptyText: <NoData description="暂无 OpenRouter 数据" /> }}
           dataSource={data.openRouter.topModels}
           columns={[
             { title: '排名', dataIndex: 'rank', width: 72 },
-            { title: '模型', dataIndex: 'model', className: 'ai-model-name', render: (value) => <Tooltip title={value}><span>{value}</span></Tooltip> },
-            { title: '七日公开 Token', dataIndex: 'totalTokens', width: 180, align: 'right', render: (value, row) => <Text strong>{row.approximate ? '≈' : ''}{formatTokenCount(value)}</Text> },
+            { title: '模型', dataIndex: 'model', className: 'ai-model-name', render: (value, row) => <Tooltip title={value}>{row.url ? <Link href={row.url} target="_blank" rel="noopener noreferrer">{value}</Link> : <span>{value}</span>}</Tooltip> },
+            { title: '七日公开 Token（约）', dataIndex: 'totalTokens', width: 180, align: 'right', render: (value, row) => <Text strong>{row.tokenDisplay || `${row.approximate ? '≈' : ''}${formatTokenCount(value)}`}</Text> },
+            { title: '模型周环比（约）', dataIndex: 'weekOverWeekPercent', width: 155, align: 'right', render: (value: number | null | undefined) => value == null ? '—' : <Text type={value < 0 ? 'danger' : value > 0 ? 'success' : undefined}>{value > 0 ? '+' : ''}{compactNumber(value * 100)}%</Text> },
           ]}
         />
         <Text type="secondary" className="ai-attribution">{data.openRouter.attribution}</Text>

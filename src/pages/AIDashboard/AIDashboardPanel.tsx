@@ -124,6 +124,7 @@ export const AIDashboardPanel: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [benchmarkRefreshing, setBenchmarkRefreshing] = useState(false);
+  const [openRouterRefreshing, setOpenRouterRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [publicAccess, setPublicAccess] = useState(false);
   const [sessionExpiresAt, setSessionExpiresAt] = useState<string | null>(null);
@@ -217,9 +218,11 @@ export const AIDashboardPanel: React.FC = () => {
 
   const changeTab = async (key: string) => {
     setActiveTab(key);
-    const refreshRequest = benchmarkRefreshRequest(key);
-    if (!refreshRequest || benchmarkRefreshing) return;
-    setBenchmarkRefreshing(true);
+    const isOpenRouter = key === 'openrouter';
+    const refreshRequest = isOpenRouter ? { sources: ['openRouter'], force: true } : benchmarkRefreshRequest(key);
+    if (!refreshRequest || (isOpenRouter ? openRouterRefreshing : benchmarkRefreshing)) return;
+    const setSourceRefreshing = isOpenRouter ? setOpenRouterRefreshing : setBenchmarkRefreshing;
+    setSourceRefreshing(true);
     try {
       const payload = await requestDashboard('/refresh', {
         method: 'POST',
@@ -234,10 +237,10 @@ export const AIDashboardPanel: React.FC = () => {
         setData(null);
         setSessionExpiresAt(null);
       } else {
-        messageApi.warning(`Benchmark 刷新失败，继续展示上一版：${(requestError as Error).message}`);
+        messageApi.warning(`${isOpenRouter ? 'OpenRouter 网页' : 'Benchmark'} 刷新失败，继续展示上一版：${(requestError as Error).message}`);
       }
     } finally {
-      setBenchmarkRefreshing(false);
+      setSourceRefreshing(false);
     }
   };
 
@@ -258,7 +261,7 @@ export const AIDashboardPanel: React.FC = () => {
   const tabs = useMemo(() => data ? [
     { key: 'overview', label: '总览', children: <OverviewSection data={data} /> },
     { key: 'arr', label: 'ARR & 估值', children: <ArrValuationSection data={data} /> },
-    { key: 'openrouter', label: 'OpenRouter', children: <OpenRouterSection data={data} /> },
+    { key: 'openrouter', label: 'OpenRouter', children: <OpenRouterSection data={data} refreshing={openRouterRefreshing} /> },
     { key: 'pricing', label: '模型价格', children: <ModelPricingSection data={data} /> },
     { key: 'benchmark', label: 'Benchmark', children: <BenchmarkSection data={data} refreshing={benchmarkRefreshing} /> },
     { key: 'aa', label: 'AA 指数与成本', children: <ArtificialAnalysisSection data={data} /> },
@@ -274,7 +277,7 @@ export const AIDashboardPanel: React.FC = () => {
         />
       ),
     },
-  ] : [], [benchmarkRefreshing, cdsImportStatus, data]);
+  ] : [], [benchmarkRefreshing, openRouterRefreshing, cdsImportStatus, data]);
 
   if (auth === 'checking' || (loading && !data)) return <><Skeleton active paragraph={{ rows: 8 }} />{messageContext}</>;
   if (auth === 'required') return <>{messageContext}<AccessGate loading={submitting} onSubmit={login} /></>;
