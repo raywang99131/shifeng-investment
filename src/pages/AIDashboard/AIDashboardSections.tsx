@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
+import OpenRouterWeeklyChart from './OpenRouterWeeklyChart';
 import { arrChartSeries, arrSourceCategory, arrValueLabel, primaryArrMetrics, latestCompanyValuations, type LatestCompanyValuation } from './arrChart';
 import {
   Alert,
@@ -604,6 +605,9 @@ export function ArrValuationSection({ data }: DashboardProps) {
 export function OpenRouterSection({ data, refreshing = false }: DashboardProps & { refreshing?: boolean }) {
   return (
     <div className="ai-section-stack">
+      <ChartCard title="OpenRouter 每周 Token 用量">
+        <OpenRouterWeeklyChart history={data.openRouter.weeklyHistory} latestDate={data.openRouter.endDate} error={data.openRouter.weeklyHistoryError} />
+      </ChartCard>
       <Alert
         type="info"
         showIcon
