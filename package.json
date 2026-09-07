@@ -25,6 +25,8 @@
     "cf:migrate:local": "wrangler d1 migrations apply RESEARCH_DB --local",
     "cf:migrate:remote": "wrangler d1 migrations apply RESEARCH_DB --remote",
     "deploy:cloud": "npm run build && wrangler deploy",
+    "deploy:cloud:ci": "node scripts/deploy-cloud-worker.mjs",
+    "upload:cloud:ci": "node scripts/deploy-cloud-worker.mjs --preview",
     "research:cloud-run": "node server/scripts/cloud_research_runner.mjs",
     "research:cloud-publish": "node server/scripts/publish_cloud_research.mjs",
     "research:cloud-migrate": "node server/scripts/migrate_research_history.mjs",
