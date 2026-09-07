@@ -87,3 +87,17 @@ curl -fsS "${SHIFENG_CLOUD_HOST}/api/research/refresh/status"
 如果新站点需要回滚，把正式 DNS 主机名恢复到原来的 Named Tunnel 即可。不要删除 D1、R2 或迁移检查点；它们不影响旧站，并可用于再次部署。
 
 Cloudflare 和 GitHub 都有免费额度，但不是无限免费；实际用量和是否产生超额费用以账号控制台为准。
+
+## 9. Workers Builds 自动发布
+
+Cloudflare 的构建环境密钥不会自动成为 Worker 运行时绑定。在 Workers Builds 中保存现有的 `GITHUB_DISPATCH_TOKEN`、`RESEARCH_PUBLISH_TOKEN`，并设置：
+
+- 构建命令：`npm run build`
+- 部署命令：`npm run deploy:cloud:ci`
+- 非生产分支的版本命令：`npm run upload:cloud:ci`
+
+发布脚本只将这两个密钥写入权限为 `0600` 的临时文件，通过 Wrangler `--secrets-file` 传入；完成或失败后删除临时文件。缺少密钥时立即停止。非生产分支仅上传预览版本，不切换生产流量。`RESEARCH_PUBLISH_TOKEN` 应与 GitHub Actions 的同名密钥保持一致。
+
+`wrangler.jsonc` 的 `LEGACY_API_ORIGIN` 必须指向 `https://origin.shifeng-investment.com`。该域名由 Tunnel 连接本地 API，不应配置到 `www` 的 Worker 路由上，以免循环代理。保留 `secrets.required` 校验和 `assets.run_worker_first` 访问控制。
+
+相关文档：[Cloudflare 构建配置](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/)、[Wrangler 发布命令](https://developers.cloudflare.com/workers/wrangler/commands/workers/)。
