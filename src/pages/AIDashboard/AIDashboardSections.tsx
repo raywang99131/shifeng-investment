@@ -372,11 +372,12 @@ function CombinedArrChart({ metrics, height = 360 }: { metrics: ArrCompanyMetric
             ? `<a href="${escapeHtml(point.sourceUrl)}" target="_blank" rel="noreferrer">来源 ${escapeHtml(point.sourceCell || '')}</a>` : '';
           return [
             `${item.marker}<b>${escapeHtml(item.seriesName)}</b>`,
-            `${escapeHtml(date)} · 历史观测`,
-            `来源：${escapeHtml(point.sourceLabel)} · ${{ official: '官方口径', yipit: 'Yipit', unspecified: '原表未注明来源' }[arrSourceCategory(point)]}`,
+            `${escapeHtml(date)} · ${point.preliminary ? 'MTD 初步估计' : '历史观测'}`,
+            `来源：${escapeHtml(point.sourceLabel)} · ${{ official: '官方口径', yipit: 'Yipit', unspecified: '机构未注明' }[arrSourceCategory(point)]}`,
             `ARR：${escapeHtml(arrValueLabel(point))} 亿美元`,
             point.valueHigh !== undefined ? '图中以区间中点定位，原始区间见上方。' : '',
             point.kind === 'actual' && point.comparisonLabel ? `${point.consecutiveMonth ? '月环比' : '相邻观测变化'}：${escapeHtml(formatArrDelta(point.momAbsolute, point.momPercent))}<br/>${escapeHtml(point.comparisonLabel)}` : '',
+            point.comparisonNote ? `可比性：${escapeHtml(point.comparisonNote)}` : '',
             `口径：${escapeHtml(point.methodology || point.provenance?.methodology || point.sourceLabel)}`,
             point.commentary ? `备注：${escapeHtml(point.commentary)}` : '', sourceLink,
           ].filter(Boolean).join('<br/>');
@@ -402,7 +403,9 @@ function CombinedArrChart({ metrics, height = 360 }: { metrics: ArrCompanyMetric
     };
   }, [compact, metrics, palette]);
   if (!metrics.some((metric) => metric.actualPoints.length || metric.forecastPoints.length)) return <NoData description="暂无 ARR 数据" />;
-  return <><Space wrap size={12}><Text type="secondary">● Anthropic · ◆ OpenAI</Text><Tag color="blue">官方披露</Tag><Tag color="orange">Yipit</Tag><Tag>原表未注明来源</Tag></Space><ReactECharts option={option} style={{ height }} notMerge /></>;
+  return <><Space wrap size={12}><Text type="secondary">● Anthropic · ◆ OpenAI</Text><Tag color="blue">官方披露</Tag><Tag color="orange">Yipit</Tag><Tag>报告 / 原表未注明机构</Tag></Space><ReactECharts option={option} style={{ height }} notMerge />
+    {metrics.some((m) => m.actualPoints.some((p) => p.comparisonNote)) && <Text type="secondary">标注口径待核对的观测以独立点展示、不连线；不据此推断 ARR 下降。</Text>}
+  </>;
 }
 
 function OpenRouterTopChart({ data, height = 350 }: { data: AiDashboardSnapshot['openRouter']; height?: number }) {
@@ -492,7 +495,7 @@ export function OverviewSection({ data }: DashboardProps) {
               precision={arr ? 2 : undefined}
               prefix={<LineChartOutlined />}
             />
-            <Text type="secondary">{arrPoint ? `${arr.sourceLabel} · ${arrPoint.observedAt} · 较上次 ${formatArrDelta(arrPoint.momAbsolute, arrPoint.momPercent)}` : '暂无环比观测'}</Text>
+            <Text type="secondary">{arrPoint ? `${arr.sourceLabel} · ${arrPoint.observedAt} · ${arrPoint.preliminary ? 'MTD 初值，可能修订' : `较上次 ${formatArrDelta(arrPoint.momAbsolute, arrPoint.momPercent)}`}` : '暂无环比观测'}</Text>
           </Card>
         </Col>
         <Col xs={24} sm={12} xl={6}>
@@ -510,7 +513,7 @@ export function OverviewSection({ data }: DashboardProps) {
         <Col xs={24} sm={12} xl={6}>
           <Card className="ai-kpi-card">
             <Statistic title={`最新 P/ARR${valuation ? ` · ${valuation.company}` : ''}`} value={valuation ? formatMultiple(valuation.parrLow, valuation.parrHigh) : '—'} />
-            <Text type="secondary">估值期间 {valuation?.datePrecision === 'month' ? valuation.asOf.slice(0, 7) : dateLabel(valuation?.asOf)} · ARR 更新 {valuation?.datePrecision === 'month' ? valuation.arrAsOf?.slice(0, 7) : dateLabel(valuation?.arrAsOf)}</Text>
+            <Text type="secondary">估值期间 {valuation?.datePrecision === 'month' ? valuation.asOf.slice(0, 7) : dateLabel(valuation?.asOf)} · ARR 更新 {valuation?.arrPoint?.datePrecision === 'month' ? valuation.arrAsOf?.slice(0, 7) : dateLabel(valuation?.arrAsOf)}{valuation?.arrPoint?.preliminary ? ' · 初估' : ''}</Text>
           </Card>
         </Col>
       </Row>
@@ -559,11 +562,12 @@ function ValuationTable({ data }: { data: LatestCompanyValuation[] }) {
       { title: '公司', dataIndex: 'company', fixed: 'left', width: 115 },
       { title: '估值（亿美元）', width: 155, align: 'right', render: (_, row) => row.valuationLow === row.valuationHigh ? compactNumber(row.valuationLow) : `${compactNumber(row.valuationLow)}–${compactNumber(row.valuationHigh)}` },
       { title: 'ARR', width: 110, align: 'right', render: (_, row) => row.arrPoint ? arrValueLabel(row.arrPoint) : '—' },
-      { title: 'P/ARR', width: 120, align: 'right', render: (_, row) => <Text strong>{row.parrUpperBound && row.parrHigh !== null ? `<${formatMultiple(row.parrHigh, row.parrHigh)}` : formatMultiple(row.parrLow, row.parrHigh)}</Text> },
+      { title: 'P/ARR', width: 120, align: 'right', render: (_, row) => <><Text strong>{row.parrUpperBound && row.parrHigh !== null ? `<${formatMultiple(row.parrHigh, row.parrHigh)}` : formatMultiple(row.parrLow, row.parrHigh)}</Text>{row.arrPoint?.preliminary && <div><Text type="secondary">初估</Text></div>}</> },
       { title: '来源', width: 190, render: (_, row) => <Tooltip title={<>
         <div>估值：{row.datePrecision === 'month' ? row.asOf.slice(0, 7) : row.asOf} · {row.sourceLabel} {row.sourceCell}</div>
         <div>ARR：{row.arrPoint?.datePrecision === 'month' ? row.arrPoint.month : row.arrAsOf || '未披露'} · {row.arrSourceLabel} {row.arrPoint?.sourceCell}</div>
         <div>最新明确估值 ÷ 最新历史 ARR；两项日期可能不同。</div>
+        {row.arrPoint?.preliminary && <div>ARR 为 MTD 初步估计，B2B 样本未齐，倍数会随修订变化；不使用月底推算值。</div>}
         {row.multipleKind === 'P/S' && <div>原表倍数列为 P/S；此处使用 ARR 跟踪值重新计算。</div>}
       </>}><Space size={5}>
         {row.sourceUrl ? <Link href={row.sourceUrl} target="_blank" rel="noreferrer">{row.sourceLabel?.includes('飞书') ? '飞书表格' : row.sourceLabel || '估值来源'}</Link> : <Text>{row.sourceLabel || '未注明'}</Text>}
@@ -589,10 +593,11 @@ export function ArrValuationSection({ data }: DashboardProps) {
               {latest.map((metric) => metric.latestActual && <Card size="small" key={metric.seriesId}>
                 <Statistic title={`${metric.company} · ${metric.sourceLabel}`} value={arrValueLabel(metric.latestActual)} suffix="亿美元" />
                 <Text type="secondary">观测 {metric.latestActual.observedAt}</Text><br/>
-                <Text type="secondary">较上次 {formatArrDelta(metric.latestActual.momAbsolute, metric.latestActual.momPercent)}</Text>
+                {metric.latestActual.preliminary ? <Tag color="warning">MTD 初值 · 可能修订</Tag> : <Text type="secondary">较上次 {formatArrDelta(metric.latestActual.momAbsolute, metric.latestActual.momPercent)}</Text>}
+                {metric.latestActual.reportSummary && <div><Text type="secondary">{metric.latestActual.reportSummary}</Text></div>}
               </Card>)}
               <Text type="secondary">汇集两家公司全部历史观测。点颜色区分来源，形状区分公司；拖动下方时间条可放大查看。Yipit 已乘 10 换算为亿美元。</Text>
-              {primary.some((m) => m.stale) && <Tag color="warning">最近观测超过 18 天</Tag>}
+              {latest.some((m) => m.stale) && <Tag color="warning">最近观测超过 18 天</Tag>}
             </Flex>
           </Col>
         </Row>

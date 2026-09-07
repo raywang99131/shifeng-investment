@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { arrChartSeries, arrValueLabel, latestCompanyValuations, primaryArrMetrics } from '../src/pages/AIDashboard/arrChart.ts';
 import type { ArrCompanyMetric, ValuationMetric } from '../src/pages/AIDashboard/types.ts';
+import { buildGrowthReference, readGrowthReference } from '../server/lib/aiGrowthReference.js';
 
 const metric = {
   company: 'Anthropic', seriesId: 'test', seriesKind: 'estimate', sourceLabel: 'Yipit',
@@ -19,6 +20,26 @@ test('ARR chart retains both July dates on a time axis and labels levels, not in
   assert.equal(series[0].type, 'line');
   assert.equal(arrValueLabel(metric.actualPoints[1]), '800');
   assert.equal(arrValueLabel({ value: 395, valueLow: 390, valueHigh: 400 }), '390–400');
+});
+
+test('unreconciled report vintages retain both observations but break the connecting line', () => {
+  const preliminary = { ...metric.actualPoints[0], observedAt: '2026-08-23', value: 683, preliminary: true, comparisonNote: '新旧口径尚未核对一致' };
+  const series = arrChartSeries([{ ...metric, actualPoints: [...metric.actualPoints, preliminary] }]);
+  assert.deepEqual(series[0].data.map((d) => d.value[1]), [730, 800, null, 683]);
+  assert.equal(series[0].connectNulls, false);
+});
+
+test('latest company multiples use the August 23 provisional ARR, excluding the month-end extrapolation', () => {
+  const data = buildGrowthReference(readGrowthReference());
+  const rows = latestCompanyValuations(data.valuations, data.companies);
+  for (const [company, arr, valuation, multiple] of [['Anthropic', 683, 9650, '14.1'], ['OpenAI', 410, 8400, '20.5']] as const) {
+    const row = rows.find((r) => r.company === company)!;
+    assert.equal(row.arrValue, arr);
+    assert.equal(row.parrLow, valuation / arr);
+    assert.equal(row.parrLow?.toFixed(1), multiple);
+    assert.equal(row.arrAsOf, '2026-08-23');
+    assert.equal(row.arrPoint?.preliminary, true);
+  }
 });
 
 test('overview combines every source for the two companies and excludes forecasts', () => {

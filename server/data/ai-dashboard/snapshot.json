@@ -1,14 +1,14 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-06T13:18:30.928Z",
+  "generatedAt": "2026-09-07T02:33:06.320Z",
   "sources": {
     "growth": {
       "status": "ready",
-      "stale": true,
-      "asOf": "2026-07-26",
+      "stale": false,
+      "asOf": "2026-08-23",
       "url": "https://xcn0zaydz11m.feishu.cn/sheets/F9W3s5BBEhRRV8tdZvCchEAfnCf?sheet=0rbUAO&table=tblzvLEtWP2TaYtF&view=vew0i9u3MV",
-      "message": "已核对的表格快照；最近观测 2026-07-26；导入于 2026-09-06，刷新不会视作新增观测",
-      "syncedAt": "2026-09-06T13:18:30.928Z"
+      "message": "已核对的表格快照；最近观测 2026-08-23；导入于 2026-09-07，刷新不会视作新增观测",
+      "syncedAt": "2026-09-07T02:33:06.320Z"
     },
     "openRouter": {
       "status": "ready",
@@ -395,7 +395,7 @@
             "commentary": "Yipit：月初500+，月末预测700；硅谷：650",
             "momAbsolute": null,
             "momPercent": null,
-            "comparisonLabel": "2026-05-01 → 2026-06-01",
+            "comparisonLabel": null,
             "consecutiveMonth": false
           },
           {
@@ -418,7 +418,7 @@
             "commentary": "",
             "momAbsolute": null,
             "momPercent": null,
-            "comparisonLabel": "2026-06-01 → 2026-07",
+            "comparisonLabel": null,
             "consecutiveMonth": false
           }
         ],
@@ -503,7 +503,7 @@
           "commentary": "",
           "momAbsolute": null,
           "momPercent": null,
-          "comparisonLabel": "2026-06-01 → 2026-07",
+          "comparisonLabel": null,
           "consecutiveMonth": false
         },
         "stale": true
@@ -743,7 +743,7 @@
             "commentary": "6/26:Yipit",
             "momAbsolute": null,
             "momPercent": null,
-            "comparisonLabel": "2026-05 → 2026-06",
+            "comparisonLabel": null,
             "consecutiveMonth": false
           },
           {
@@ -766,7 +766,7 @@
             "commentary": "",
             "momAbsolute": null,
             "momPercent": null,
-            "comparisonLabel": "2026-06 → 2026-07",
+            "comparisonLabel": null,
             "consecutiveMonth": false
           }
         ],
@@ -811,7 +811,7 @@
           "commentary": "",
           "momAbsolute": null,
           "momPercent": null,
-          "comparisonLabel": "2026-06 → 2026-07",
+          "comparisonLabel": null,
           "consecutiveMonth": false
         },
         "stale": true
@@ -1610,7 +1610,7 @@
             "commentary": "7/24：Kimi老股东口径ARR 10+亿美金",
             "momAbsolute": null,
             "momPercent": null,
-            "comparisonLabel": "2026-06 → 2026-07",
+            "comparisonLabel": null,
             "consecutiveMonth": false
           }
         ],
@@ -1657,7 +1657,7 @@
           "commentary": "7/24：Kimi老股东口径ARR 10+亿美金",
           "momAbsolute": null,
           "momPercent": null,
-          "comparisonLabel": "2026-06 → 2026-07",
+          "comparisonLabel": null,
           "consecutiveMonth": false
         },
         "stale": true
@@ -2072,6 +2072,130 @@
       },
       {
         "company": "Anthropic",
+        "seriesId": "Anthropic:estimate:报告摘录",
+        "seriesKind": "estimate",
+        "sourceLabel": "报告摘录",
+        "actualPoints": [
+          {
+            "company": "Anthropic",
+            "observedAt": "2026-08-23",
+            "month": "2026-08",
+            "value": 683,
+            "kind": "actual",
+            "seriesKind": "estimate",
+            "sourceLabel": "报告摘录",
+            "datePrecision": "day",
+            "sourceUrl": "https://xcn0zaydz11m.feishu.cn/sheets/F9W3s5BBEhRRV8tdZvCchEAfnCf?sheet=0rbUAO&table=tblzvLEtWP2TaYtF&view=vew0i9u3MV",
+            "sourceCell": "B47",
+            "sourceKind": "estimate",
+            "originalValue": 68.3,
+            "originalUnit": "USD billion",
+            "currency": "USD",
+            "unitScale": 100000000,
+            "methodology": "用户提供报告摘录；截至 2026-08-23 的 MTD 初步估计，机构与原报告链接未注明；十亿美元 × 10。",
+            "commentary": "Anthropic：截至 2026-08-23 ARR 初步估计 68.3（683 亿美元）。8 月 MTD 的同比增长与环比新增较 7 月放缓；按全月推算净 ARR 新增约 4–5，7 月隐含新增约 8。8 月 B2B 样本数据尚未齐备，本次依赖假设，最终数据公布后可能修订。",
+            "preliminary": true,
+            "reportSummary": "8 月净新增推算 40–50 亿，7 月隐含新增约 80 亿；8 月 B2B 样本未齐，初值可能修订。",
+            "comparisonNote": "与此前 7 月记录的版本或口径尚未核对一致，不直接计算环比；8 月 B2B 样本未齐，估计可能修订。",
+            "momAbsolute": null,
+            "momPercent": null,
+            "comparisonLabel": null,
+            "consecutiveMonth": false
+          }
+        ],
+        "forecastPoints": [],
+        "latestActual": {
+          "company": "Anthropic",
+          "observedAt": "2026-08-23",
+          "month": "2026-08",
+          "value": 683,
+          "kind": "actual",
+          "seriesKind": "estimate",
+          "sourceLabel": "报告摘录",
+          "datePrecision": "day",
+          "sourceUrl": "https://xcn0zaydz11m.feishu.cn/sheets/F9W3s5BBEhRRV8tdZvCchEAfnCf?sheet=0rbUAO&table=tblzvLEtWP2TaYtF&view=vew0i9u3MV",
+          "sourceCell": "B47",
+          "sourceKind": "estimate",
+          "originalValue": 68.3,
+          "originalUnit": "USD billion",
+          "currency": "USD",
+          "unitScale": 100000000,
+          "methodology": "用户提供报告摘录；截至 2026-08-23 的 MTD 初步估计，机构与原报告链接未注明；十亿美元 × 10。",
+          "commentary": "Anthropic：截至 2026-08-23 ARR 初步估计 68.3（683 亿美元）。8 月 MTD 的同比增长与环比新增较 7 月放缓；按全月推算净 ARR 新增约 4–5，7 月隐含新增约 8。8 月 B2B 样本数据尚未齐备，本次依赖假设，最终数据公布后可能修订。",
+          "preliminary": true,
+          "reportSummary": "8 月净新增推算 40–50 亿，7 月隐含新增约 80 亿；8 月 B2B 样本未齐，初值可能修订。",
+          "comparisonNote": "与此前 7 月记录的版本或口径尚未核对一致，不直接计算环比；8 月 B2B 样本未齐，估计可能修订。",
+          "momAbsolute": null,
+          "momPercent": null,
+          "comparisonLabel": null,
+          "consecutiveMonth": false
+        },
+        "stale": false
+      },
+      {
+        "company": "OpenAI",
+        "seriesId": "OpenAI:estimate:报告摘录",
+        "seriesKind": "estimate",
+        "sourceLabel": "报告摘录",
+        "actualPoints": [
+          {
+            "company": "OpenAI",
+            "observedAt": "2026-08-23",
+            "month": "2026-08",
+            "value": 410,
+            "kind": "actual",
+            "seriesKind": "estimate",
+            "sourceLabel": "报告摘录",
+            "datePrecision": "day",
+            "sourceUrl": "https://xcn0zaydz11m.feishu.cn/sheets/F9W3s5BBEhRRV8tdZvCchEAfnCf?sheet=0rbUAO&table=tblzvLEtWP2TaYtF&view=vew0i9u3MV",
+            "sourceCell": "C47",
+            "sourceKind": "estimate",
+            "originalValue": 41,
+            "originalUnit": "USD billion",
+            "currency": "USD",
+            "unitScale": 100000000,
+            "methodology": "用户提供报告摘录；截至 2026-08-23 的 MTD 初步估计，机构与原报告链接未注明；十亿美元 × 10。",
+            "commentary": "OpenAI：截至 2026-08-23 ARR 初步估计约 41（410 亿美元）；摘录转述媒体 8 月 13 日约 40。若 MTD 趋势延续，8 月全月净新增约 4，月底 ARR 约 42（预测），低于 7 月约 6 的新增。ARR 增长趋平主要来自 Token 价格明显下降，尽管 Token 用量增长加速；消费者端趋势更好。8 月 B2B 样本支出尚未公布，估计可能在下一份报告中修订。",
+            "preliminary": true,
+            "reportSummary": "8 月净新增推算约 40 亿，月底约 420 亿（预测）；7 月新增约 60 亿。Token 降价拖慢 ARR，消费者端更强；B2B 样本未齐，初值可能修订。",
+            "comparisonNote": "与此前 7 月记录的版本或口径尚未核对一致，不直接计算环比；8 月 B2B 样本未齐，估计可能修订。",
+            "momAbsolute": null,
+            "momPercent": null,
+            "comparisonLabel": null,
+            "consecutiveMonth": false
+          }
+        ],
+        "forecastPoints": [],
+        "latestActual": {
+          "company": "OpenAI",
+          "observedAt": "2026-08-23",
+          "month": "2026-08",
+          "value": 410,
+          "kind": "actual",
+          "seriesKind": "estimate",
+          "sourceLabel": "报告摘录",
+          "datePrecision": "day",
+          "sourceUrl": "https://xcn0zaydz11m.feishu.cn/sheets/F9W3s5BBEhRRV8tdZvCchEAfnCf?sheet=0rbUAO&table=tblzvLEtWP2TaYtF&view=vew0i9u3MV",
+          "sourceCell": "C47",
+          "sourceKind": "estimate",
+          "originalValue": 41,
+          "originalUnit": "USD billion",
+          "currency": "USD",
+          "unitScale": 100000000,
+          "methodology": "用户提供报告摘录；截至 2026-08-23 的 MTD 初步估计，机构与原报告链接未注明；十亿美元 × 10。",
+          "commentary": "OpenAI：截至 2026-08-23 ARR 初步估计约 41（410 亿美元）；摘录转述媒体 8 月 13 日约 40。若 MTD 趋势延续，8 月全月净新增约 4，月底 ARR 约 42（预测），低于 7 月约 6 的新增。ARR 增长趋平主要来自 Token 价格明显下降，尽管 Token 用量增长加速；消费者端趋势更好。8 月 B2B 样本支出尚未公布，估计可能在下一份报告中修订。",
+          "preliminary": true,
+          "reportSummary": "8 月净新增推算约 40 亿，月底约 420 亿（预测）；7 月新增约 60 亿。Token 降价拖慢 ARR，消费者端更强；B2B 样本未齐，初值可能修订。",
+          "comparisonNote": "与此前 7 月记录的版本或口径尚未核对一致，不直接计算环比；8 月 B2B 样本未齐，估计可能修订。",
+          "momAbsolute": null,
+          "momPercent": null,
+          "comparisonLabel": null,
+          "consecutiveMonth": false
+        },
+        "stale": false
+      },
+      {
+        "company": "Anthropic",
         "seriesId": "Anthropic:official:Anthropic",
         "seriesKind": "official",
         "sourceLabel": "Anthropic",
@@ -2216,7 +2340,7 @@
             "valueQualifier": "lower-bound",
             "momAbsolute": null,
             "momPercent": null,
-            "comparisonLabel": "2024-12-31 → 2025-12-31",
+            "comparisonLabel": null,
             "consecutiveMonth": false
           }
         ],
@@ -2241,7 +2365,7 @@
           "valueQualifier": "lower-bound",
           "momAbsolute": null,
           "momPercent": null,
-          "comparisonLabel": "2024-12-31 → 2025-12-31",
+          "comparisonLabel": null,
           "consecutiveMonth": false
         },
         "stale": true
@@ -2818,9 +2942,9 @@
       "title": "大模型关键数据跟踪-更新",
       "sheet": "ARR&估值",
       "url": "https://xcn0zaydz11m.feishu.cn/sheets/F9W3s5BBEhRRV8tdZvCchEAfnCf?sheet=0rbUAO&table=tblzvLEtWP2TaYtF&view=vew0i9u3MV",
-      "retrievedAt": "2026-09-06T12:19:47.739Z",
-      "sourceUpdatedAt": "2026-09-04",
-      "note": "已核对的飞书表格快照，保留公司官网历史披露。图中只展示历史 ARR；点颜色标示来源，区间点使用中点定位。"
+      "retrievedAt": "2026-09-07T02:27:31.110Z",
+      "sourceUpdatedAt": "2026-09-07",
+      "note": "已核对的飞书表格快照，保留公司官网历史披露。8/23 数据为用户提供的报告摘录初值，机构未注明；与旧记录口径待核对，图中不连接该点。月底推算仅列于备注，不用于历史 ARR 或最新 P/ARR。"
     }
   },
   "openRouter": {
@@ -13524,6 +13648,8 @@
     ]
   },
   "benchmarks": {
+    "normalizationVersion": 2,
+    "normalizationPolicy": "strict-v2",
     "models": [
       {
         "vendor": "Anthropic",
@@ -32657,16 +32783,14 @@
         "disclosedScores": 7
       }
     ],
+    "asOf": "2026-08-27T05:17:55.989Z",
+    "sourceMode": "official-model-cards",
     "coverage": {
       "vendors": 12,
       "disclosedVendors": 12,
       "metrics": 228,
       "comparableMetrics": 0
     },
-    "asOf": "2026-08-27T05:17:55.989Z",
-    "sourceMode": "official-model-cards",
-    "normalizationVersion": 2,
-    "normalizationPolicy": "strict-v2",
     "attributions": [
       {
         "source": "official-model-card",

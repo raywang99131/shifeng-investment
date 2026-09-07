@@ -52,13 +52,13 @@ function summarize(records, now) {
     const actualPoints = points.filter((p) => p.kind === 'actual').sort((a, b) => a.observedAt.localeCompare(b.observedAt))
       .map((point, index, all) => {
         const previous = all[index - 1];
-        const comparable = previous && !previous.valueQualifier && !point.valueQualifier && !previous.valueHigh && !point.valueHigh;
+        const comparable = previous && !point.comparisonNote && !previous.valueQualifier && !point.valueQualifier && !previous.valueHigh && !point.valueHigh;
         const monthIndex = (p) => Number(p.month.slice(0, 4)) * 12 + Number(p.month.slice(5, 7));
         return {
           ...point,
           momAbsolute: comparable ? point.value - previous.value : null,
           momPercent: comparable && previous.value ? (point.value - previous.value) / previous.value : null,
-          comparisonLabel: previous ? `${previous.datePrecision === 'month' ? previous.month : previous.observedAt} → ${point.datePrecision === 'month' ? point.month : point.observedAt}` : null,
+          comparisonLabel: comparable ? `${previous.datePrecision === 'month' ? previous.month : previous.observedAt} → ${point.datePrecision === 'month' ? point.month : point.observedAt}` : null,
           consecutiveMonth: Boolean(comparable && point.datePrecision === 'month' && previous.datePrecision === 'month' && monthIndex(point) - monthIndex(previous) === 1),
         };
       });
@@ -78,7 +78,7 @@ export function buildGrowthReference(reference, { now = new Date() } = {}) {
   const monthlyColumns = ['B', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
   const point = (company, cell, observedAt, values, overrides = {}) => ({
     company, observedAt, month: observedAt.slice(0, 7), ...values,
-    kind: observedAt > reference.sourceUpdatedAt ? 'forecast' : 'actual',
+    kind: observedAt > (reference.monthlySourceUpdatedAt || reference.sourceUpdatedAt) ? 'forecast' : 'actual',
     seriesKind: 'reference', sourceLabel: '飞书月度跟踪', datePrecision: 'month',
     sourceUrl: reference.url, sourceCell: cell, sourceKind: 'named-third-party',
     originalValue: cells[cell]?.value, originalUnit: reference.units.monthly,
@@ -114,6 +114,19 @@ export function buildGrowthReference(reference, { now = new Date() } = {}) {
         methodology: 'Yipit 年化收入估算；十亿美元 × 10 换算为亿美元；保留每次观测',
       }));
     }
+  }
+  // User-supplied excerpts are not attributed to Yipit without a named report.
+  // Their stated month-end extrapolations stay in the notes, outside historical ARR.
+  for (const report of reference.reportRecords || []) {
+    const rawValue = numericValue(cells, report.sourceCell);
+    if (rawValue === null || rawValue <= 0) throw new Error(`Invalid report ARR: ${report.sourceCell}`);
+    records.push(point(report.company, report.sourceCell, excelDate(numericValue(cells, report.dateCell)), { value: Number((rawValue * 10).toFixed(8)) }, {
+      kind: 'actual', sourceLabel: report.sourceLabel, sourceKind: 'estimate', seriesKind: 'estimate',
+      datePrecision: 'day', originalUnit: 'USD billion', preliminary: report.preliminary,
+      methodology: report.methodology,
+      commentary: cells[report.commentaryCell]?.value || '', reportSummary: report.reportSummary,
+      comparisonNote: report.comparisonNote,
+    }));
   }
   for (const official of reference.officialRecords || []) {
     if (!['OpenAI', 'Anthropic'].includes(official.entity) || !official.unit.startsWith('USD billion')) continue;
@@ -170,7 +183,7 @@ export function buildGrowthReference(reference, { now = new Date() } = {}) {
     companies: summarize(records, now), valuations, otherRevenue,
     reference: { title: reference.title, sheet: reference.sheet, url: reference.url, retrievedAt: reference.retrievedAt,
       sourceUpdatedAt: reference.sourceUpdatedAt,
-      note: '已核对的飞书表格快照，保留公司官网历史披露。图中只展示历史 ARR；点颜色标示来源，区间点使用中点定位。' },
+      note: reference.note || '已核对的飞书表格快照，保留公司官网历史披露。图中只展示历史 ARR；点颜色标示来源，区间点使用中点定位。' },
   };
 }
 
