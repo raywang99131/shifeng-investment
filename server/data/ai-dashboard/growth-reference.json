@@ -3,8 +3,8 @@
   "title": "大模型关键数据跟踪-更新",
   "sheet": "ARR&估值",
   "url": "https://xcn0zaydz11m.feishu.cn/sheets/F9W3s5BBEhRRV8tdZvCchEAfnCf?sheet=0rbUAO&table=tblzvLEtWP2TaYtF&view=vew0i9u3MV",
-  "retrievedAt": "2026-09-06T12:19:47.739Z",
-  "sourceUpdatedAt": "2026-09-04",
+  "retrievedAt": "2026-09-07T02:27:31.110Z",
+  "sourceUpdatedAt": "2026-09-07",
   "units": {
     "monthly": "USD 100 million",
     "yipit": "USD billion"
@@ -1680,7 +1680,28 @@
     "U50": {},
     "V50": {},
     "W50": {},
-    "X50": {}
+    "X50": {},
+    "A47": {
+      "value": 46257
+    },
+    "B47": {
+      "value": 68.3
+    },
+    "C47": {
+      "value": 41
+    },
+    "A51": {
+      "value": "2026-08-23 MTD 报告补充｜金额单位：十亿美元（USD bn）"
+    },
+    "A52": {
+      "value": "Anthropic：截至 2026-08-23 ARR 初步估计 68.3（683 亿美元）。8 月 MTD 的同比增长与环比新增较 7 月放缓；按全月推算净 ARR 新增约 4–5，7 月隐含新增约 8。8 月 B2B 样本数据尚未齐备，本次依赖假设，最终数据公布后可能修订。"
+    },
+    "A53": {
+      "value": "OpenAI：截至 2026-08-23 ARR 初步估计约 41（410 亿美元）；摘录转述媒体 8 月 13 日约 40。若 MTD 趋势延续，8 月全月净新增约 4，月底 ARR 约 42（预测），低于 7 月约 6 的新增。ARR 增长趋平主要来自 Token 价格明显下降，尽管 Token 用量增长加速；消费者端趋势更好。8 月 B2B 样本支出尚未公布，估计可能在下一份报告中修订。"
+    },
+    "A54": {
+      "value": "来源：用户于 2026-09-07 提供的报告摘录，机构与原报告链接未注明。本次 68.3 / 41 低于表内 2026-07-26 的 80 / 47，但摘录仍描述正新增；两批数据的版本或口径尚未核对一致，保留原记录，不据此直接计算环比下降。预测值不作为历史 ARR 或最新 P/ARR 分母。"
+    }
   },
   "officialRecords": [
     {
@@ -1768,5 +1789,31 @@
         "checkedAt": "2026-08-23T16:00:00.000Z"
       }
     }
-  ]
+  ],
+  "monthlySourceUpdatedAt": "2026-09-04",
+  "reportRecords": [
+    {
+      "company": "Anthropic",
+      "sourceCell": "B47",
+      "dateCell": "A47",
+      "commentaryCell": "A52",
+      "sourceLabel": "报告摘录",
+      "preliminary": true,
+      "reportSummary": "8 月净新增推算 40–50 亿，7 月隐含新增约 80 亿；8 月 B2B 样本未齐，初值可能修订。",
+      "methodology": "用户提供报告摘录；截至 2026-08-23 的 MTD 初步估计，机构与原报告链接未注明；十亿美元 × 10。",
+      "comparisonNote": "与此前 7 月记录的版本或口径尚未核对一致，不直接计算环比；8 月 B2B 样本未齐，估计可能修订。"
+    },
+    {
+      "company": "OpenAI",
+      "sourceCell": "C47",
+      "dateCell": "A47",
+      "commentaryCell": "A53",
+      "sourceLabel": "报告摘录",
+      "preliminary": true,
+      "reportSummary": "8 月净新增推算约 40 亿，月底约 420 亿（预测）；7 月新增约 60 亿。Token 降价拖慢 ARR，消费者端更强；B2B 样本未齐，初值可能修订。",
+      "methodology": "用户提供报告摘录；截至 2026-08-23 的 MTD 初步估计，机构与原报告链接未注明；十亿美元 × 10。",
+      "comparisonNote": "与此前 7 月记录的版本或口径尚未核对一致，不直接计算环比；8 月 B2B 样本未齐，估计可能修订。"
+    }
+  ],
+  "note": "已核对的飞书表格快照，保留公司官网历史披露。8/23 数据为用户提供的报告摘录初值，机构未注明；与旧记录口径待核对，图中不连接该点。月底推算仅列于备注，不用于历史 ARR 或最新 P/ARR。"
 }
