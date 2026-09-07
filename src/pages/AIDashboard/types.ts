@@ -47,6 +47,9 @@ export interface ArrPoint {
   momAbsolute?: number | null;
   momPercent?: number | null;
   comparisonLabel?: string | null;
+  preliminary?: boolean;
+  comparisonNote?: string;
+  reportSummary?: string;
   consecutiveMonth?: boolean | null;
   sourceLabel: string;
   sourceUrl?: string;

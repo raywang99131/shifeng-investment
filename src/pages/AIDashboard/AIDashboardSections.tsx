@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import OpenRouterWeeklyChart from './OpenRouterWeeklyChart';
 import { arrChartSeries, arrSourceCategory, arrValueLabel, primaryArrMetrics, latestCompanyValuations, type LatestCompanyValuation } from './arrChart';
@@ -45,7 +45,6 @@ import type {
   ComputeRentalQuote,
   IceCdsImportStatus,
   PriceEvent,
-  TokenPrice,
 } from './types';
 import {
   benchmarkDisclosureKey,
@@ -55,7 +54,6 @@ import {
   formatArrDelta,
   formatCurrencyPrice,
   formatMultiple,
-  formatPriceChange,
   formatTaskCostComponents,
   formatTaskTokenBreakdown,
   formatTokenCount,
@@ -67,6 +65,14 @@ import {
   terminalBenchmarkRunLabel,
   topBenchmarkScoreRows,
 } from './viewModel';
+import {
+  buildPricingNews,
+  filterUsdTokenPrices,
+  TOKEN_PRICE_FX,
+  tokenPriceChartLabel,
+  type PricingRegion,
+  type UsdTokenPrice,
+} from './pricingViewModel';
 
 const { Text, Title, Link } = Typography;
 
@@ -366,11 +372,12 @@ function CombinedArrChart({ metrics, height = 360 }: { metrics: ArrCompanyMetric
             ? `<a href="${escapeHtml(point.sourceUrl)}" target="_blank" rel="noreferrer">来源 ${escapeHtml(point.sourceCell || '')}</a>` : '';
           return [
             `${item.marker}<b>${escapeHtml(item.seriesName)}</b>`,
-            `${escapeHtml(date)} · 历史观测`,
-            `来源：${escapeHtml(point.sourceLabel)} · ${{ official: '官方口径', yipit: 'Yipit', unspecified: '原表未注明来源' }[arrSourceCategory(point)]}`,
+            `${escapeHtml(date)} · ${point.preliminary ? 'MTD 初步估计' : '历史观测'}`,
+            `来源：${escapeHtml(point.sourceLabel)} · ${{ official: '官方口径', yipit: 'Yipit', unspecified: '机构未注明' }[arrSourceCategory(point)]}`,
             `ARR：${escapeHtml(arrValueLabel(point))} 亿美元`,
             point.valueHigh !== undefined ? '图中以区间中点定位，原始区间见上方。' : '',
             point.kind === 'actual' && point.comparisonLabel ? `${point.consecutiveMonth ? '月环比' : '相邻观测变化'}：${escapeHtml(formatArrDelta(point.momAbsolute, point.momPercent))}<br/>${escapeHtml(point.comparisonLabel)}` : '',
+            point.comparisonNote ? `可比性：${escapeHtml(point.comparisonNote)}` : '',
             `口径：${escapeHtml(point.methodology || point.provenance?.methodology || point.sourceLabel)}`,
             point.commentary ? `备注：${escapeHtml(point.commentary)}` : '', sourceLink,
           ].filter(Boolean).join('<br/>');
@@ -396,7 +403,9 @@ function CombinedArrChart({ metrics, height = 360 }: { metrics: ArrCompanyMetric
     };
   }, [compact, metrics, palette]);
   if (!metrics.some((metric) => metric.actualPoints.length || metric.forecastPoints.length)) return <NoData description="暂无 ARR 数据" />;
-  return <><Space wrap size={12}><Text type="secondary">● Anthropic · ◆ OpenAI</Text><Tag color="blue">官方披露</Tag><Tag color="orange">Yipit</Tag><Tag>原表未注明来源</Tag></Space><ReactECharts option={option} style={{ height }} notMerge /></>;
+  return <><Space wrap size={12}><Text type="secondary">● Anthropic · ◆ OpenAI</Text><Tag color="blue">官方披露</Tag><Tag color="orange">Yipit</Tag><Tag>报告 / 原表未注明机构</Tag></Space><ReactECharts option={option} style={{ height }} notMerge />
+    {metrics.some((m) => m.actualPoints.some((p) => p.comparisonNote)) && <Text type="secondary">标注口径待核对的观测以独立点展示、不连线；不据此推断 ARR 下降。</Text>}
+  </>;
 }
 
 function OpenRouterTopChart({ data, height = 350 }: { data: AiDashboardSnapshot['openRouter']; height?: number }) {
@@ -486,7 +495,7 @@ export function OverviewSection({ data }: DashboardProps) {
               precision={arr ? 2 : undefined}
               prefix={<LineChartOutlined />}
             />
-            <Text type="secondary">{arrPoint ? `${arr.sourceLabel} · ${arrPoint.observedAt} · 较上次 ${formatArrDelta(arrPoint.momAbsolute, arrPoint.momPercent)}` : '暂无环比观测'}</Text>
+            <Text type="secondary">{arrPoint ? `${arr.sourceLabel} · ${arrPoint.observedAt} · ${arrPoint.preliminary ? 'MTD 初值，可能修订' : `较上次 ${formatArrDelta(arrPoint.momAbsolute, arrPoint.momPercent)}`}` : '暂无环比观测'}</Text>
           </Card>
         </Col>
         <Col xs={24} sm={12} xl={6}>
@@ -504,7 +513,7 @@ export function OverviewSection({ data }: DashboardProps) {
         <Col xs={24} sm={12} xl={6}>
           <Card className="ai-kpi-card">
             <Statistic title={`最新 P/ARR${valuation ? ` · ${valuation.company}` : ''}`} value={valuation ? formatMultiple(valuation.parrLow, valuation.parrHigh) : '—'} />
-            <Text type="secondary">估值期间 {valuation?.datePrecision === 'month' ? valuation.asOf.slice(0, 7) : dateLabel(valuation?.asOf)} · ARR 更新 {valuation?.datePrecision === 'month' ? valuation.arrAsOf?.slice(0, 7) : dateLabel(valuation?.arrAsOf)}</Text>
+            <Text type="secondary">估值期间 {valuation?.datePrecision === 'month' ? valuation.asOf.slice(0, 7) : dateLabel(valuation?.asOf)} · ARR 更新 {valuation?.arrPoint?.datePrecision === 'month' ? valuation.arrAsOf?.slice(0, 7) : dateLabel(valuation?.arrAsOf)}{valuation?.arrPoint?.preliminary ? ' · 初估' : ''}</Text>
           </Card>
         </Col>
       </Row>
@@ -553,11 +562,12 @@ function ValuationTable({ data }: { data: LatestCompanyValuation[] }) {
       { title: '公司', dataIndex: 'company', fixed: 'left', width: 115 },
       { title: '估值（亿美元）', width: 155, align: 'right', render: (_, row) => row.valuationLow === row.valuationHigh ? compactNumber(row.valuationLow) : `${compactNumber(row.valuationLow)}–${compactNumber(row.valuationHigh)}` },
       { title: 'ARR', width: 110, align: 'right', render: (_, row) => row.arrPoint ? arrValueLabel(row.arrPoint) : '—' },
-      { title: 'P/ARR', width: 120, align: 'right', render: (_, row) => <Text strong>{row.parrUpperBound && row.parrHigh !== null ? `<${formatMultiple(row.parrHigh, row.parrHigh)}` : formatMultiple(row.parrLow, row.parrHigh)}</Text> },
+      { title: 'P/ARR', width: 120, align: 'right', render: (_, row) => <><Text strong>{row.parrUpperBound && row.parrHigh !== null ? `<${formatMultiple(row.parrHigh, row.parrHigh)}` : formatMultiple(row.parrLow, row.parrHigh)}</Text>{row.arrPoint?.preliminary && <div><Text type="secondary">初估</Text></div>}</> },
       { title: '来源', width: 190, render: (_, row) => <Tooltip title={<>
         <div>估值：{row.datePrecision === 'month' ? row.asOf.slice(0, 7) : row.asOf} · {row.sourceLabel} {row.sourceCell}</div>
         <div>ARR：{row.arrPoint?.datePrecision === 'month' ? row.arrPoint.month : row.arrAsOf || '未披露'} · {row.arrSourceLabel} {row.arrPoint?.sourceCell}</div>
         <div>最新明确估值 ÷ 最新历史 ARR；两项日期可能不同。</div>
+        {row.arrPoint?.preliminary && <div>ARR 为 MTD 初步估计，B2B 样本未齐，倍数会随修订变化；不使用月底推算值。</div>}
         {row.multipleKind === 'P/S' && <div>原表倍数列为 P/S；此处使用 ARR 跟踪值重新计算。</div>}
       </>}><Space size={5}>
         {row.sourceUrl ? <Link href={row.sourceUrl} target="_blank" rel="noreferrer">{row.sourceLabel?.includes('飞书') ? '飞书表格' : row.sourceLabel || '估值来源'}</Link> : <Text>{row.sourceLabel || '未注明'}</Text>}
@@ -575,13 +585,6 @@ export function ArrValuationSection({ data }: DashboardProps) {
   const currentValuations = latestCompanyValuations(data.arrAndValuation.valuations, metrics);
   return (
     <div className="ai-section-stack">
-      {reference && <Alert type="info" showIcon title="数据已按飞书表格核对" description={<>
-        <Link href={reference.url} target="_blank" rel="noreferrer">{reference.title} · {reference.sheet}</Link>
-        <span> · 导入 {reference.retrievedAt.slice(0, 10)} · 表格修改 {reference.sourceUpdatedAt}。{reference.note}</span>
-      </>} />}
-      <ChartCard title="最新估值与 P/ARR" extra={<Text type="secondary">金额单位：亿美元</Text>}>
-        <ValuationTable data={currentValuations} />
-      </ChartCard>
       <ChartCard title="OpenAI 与 Anthropic · 历史 ARR" extra={<Text type="secondary">单位：亿美元</Text>}>
         <Row gutter={[20, 12]}>
           <Col xs={24} lg={18}><CombinedArrChart metrics={primary} height={370} /></Col>
@@ -590,14 +593,22 @@ export function ArrValuationSection({ data }: DashboardProps) {
               {latest.map((metric) => metric.latestActual && <Card size="small" key={metric.seriesId}>
                 <Statistic title={`${metric.company} · ${metric.sourceLabel}`} value={arrValueLabel(metric.latestActual)} suffix="亿美元" />
                 <Text type="secondary">观测 {metric.latestActual.observedAt}</Text><br/>
-                <Text type="secondary">较上次 {formatArrDelta(metric.latestActual.momAbsolute, metric.latestActual.momPercent)}</Text>
+                {metric.latestActual.preliminary ? <Tag color="warning">MTD 初值 · 可能修订</Tag> : <Text type="secondary">较上次 {formatArrDelta(metric.latestActual.momAbsolute, metric.latestActual.momPercent)}</Text>}
+                {metric.latestActual.reportSummary && <div><Text type="secondary">{metric.latestActual.reportSummary}</Text></div>}
               </Card>)}
               <Text type="secondary">汇集两家公司全部历史观测。点颜色区分来源，形状区分公司；拖动下方时间条可放大查看。Yipit 已乘 10 换算为亿美元。</Text>
-              {primary.some((m) => m.stale) && <Tag color="warning">最近观测超过 18 天</Tag>}
+              {latest.some((m) => m.stale) && <Tag color="warning">最近观测超过 18 天</Tag>}
             </Flex>
           </Col>
         </Row>
       </ChartCard>
+      <ChartCard title="最新估值与 P/ARR" extra={<Text type="secondary">金额单位：亿美元</Text>}>
+        <ValuationTable data={currentValuations} />
+      </ChartCard>
+      {reference && <Alert type="info" showIcon title="数据已按飞书表格核对" description={<>
+        <Link href={reference.url} target="_blank" rel="noreferrer">{reference.title} · {reference.sheet}</Link>
+        <span> · 导入 {reference.retrievedAt.slice(0, 10)} · 表格修改 {reference.sourceUpdatedAt}。{reference.note}</span>
+      </>} />}
     </div>
   );
 }
@@ -648,115 +659,132 @@ export function OpenRouterSection({ data, refreshing = false }: DashboardProps &
   );
 }
 
-function TokenPriceCharts({ prices }: { prices: TokenPrice[] }) {
+function TokenPriceCharts({ prices, region, onRegionChange }: {
+  prices: UsdTokenPrice[];
+  region: PricingRegion;
+  onRegionChange: (region: PricingRegion) => void;
+}) {
   const palette = useChartPalette();
   const screens = Grid.useBreakpoint();
   const compact = !screens.sm;
-  if (prices.length === 0) return <NoData description="暂无 API Token 价格" />;
-  const grouped = prices.reduce((groups, row) => {
-    const currency = row.currency || '未标注';
-    groups.set(currency, [...(groups.get(currency) || []), row]);
-    return groups;
-  }, new Map<string, TokenPrice[]>());
+  const rows = prices.toReversed();
+  const height = Math.max(340, rows.length * 34 + 110);
+  const option = {
+    animation: false,
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      valueFormatter: (value: number) => formatCurrencyPrice(value, 'USD', 4),
+    },
+    legend: { top: 0, textStyle: { color: palette.text }, itemGap: compact ? 8 : 16 },
+    grid: { left: compact ? 112 : 230, right: compact ? 10 : 35, top: compact ? 64 : 44, bottom: 28 },
+    xAxis: {
+      type: 'value',
+      axisLabel: { color: palette.text, fontSize: compact ? 8 : 12, formatter: (value: number) => `$${value}` },
+      splitLine: { lineStyle: { color: palette.line } },
+    },
+    yAxis: {
+      type: 'category',
+      data: rows.map(tokenPriceChartLabel),
+      axisLabel: { color: palette.text, fontSize: compact ? 8 : 12, lineHeight: compact ? 11 : 15, width: compact ? 100 : 205, overflow: 'break', interval: 0 },
+      axisTick: { show: false },
+    },
+    series: [
+      { name: '输入', type: 'bar', data: rows.map(row => row.inputPrice), itemStyle: { color: palette.blue } },
+      { name: '缓存读取', type: 'bar', data: rows.map(row => row.cacheReadPrice), itemStyle: { color: palette.cyan } },
+      { name: '缓存写入', type: 'bar', data: rows.map(row => row.cacheWritePrice), itemStyle: { color: '#722ed1' } },
+      { name: '输出', type: 'bar', data: rows.map(row => row.outputPrice), itemStyle: { color: palette.orange } },
+    ],
+  };
   return (
-    <div className="ai-section-stack">
-      {[...grouped.entries()].map(([currency, currencyPrices]) => {
-        const rows = currencyPrices.slice(0, 30).toReversed();
-        const labels = rows.map((row) => [
-          row.model,
-          row.contextTier && row.contextTier !== 'standard' ? row.contextTier : null,
-          row.serviceTier && row.serviceTier !== 'standard' ? row.serviceTier : null,
-        ].filter(Boolean).join(' · '));
-        const height = Math.max(320, Math.min(760, rows.length * 34 + 90));
-        const option = {
-          tooltip: {
-            trigger: 'axis',
-            axisPointer: { type: 'shadow' },
-            valueFormatter: (value: number) => formatCurrencyPrice(value, currency, 3),
-          },
-          legend: { top: 0, textStyle: { color: palette.text } },
-          grid: { left: compact ? 112 : 230, right: compact ? 10 : 35, top: 44, bottom: 28 },
-          xAxis: {
-            type: 'value',
-            name: compact ? '' : `${currency} / 1M Tokens`,
-            nameTextStyle: { color: palette.text },
-            axisLabel: { color: palette.text, fontSize: compact ? 8 : 12 },
-            splitLine: { lineStyle: { color: palette.line } },
-          },
-          yAxis: {
-            type: 'category',
-            data: labels,
-            axisLabel: { color: palette.text, fontSize: compact ? 8 : 12, lineHeight: compact ? 11 : 15, width: compact ? 100 : 205, overflow: 'break', interval: 0 },
-            axisTick: { show: false },
-          },
-          series: [
-            { name: '输入', type: 'bar', data: rows.map((row) => row.inputPrice), itemStyle: { color: palette.blue } },
-            { name: '缓存读取', type: 'bar', data: rows.map((row) => row.cacheReadPrice), itemStyle: { color: palette.cyan } },
-            { name: '缓存写入', type: 'bar', data: rows.map((row) => row.cacheWritePrice), itemStyle: { color: '#722ed1' } },
-            { name: '输出', type: 'bar', data: rows.map((row) => row.outputPrice), itemStyle: { color: palette.orange } },
-          ],
-        };
-        return <ChartCard key={currency} title={`当前代际公开价 · ${currency}`}><ReactECharts option={option} style={{ height }} notMerge /></ChartCard>;
-      })}
-    </div>
-  );
-}
-
-const PRICE_FIELD_LABELS: Record<PriceEvent['priceField'], string> = {
-  inputPrice: '输入',
-  cacheReadPrice: '缓存读取',
-  cacheWritePrice: '缓存写入',
-  outputPrice: '输出',
-};
-
-function PriceEventsCard({ events }: { events: PriceEvent[] }) {
-  return (
-    <ChartCard title="近期官方调价" extra={<Text type="secondary">仅同一 SKU 可比</Text>}>
-      <Table
-        rowKey="id"
-        size="small"
-        pagination={{ pageSize: 8, showSizeChanger: false }}
-        locale={{ emptyText: <NoData description="尚无可确认的同 SKU 调价记录" /> }}
-        dataSource={events}
-        columns={[
-          { title: '日期', dataIndex: 'asOf', width: 100, render: dateLabel },
-          { title: '模型 / 价格项', render: (_, row) => <><Text strong>{row.model}</Text><br /><Text type="secondary">{PRICE_FIELD_LABELS[row.priceField]} · {row.contextTier}</Text></> },
-          { title: '变化', width: 190, render: (_, row) => <Text className={row.absoluteDelta > 0 ? 'ai-change-up' : 'ai-change-down'}>{formatPriceChange(row)}</Text> },
-          { title: '原始来源', width: 90, render: (_, row) => <a href={row.sourceUrl} target="_blank" rel="noreferrer">官网</a> },
+    <ChartCard title="当前代际公开价 · USD" extra={(
+      <Select
+        aria-label="模型范围"
+        value={region}
+        onChange={onRegionChange}
+        style={{ minWidth: 130 }}
+        options={[
+          { value: 'all', label: '全部' },
+          { value: 'domestic', label: '国内模型' },
+          { value: 'overseas', label: '海外模型' },
         ]}
       />
+    )}>
+      {prices.length ? <ReactECharts key={region} option={option} style={{ height }} notMerge /> : <NoData description="该范围暂无 API Token 价格" />}
+      <Text type="secondary" className="ai-attribution">USD / 1M Tokens · {prices.length} 个报价档位</Text>
     </ChartCard>
   );
 }
 
+function PriceEventsCard({ events }: { events: PriceEvent[] }) {
+  const news = useMemo(() => buildPricingNews(events), [events]);
+  return (
+    <ChartCard title="近期官方调价" extra={<Text type="secondary">按时间排序</Text>}>
+      <div className="ai-pricing-news-list">
+        {news.map(item => (
+          <article className="ai-pricing-news-item" key={item.id}>
+            <Flex gap={8} align="center" wrap className="ai-pricing-news-meta">
+              <Tag color={item.kind === 'announcement' ? 'blue' : 'default'}>{item.kind === 'announcement' ? '官方公告' : '价格观测'}</Tag>
+              <span>{item.vendor}</span>
+              <time dateTime={item.publishedAt}>{item.publishedAt.slice(0, 10)}</time>
+            </Flex>
+            <Title level={4}><a href={item.sourceUrl} target="_blank" rel="noreferrer">{item.title}</a></Title>
+            {item.paragraphs.map(paragraph => <p key={paragraph}>{paragraph}</p>)}
+            {item.details.map(detail => <p className="ai-pricing-news-change" key={detail}>{detail}</p>)}
+            {item.effectiveAt && <Text type="secondary" className="ai-pricing-news-effective">生效：{item.effectiveAt.slice(0, 16).replace('T', ' ')}（北京时间）</Text>}
+            <Flex gap={16} wrap className="ai-pricing-news-links">
+              <Link href={item.sourceUrl} target="_blank" rel="noreferrer">{item.kind === 'announcement' ? '阅读官方公告' : '查看官网价格'} ↗</Link>
+              {item.pricingUrl && <Link href={item.pricingUrl} target="_blank" rel="noreferrer">最新价目表 ↗</Link>}
+            </Flex>
+          </article>
+        ))}
+      </div>
+    </ChartCard>
+  );
+}
+
+function TokenPriceValue({ row, field }: { row: UsdTokenPrice; field: 'inputPrice' | 'cacheReadPrice' | 'outputPrice' }) {
+  const label = field === 'cacheReadPrice' ? '缓存读取（命中）原价' : '原价';
+  return (
+    <Tooltip title={`${label} ${formatCurrencyPrice(row.originalPrices[field], row.originalCurrency, 4)} / 1M Tokens${row.originalCurrency === 'CNY' ? `；按 ${TOKEN_PRICE_FX.asOf} 参考汇率折算` : ''}`}>
+      <span>{formatCurrencyPrice(row[field], 'USD', 4)}</span>
+    </Tooltip>
+  );
+}
+
 function TokenPricing({ data }: DashboardProps) {
+  const [region, setRegion] = useState<PricingRegion>('all');
+  const prices = useMemo(() => filterUsdTokenPrices(data.modelPricing.token, region), [data.modelPricing.token, region]);
   return (
     <div className="ai-section-stack">
       <Alert
         type="info"
         showIcon
-        title="最新代际与可比口径"
-        description="主图只展示各厂商当前代际、标准服务档的官网公开价；上下文档位分别保留。USD 与 CNY 分图展示，不做隐含汇率换算。旧代际保存在历史中，仅用于识别同 SKU 调价。"
+        title="统一美元口径 · USD / 1M Tokens"
+        description={<>
+          人民币报价按 1 USD = {TOKEN_PRICE_FX.cnyPerUsd} CNY 折算（{TOKEN_PRICE_FX.asOf} 参考汇率）。国内／海外按厂商归属划分，图表与明细同步筛选。{' '}
+          <Link href={TOKEN_PRICE_FX.sourceUrl} target="_blank" rel="noreferrer">汇率来源</Link>
+        </>}
       />
       <Row gutter={[16, 16]}>
-        <Col xs={24} xl={15}><TokenPriceCharts prices={data.modelPricing.token} /></Col>
+        <Col xs={24} xl={15}><TokenPriceCharts prices={prices} region={region} onRegionChange={setRegion} /></Col>
         <Col xs={24} xl={9}><PriceEventsCard events={data.modelPricing.priceEvents || []} /></Col>
       </Row>
-      <ChartCard title="当前代际 API Token 价格明细" extra={<Text type="secondary">各币种 / 1M Tokens</Text>}>
+      <ChartCard title="当前代际 API Token 价格明细" extra={<Text type="secondary">USD / 1M Tokens</Text>}>
         <Table
-          rowKey={(row) => `${row.vendor}-${row.model}-${row.contextTier}-${row.serviceTier}-${row.currency}-${row.asOf}`}
+          rowKey={(row) => `${row.vendor}-${row.model}-${row.contextTier}-${row.serviceTier}-${row.region}-${row.originalCurrency}-${row.asOf}`}
           size="small"
           pagination={{ pageSize: 25, showSizeChanger: false }}
           tableLayout="fixed"
           scroll={{ x: 760 }}
-          locale={{ emptyText: <NoData description="暂无 API Token 价格" /> }}
-          dataSource={data.modelPricing.token}
+          locale={{ emptyText: <NoData description="该范围暂无 API Token 价格" /> }}
+          dataSource={prices}
           columns={[
             { title: '厂商', dataIndex: 'vendor', fixed: 'left', width: 110 },
-            { title: '模型', dataIndex: 'model', width: 260, className: 'ai-model-name', render: (value, row) => <>{value}{row.contextTier && row.contextTier !== 'standard' ? <><br /><Text type="secondary">{row.contextTier}</Text></> : null}</> },
-            { title: '输入', dataIndex: 'inputPrice', width: 130, align: 'right', render: (value, row) => formatCurrencyPrice(value, row.currency, 3) },
-            { title: '缓存', dataIndex: 'cacheReadPrice', width: 130, align: 'right', render: (value, row) => <Tooltip title="缓存读取（命中）价格"><span>{formatCurrencyPrice(value, row.currency, 3)}</span></Tooltip> },
-            { title: '输出', dataIndex: 'outputPrice', width: 130, align: 'right', render: (value, row) => formatCurrencyPrice(value, row.currency, 3) },
+            { title: '模型', dataIndex: 'model', width: 260, className: 'ai-model-name', render: (value, row) => <>{value}{row.contextTier && row.contextTier !== 'standard' ? <><br /><Text type="secondary">{row.contextTier}</Text></> : null}{row.marketLabel ? <><br /><Text type="secondary">{row.marketLabel}</Text></> : null}</> },
+            { title: '输入', width: 130, align: 'right', render: (_, row) => <TokenPriceValue row={row} field="inputPrice" /> },
+            { title: '缓存', width: 130, align: 'right', render: (_, row) => <TokenPriceValue row={row} field="cacheReadPrice" /> },
+            { title: '输出', width: 130, align: 'right', render: (_, row) => <TokenPriceValue row={row} field="outputPrice" /> },
           ]}
         />
       </ChartCard>
@@ -791,23 +819,19 @@ function VideoPricing({ data }: DashboardProps) {
 
 function CodingPlanPricing({ data }: DashboardProps) {
   return (
-    <ChartCard title="Coding Plan 价格" extra={<Text type="secondary">套餐价格与额度限制分开记录</Text>}>
+    <ChartCard title="Coding Plan 价格">
       <Table
         rowKey={(row) => `${row.vendor}-${row.plan}`}
         size="small"
         pagination={{ pageSize: 15, showSizeChanger: false }}
-        scroll={{ x: 1200 }}
+        tableLayout="fixed"
+        scroll={{ x: 640 }}
         locale={{ emptyText: <NoData description="尚未从厂商官网确认 Coding Plan 价格" /> }}
         dataSource={data.modelPricing.codingPlans}
         columns={[
           { title: '厂商', dataIndex: 'vendor', fixed: 'left', width: 120 },
-          { title: '套餐', dataIndex: 'plan', width: 180 },
-          { title: '计价状态', dataIndex: 'pricingMode', width: 100, render: (value) => <Tag>{value === 'fixed' ? '公开价' : value === 'inquiry' ? '询价' : '未公开'}</Tag> },
-          { title: '月付', dataIndex: 'monthlyPrice', width: 120, align: 'right', render: (value, row) => row.pricingMode === 'fixed' ? formatCurrencyPrice(value, row.currency) : '—' },
-          { title: '年付折算/月', dataIndex: 'annualMonthlyPrice', width: 145, align: 'right', render: (value, row) => row.pricingMode === 'fixed' ? formatCurrencyPrice(value, row.currency) : '—' },
-          { title: '额度限制', dataIndex: 'allowanceText', width: 260, render: (value) => value || '未公布' },
-          { title: '超量计费', dataIndex: 'overage', width: 180, render: (value) => value || '未公布' },
-          { title: '日期', dataIndex: 'asOf', width: 112, render: dateLabel },
+          { title: '套餐', dataIndex: 'plan', width: 240 },
+          { title: '月付', dataIndex: 'monthlyPrice', width: 130, align: 'right', render: (value, row) => row.pricingMode === 'fixed' ? formatCurrencyPrice(value, row.currency) : <Tag>{row.pricingMode === 'inquiry' ? '询价' : '未公开'}</Tag> },
           { title: '来源', width: 150, render: (_, row) => <a href={row.sourceUrl} target="_blank" rel="noreferrer">{row.sourceLabel}</a> },
         ]}
       />

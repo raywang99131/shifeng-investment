@@ -50,7 +50,33 @@ test('P/ARR recalculates source formulas and exposes forward denominators and st
 test('refresh preserves source observation dates and reports an imported snapshot, without relabelling it live', async () => {
   const collector = createGrowthReferenceCollector();
   const result = await collector({ now, generatedAt: now.toISOString() });
-  assert.equal(result.source.asOf, '2026-07-26');
-  assert.equal(result.source.stale, true);
+  assert.equal(result.source.asOf, '2026-08-23');
+  assert.equal(result.source.stale, false);
   assert.equal(result.payload.arrAndValuation.reference.retrievedAt, reference.retrievedAt);
+});
+
+test('August MTD excerpt preserves provisional ARR and source uncertainty, without inferring contraction', () => {
+  const data = buildGrowthReference(reference, { now });
+  for (const [company, value, sourceCell] of [['Anthropic', 683, 'B47'], ['OpenAI', 410, 'C47']]) {
+    const latest = data.companies.filter((s) => s.company === company)
+      .map((s) => s.latestActual).filter(Boolean).sort((a, b) => a.observedAt.localeCompare(b.observedAt)).at(-1);
+    assert.equal(latest.value, value);
+    assert.equal(latest.observedAt, '2026-08-23');
+    assert.equal(latest.sourceCell, sourceCell);
+    assert.equal(latest.sourceLabel, '报告摘录');
+    assert.equal(latest.preliminary, true);
+    assert.equal(latest.momAbsolute, null);
+    assert.match(latest.comparisonNote, /尚未核对一致/);
+    assert.match(latest.commentary, /B2B/);
+  }
+  const openai = data.companies.find((s) => s.company === 'OpenAI' && s.sourceLabel === '报告摘录');
+  assert.equal(openai.actualPoints.length, 1);
+  assert.match(openai.latestActual.reportSummary, /420 亿.*预测/);
+});
+
+test('a sheet note update never converts the original monthly forecasts into historical ARR', () => {
+  const data = buildGrowthReference({ ...reference, sourceUpdatedAt: '2027-01-01' }, { now });
+  const monthly = data.companies.find((s) => s.company === 'Anthropic' && s.seriesKind === 'reference');
+  assert.equal(monthly.latestActual.value, 730);
+  assert.equal(monthly.forecastPoints.find((p) => p.month === '2026-12').value, 1100);
 });

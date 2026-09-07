@@ -23,9 +23,18 @@ export function arrChartSeries(metrics: ArrCompanyMetric[]) {
     if (!points.length) return [];
     return [{
       name: company, company, type: 'line',
-      smooth: false, showSymbol: true, showAllSymbol: true,
+      smooth: false, connectNulls: false, showSymbol: true, showAllSymbol: true,
       symbolSize: 10, symbol: company === 'Anthropic' ? 'circle' : 'diamond',
-      data: points.map((point) => ({ value: [Date.parse(`${point.observedAt}T00:00:00Z`), point.value], point })),
+      data: points.flatMap((point, index) => {
+        const timestamp = Date.parse(`${point.observedAt}T00:00:00Z`);
+        const observation = { value: [timestamp, point.value], point };
+        // An unreconciled vintage is still an observation, but its connecting line
+        // would imply a like-for-like change that the supplied report does not support.
+        return index > 0 && point.comparisonNote ? [
+          { value: [timestamp, null], point, symbolSize: 0, label: { show: false }, tooltip: { show: false } },
+          observation,
+        ] : [observation];
+      }),
     }];
   });
 }

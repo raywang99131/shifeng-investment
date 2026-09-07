@@ -154,6 +154,58 @@
   font-size: 12px;
 }
 
+.ai-pricing-news-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-height: 780px;
+  overflow-y: auto;
+}
+
+.ai-pricing-news-item {
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--ai-border);
+}
+
+.ai-pricing-news-item:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.ai-pricing-news-meta {
+  color: var(--ai-secondary-text);
+  font-size: 12px;
+}
+
+.ai-pricing-news-item h4 {
+  margin: 12px 0 16px;
+  font-size: 19px;
+  line-height: 1.5;
+}
+
+.ai-pricing-news-item h4 a {
+  color: inherit;
+}
+
+.ai-pricing-news-item p {
+  margin: 0 0 14px;
+  line-height: 1.8;
+}
+
+.ai-pricing-news-change {
+  font-variant-numeric: tabular-nums;
+}
+
+.ai-pricing-news-effective {
+  display: block;
+  font-size: 12px;
+}
+
+.ai-pricing-news-links {
+  margin-top: 16px;
+  font-size: 13px;
+}
+
 .ai-winner-list {
   display: flex;
   flex-direction: column;
