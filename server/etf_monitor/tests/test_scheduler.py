@@ -32,6 +32,9 @@ class StaticCalendar:
 
 
 class RecordingService:
+    def retry_notifications(self):
+        pass
+
     def __init__(self, settings: Settings):
         self.settings = settings
         self.poll_count = 0
@@ -143,3 +146,108 @@ def test_scheduler_stop_interrupts_long_wait():
     scheduler.stop()
 
     assert scheduler.status().running is False
+    assert scheduler.status().monitoring_active is False
+
+
+def test_stalled_cycle_is_not_reported_as_active_monitoring():
+    service = RecordingService(Settings(scheduler_enabled=True))
+    clock = MutableClock(at(10, 23))
+    scheduler = PollScheduler(service, 60, trading_calendar=StaticCalendar(), now=clock)
+    scheduler.run_once()
+
+    clock.value = at(14, 3)
+    status = scheduler.status()
+
+    assert status.monitoring_active is False
+    assert status.stalled is True
+    assert status.error
+
+
+def test_watchdog_requests_recovery_when_poll_never_returns():
+    service = RecordingService(Settings(scheduler_enabled=True, poll_stall_timeout_seconds=1))
+    release = threading.Event()
+    recovered = threading.Event()
+
+    def blocked_poll():
+        service.polled.set()
+        release.wait(timeout=3)
+        return [SimpleNamespace(error=None)]
+
+    service.poll_all = blocked_poll
+    clock = MutableClock(at(10, 23))
+    scheduler = PollScheduler(
+        service, 60, trading_calendar=StaticCalendar(), now=clock,
+        on_stall=lambda error: recovered.set(),
+    )
+    try:
+        scheduler.start()
+        assert service.polled.wait(timeout=1)
+        clock.value = at(10, 24)
+        assert recovered.wait(timeout=2), 'a blocked request must trigger recovery'
+    finally:
+        release.set()
+        scheduler.stop()
+
+
+def test_watchdog_also_covers_blocked_calendar_requests():
+    service = RecordingService(Settings(scheduler_enabled=True, poll_stall_timeout_seconds=1))
+    entered = threading.Event()
+    release = threading.Event()
+    recovered = threading.Event()
+
+    class BlockedCalendar:
+        def resolve(self, target_date):
+            entered.set()
+            release.wait(timeout=3)
+            return TradingDayResolution(True, 'confirmed')
+
+    clock = MutableClock(at(10, 23))
+    scheduler = PollScheduler(
+        service, 60, trading_calendar=BlockedCalendar(), now=clock,
+        on_stall=lambda error: recovered.set(),
+    )
+    try:
+        scheduler.start()
+        assert entered.wait(timeout=1)
+        clock.value = at(10, 24)
+        assert recovered.wait(timeout=2)
+        assert scheduler.status().stalled is True
+    finally:
+        release.set()
+        scheduler.stop()
+
+
+def test_long_poll_interval_is_not_mistaken_for_stalled_work():
+    service = RecordingService(Settings(scheduler_enabled=True, poll_stall_timeout_seconds=5))
+    clock = MutableClock(at(10, 0))
+    scheduler = PollScheduler(service, 3600, trading_calendar=StaticCalendar(), now=clock)
+    scheduler.run_once()
+    clock.value = at(10, 30)
+    assert scheduler.status().stalled is False
+    assert scheduler.status().monitoring_active is True
+
+
+def test_pending_mail_retries_even_when_market_is_closed():
+    service = RecordingService(Settings(scheduler_enabled=True))
+    retried = []
+    service.retry_notifications = lambda: retried.append(True)
+    scheduler = PollScheduler(service, 60, trading_calendar=StaticCalendar(False), now=lambda: at(16, 0))
+    scheduler.run_once()
+    assert retried == [True]
+    assert service.poll_count == 0
+
+
+def test_failed_closing_poll_is_retried_until_all_symbols_succeed():
+    service = RecordingService(Settings(scheduler_enabled=True))
+    results = [SimpleNamespace(error=None), SimpleNamespace(error='source offline')]
+    service.poll_all = lambda: results
+    clock = MutableClock(at(15, 1))
+    scheduler = PollScheduler(service, 60, trading_calendar=StaticCalendar(), now=clock)
+    scheduler.run_once()
+    assert scheduler.status().finalized_for_date is None
+    assert scheduler.status().last_poll_success is None
+    results[1] = SimpleNamespace(error=None)
+    clock.value = at(15, 2)
+    scheduler.run_once()
+    assert scheduler.status().finalized_for_date == date(2026, 8, 12)
+    assert scheduler.status().last_poll_success == at(15, 2)

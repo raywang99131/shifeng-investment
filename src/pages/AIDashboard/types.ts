@@ -496,6 +496,35 @@ export interface CdsRiskSnapshot {
   companies: CdsCompanyMetric[];
 }
 
+export interface CdsComparisonPoint {
+  date: string;
+  instrumentName: string;
+  legacyBp: number;
+  newBp: number;
+  differenceBp: number;
+  curveKind: 'standard-rfr' | 'treasury-proxy';
+  curveId: string;
+  curveAsOf: string;
+}
+
+export interface CdsComparisonCompany extends CdsComparisonPoint {
+  company: string;
+  newChanges: { oneDayBp: number | null; sevenDayBp: number | null };
+  legacyChanges: { oneDayBp: number | null; sevenDayBp: number | null };
+  history: CdsComparisonPoint[];
+}
+
+export interface CdsModelComparison {
+  mode: 'parallel';
+  status: 'ready' | 'proxy' | 'mixed' | 'error' | 'unavailable';
+  asOf: string | null;
+  lastAttemptAt: string;
+  lastSuccessAt: string | null;
+  engineVersion?: string;
+  message: string;
+  companies: CdsComparisonCompany[];
+}
+
 export interface DiscountCurveNodeInput {
   years: number;
   zeroRate: number;
@@ -613,6 +642,7 @@ export interface AiDashboardSnapshot {
   debtFinancing: CapitalEvent[];
   creditRisk: {
     cds5y: CdsRiskSnapshot;
+    cdsModelComparison?: CdsModelComparison;
   };
 }
 

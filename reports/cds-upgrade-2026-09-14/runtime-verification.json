@@ -1,0 +1,9 @@
+{
+  "previousPid": 1320,
+  "pid": 74065,
+  "configurationPreserved": true,
+  "healthCheck": true,
+  "comparisonStatus": "proxy",
+  "observations": 98,
+  "log": "/private/tmp/cds-upgrade-backend.log"
+}

@@ -1,0 +1,3811 @@
+{
+  "capturedAt": "2026-09-14T05:07:58.675Z",
+  "sourceWorkbook": "server/data/ai-dashboard/ice-cds/ice-cds-history.xlsx",
+  "sha256": "4a3d6b4b7d605b77d546cd2e3ab95b5cf519aec32d855d1eb3d1430a383625a9",
+  "rawRows": [
+    {
+      "batchId": "ice-20260831-97f11462974c",
+      "clearingDate": "2026-08-31",
+      "company": "Oracle",
+      "name": "Oracle Cop",
+      "instrumentName": "ORCLE.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 95.7863,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "importedAt": "2026-09-01T09:03:35.101Z"
+    },
+    {
+      "batchId": "ice-20260831-97f11462974c",
+      "clearingDate": "2026-08-31",
+      "company": "CoreWeave",
+      "name": "COREWEAVE INC",
+      "instrumentName": "COREWEI.SNRFOR.USD.XR14.500.2031-06-20",
+      "eodPrice": 90.6729,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "importedAt": "2026-09-01T09:03:35.101Z"
+    },
+    {
+      "batchId": "ice-20260831-97f11462974c",
+      "clearingDate": "2026-08-31",
+      "company": "NVIDIA",
+      "name": "NVIDIA Corp",
+      "instrumentName": "NVIDIA.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 100.7545,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "importedAt": "2026-09-01T09:03:35.101Z"
+    },
+    {
+      "batchId": "ice-20260831-97f11462974c",
+      "clearingDate": "2026-08-31",
+      "company": "Amazon",
+      "name": "Amazon Com Inc",
+      "instrumentName": "AMZN.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 101.4657,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "importedAt": "2026-09-01T09:03:35.101Z"
+    },
+    {
+      "batchId": "ice-20260831-97f11462974c",
+      "clearingDate": "2026-08-31",
+      "company": "Google",
+      "name": "Alphabet Inc",
+      "instrumentName": "ALPHINC.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 101.7014,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "importedAt": "2026-09-01T09:03:35.101Z"
+    },
+    {
+      "batchId": "ice-20260831-97f11462974c",
+      "clearingDate": "2026-08-31",
+      "company": "Microsoft",
+      "name": "Microsoft Corp",
+      "instrumentName": "MSFT.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 102.3201,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "importedAt": "2026-09-01T09:03:35.101Z"
+    },
+    {
+      "batchId": "ice-20260831-97f11462974c",
+      "clearingDate": "2026-08-31",
+      "company": "Meta",
+      "name": "META PLATFORMS INC",
+      "instrumentName": "METAPL.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 100.2951,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "importedAt": "2026-09-01T09:03:35.101Z"
+    },
+    {
+      "batchId": "ice-20260904-5617a923de2f",
+      "clearingDate": "2026-09-04",
+      "company": "Oracle",
+      "name": "Oracle Cop",
+      "instrumentName": "ORCLE.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 95.9002,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "importedAt": "2026-09-07T07:14:33.887Z"
+    },
+    {
+      "batchId": "ice-20260904-5617a923de2f",
+      "clearingDate": "2026-09-04",
+      "company": "CoreWeave",
+      "name": "COREWEAVE INC",
+      "instrumentName": "COREWEI.SNRFOR.USD.XR14.500.2031-06-20",
+      "eodPrice": 90.1002,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "importedAt": "2026-09-07T07:14:33.887Z"
+    },
+    {
+      "batchId": "ice-20260904-5617a923de2f",
+      "clearingDate": "2026-09-04",
+      "company": "NVIDIA",
+      "name": "NVIDIA Corp",
+      "instrumentName": "NVIDIA.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 100.8031,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "importedAt": "2026-09-07T07:14:33.887Z"
+    },
+    {
+      "batchId": "ice-20260904-5617a923de2f",
+      "clearingDate": "2026-09-04",
+      "company": "Amazon",
+      "name": "Amazon Com Inc",
+      "instrumentName": "AMZN.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 101.5719,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "importedAt": "2026-09-07T07:14:33.887Z"
+    },
+    {
+      "batchId": "ice-20260904-5617a923de2f",
+      "clearingDate": "2026-09-04",
+      "company": "Google",
+      "name": "Alphabet Inc",
+      "instrumentName": "ALPHINC.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 101.7811,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "importedAt": "2026-09-07T07:14:33.887Z"
+    },
+    {
+      "batchId": "ice-20260904-5617a923de2f",
+      "clearingDate": "2026-09-04",
+      "company": "Microsoft",
+      "name": "Microsoft Corp",
+      "instrumentName": "MSFT.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 102.3674,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "importedAt": "2026-09-07T07:14:33.887Z"
+    },
+    {
+      "batchId": "ice-20260904-5617a923de2f",
+      "clearingDate": "2026-09-04",
+      "company": "Meta",
+      "name": "META PLATFORMS INC",
+      "instrumentName": "METAPL.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 100.4236,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "importedAt": "2026-09-07T07:14:33.887Z"
+    },
+    {
+      "batchId": "ice-20260911-85d8b4e131e1",
+      "clearingDate": "2026-09-11",
+      "company": "Oracle",
+      "name": "Oracle Cop",
+      "instrumentName": "ORCLE.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 96.5128,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "importedAt": "2026-09-13T16:13:17.735Z"
+    },
+    {
+      "batchId": "ice-20260911-85d8b4e131e1",
+      "clearingDate": "2026-09-11",
+      "company": "CoreWeave",
+      "name": "COREWEAVE INC",
+      "instrumentName": "COREWEI.SNRFOR.USD.XR14.500.2031-06-20",
+      "eodPrice": 91.3783,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "importedAt": "2026-09-13T16:13:17.735Z"
+    },
+    {
+      "batchId": "ice-20260911-85d8b4e131e1",
+      "clearingDate": "2026-09-11",
+      "company": "NVIDIA",
+      "name": "NVIDIA Corp",
+      "instrumentName": "NVIDIA.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 100.938,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "importedAt": "2026-09-13T16:13:17.735Z"
+    },
+    {
+      "batchId": "ice-20260911-85d8b4e131e1",
+      "clearingDate": "2026-09-11",
+      "company": "Amazon",
+      "name": "Amazon Com Inc",
+      "instrumentName": "AMZN.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 101.5422,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "importedAt": "2026-09-13T16:13:17.735Z"
+    },
+    {
+      "batchId": "ice-20260911-85d8b4e131e1",
+      "clearingDate": "2026-09-11",
+      "company": "Google",
+      "name": "Alphabet Inc",
+      "instrumentName": "ALPHINC.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 101.6152,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "importedAt": "2026-09-13T16:13:17.735Z"
+    },
+    {
+      "batchId": "ice-20260911-85d8b4e131e1",
+      "clearingDate": "2026-09-11",
+      "company": "Microsoft",
+      "name": "Microsoft Corp",
+      "instrumentName": "MSFT.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 102.3597,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "importedAt": "2026-09-13T16:13:17.735Z"
+    },
+    {
+      "batchId": "ice-20260911-85d8b4e131e1",
+      "clearingDate": "2026-09-11",
+      "company": "Meta",
+      "name": "META PLATFORMS INC",
+      "instrumentName": "METAPL.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 100.6787,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "importedAt": "2026-09-13T16:13:17.735Z"
+    }
+  ],
+  "derivedRows": [
+    {
+      "batchId": "ice-20260831-97f11462974c",
+      "clearingDate": "2026-08-31",
+      "company": "Oracle",
+      "instrumentName": "ORCLE.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 95.7863,
+      "couponBp": 100,
+      "spreadBp": 204.3725603696754,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 95.78630000003596,
+      "priceResidual": 3.596767328417627e-11,
+      "hazardRate": 0.03434414677570885,
+      "curveId": "ust-par-zero-proxy-2026-08-31",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments"
+    },
+    {
+      "batchId": "ice-20260831-97f11462974c",
+      "clearingDate": "2026-08-31",
+      "company": "CoreWeave",
+      "instrumentName": "COREWEI.SNRFOR.USD.XR14.500.2031-06-20",
+      "eodPrice": 90.6729,
+      "couponBp": 500,
+      "spreadBp": 785.1202103787772,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 90.6728999999955,
+      "priceResidual": 4.504840944719035e-12,
+      "hazardRate": 0.13196119880262813,
+      "curveId": "ust-par-zero-proxy-2026-08-31",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments"
+    },
+    {
+      "batchId": "ice-20260831-97f11462974c",
+      "clearingDate": "2026-08-31",
+      "company": "NVIDIA",
+      "instrumentName": "NVIDIA.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 100.7545,
+      "couponBp": 100,
+      "spreadBp": 82.16155524536391,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 100.75450000000272,
+      "priceResidual": 2.7284841053187847e-12,
+      "hazardRate": 0.013806622158369919,
+      "curveId": "ust-par-zero-proxy-2026-08-31",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments"
+    },
+    {
+      "batchId": "ice-20260831-97f11462974c",
+      "clearingDate": "2026-08-31",
+      "company": "Amazon",
+      "instrumentName": "AMZN.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 101.4657,
+      "couponBp": 100,
+      "spreadBp": 65.5674198570739,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 101.46570000000987,
+      "priceResidual": 9.876544027065393e-12,
+      "hazardRate": 0.011018068996691,
+      "curveId": "ust-par-zero-proxy-2026-08-31",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments"
+    },
+    {
+      "batchId": "ice-20260831-97f11462974c",
+      "clearingDate": "2026-08-31",
+      "company": "Google",
+      "instrumentName": "ALPHINC.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 101.7014,
+      "couponBp": 100,
+      "spreadBp": 60.11421570069445,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 101.70139999999907,
+      "priceResidual": 9.379164112033322e-13,
+      "hazardRate": 0.01010169212747769,
+      "curveId": "ust-par-zero-proxy-2026-08-31",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments"
+    },
+    {
+      "batchId": "ice-20260831-97f11462974c",
+      "clearingDate": "2026-08-31",
+      "company": "Microsoft",
+      "instrumentName": "MSFT.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 102.3201,
+      "couponBp": 100,
+      "spreadBp": 45.90748605993371,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 102.32009999996504,
+      "priceResidual": 3.495870259939693e-11,
+      "hazardRate": 0.007714349269747345,
+      "curveId": "ust-par-zero-proxy-2026-08-31",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments"
+    },
+    {
+      "batchId": "ice-20260831-97f11462974c",
+      "clearingDate": "2026-08-31",
+      "company": "Meta",
+      "instrumentName": "METAPL.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 100.2951,
+      "couponBp": 100,
+      "spreadBp": 92.99394082582893,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 100.29509999994337,
+      "priceResidual": 5.6630256040079985e-11,
+      "hazardRate": 0.015626955309073765,
+      "curveId": "ust-par-zero-proxy-2026-08-31",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments"
+    },
+    {
+      "batchId": "ice-20260904-5617a923de2f",
+      "clearingDate": "2026-09-04",
+      "company": "Oracle",
+      "instrumentName": "ORCLE.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 95.9002,
+      "couponBp": 100,
+      "spreadBp": 201.85865970787032,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 95.90019999995474,
+      "priceResidual": 4.526157226791838e-11,
+      "hazardRate": 0.03391928469824279,
+      "curveId": "ust-par-zero-proxy-2026-09-04",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments"
+    },
+    {
+      "batchId": "ice-20260904-5617a923de2f",
+      "clearingDate": "2026-09-04",
+      "company": "CoreWeave",
+      "instrumentName": "COREWEI.SNRFOR.USD.XR14.500.2031-06-20",
+      "eodPrice": 90.1002,
+      "couponBp": 500,
+      "spreadBp": 805.768110774567,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 90.10020000000769,
+      "priceResidual": 7.688072400924284e-12,
+      "hazardRate": 0.13542361575019868,
+      "curveId": "ust-par-zero-proxy-2026-09-04",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments"
+    },
+    {
+      "batchId": "ice-20260904-5617a923de2f",
+      "clearingDate": "2026-09-04",
+      "company": "NVIDIA",
+      "instrumentName": "NVIDIA.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 100.8031,
+      "couponBp": 100,
+      "spreadBp": 80.94251930469856,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 100.80310000002173,
+      "priceResidual": 2.1728396859543864e-11,
+      "hazardRate": 0.013600804853979298,
+      "curveId": "ust-par-zero-proxy-2026-09-04",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments"
+    },
+    {
+      "batchId": "ice-20260904-5617a923de2f",
+      "clearingDate": "2026-09-04",
+      "company": "Amazon",
+      "instrumentName": "AMZN.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 101.5719,
+      "couponBp": 100,
+      "spreadBp": 62.955350344271935,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 101.57189999997591,
+      "priceResidual": 2.4087398742267396e-11,
+      "hazardRate": 0.010578376029286574,
+      "curveId": "ust-par-zero-proxy-2026-09-04",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments"
+    },
+    {
+      "batchId": "ice-20260904-5617a923de2f",
+      "clearingDate": "2026-09-04",
+      "company": "Google",
+      "instrumentName": "ALPHINC.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 101.7811,
+      "couponBp": 100,
+      "spreadBp": 58.10331994667379,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 101.78109999993872,
+      "priceResidual": 6.127720553195104e-11,
+      "hazardRate": 0.009763081092444281,
+      "curveId": "ust-par-zero-proxy-2026-09-04",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments"
+    },
+    {
+      "batchId": "ice-20260904-5617a923de2f",
+      "clearingDate": "2026-09-04",
+      "company": "Microsoft",
+      "instrumentName": "MSFT.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 102.3674,
+      "couponBp": 100,
+      "spreadBp": 44.60024146293813,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 102.36739999999511,
+      "priceResidual": 4.888534022029489e-12,
+      "hazardRate": 0.007494144126098945,
+      "curveId": "ust-par-zero-proxy-2026-09-04",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments"
+    },
+    {
+      "batchId": "ice-20260904-5617a923de2f",
+      "clearingDate": "2026-09-04",
+      "company": "Meta",
+      "instrumentName": "METAPL.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 100.4236,
+      "couponBp": 100,
+      "spreadBp": 89.91344505459787,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 100.42359999998543,
+      "priceResidual": 1.4566126083082054e-11,
+      "hazardRate": 0.01510822039648474,
+      "curveId": "ust-par-zero-proxy-2026-09-04",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments"
+    },
+    {
+      "batchId": "ice-20260911-85d8b4e131e1",
+      "clearingDate": "2026-09-11",
+      "company": "Oracle",
+      "instrumentName": "ORCLE.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 96.5128,
+      "couponBp": 100,
+      "spreadBp": 186.92925832177772,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 96.51279999999721,
+      "priceResidual": 2.7853275241795927e-12,
+      "hazardRate": 0.031400479507226464,
+      "curveId": "ust-par-zero-proxy-2026-09-11",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments"
+    },
+    {
+      "batchId": "ice-20260911-85d8b4e131e1",
+      "clearingDate": "2026-09-11",
+      "company": "CoreWeave",
+      "instrumentName": "COREWEI.SNRFOR.USD.XR14.500.2031-06-20",
+      "eodPrice": 91.3783,
+      "couponBp": 500,
+      "spreadBp": 764.5609662734221,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 91.37829999999877,
+      "priceResidual": 1.2221335055073723e-12,
+      "hazardRate": 0.12845486128810535,
+      "curveId": "ust-par-zero-proxy-2026-09-11",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments"
+    },
+    {
+      "batchId": "ice-20260911-85d8b4e131e1",
+      "clearingDate": "2026-09-11",
+      "company": "NVIDIA",
+      "instrumentName": "NVIDIA.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 100.938,
+      "couponBp": 100,
+      "spreadBp": 77.56402862671325,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 100.93799999997115,
+      "priceResidual": 2.8848035071860068e-11,
+      "hazardRate": 0.013028942284165623,
+      "curveId": "ust-par-zero-proxy-2026-09-11",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments"
+    },
+    {
+      "batchId": "ice-20260911-85d8b4e131e1",
+      "clearingDate": "2026-09-11",
+      "company": "Amazon",
+      "instrumentName": "AMZN.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 101.5422,
+      "couponBp": 100,
+      "spreadBp": 63.31203886648256,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 101.54220000002796,
+      "priceResidual": 2.7966962079517543e-11,
+      "hazardRate": 0.010634911668887526,
+      "curveId": "ust-par-zero-proxy-2026-09-11",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments"
+    },
+    {
+      "batchId": "ice-20260911-85d8b4e131e1",
+      "clearingDate": "2026-09-11",
+      "company": "Google",
+      "instrumentName": "ALPHINC.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 101.6152,
+      "couponBp": 100,
+      "spreadBp": 61.600501382236914,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 101.61519999999578,
+      "priceResidual": 4.220623850414995e-12,
+      "hazardRate": 0.01034741078171919,
+      "curveId": "ust-par-zero-proxy-2026-09-11",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments"
+    },
+    {
+      "batchId": "ice-20260911-85d8b4e131e1",
+      "clearingDate": "2026-09-11",
+      "company": "Microsoft",
+      "instrumentName": "MSFT.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 102.3597,
+      "couponBp": 100,
+      "spreadBp": 44.271103359688034,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 102.35970000005634,
+      "priceResidual": 5.633182809106074e-11,
+      "hazardRate": 0.007436461804957162,
+      "curveId": "ust-par-zero-proxy-2026-09-11",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments"
+    },
+    {
+      "batchId": "ice-20260911-85d8b4e131e1",
+      "clearingDate": "2026-09-11",
+      "company": "Meta",
+      "instrumentName": "METAPL.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 100.6787,
+      "couponBp": 100,
+      "spreadBp": 83.72808080653539,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 100.67869999999984,
+      "priceResidual": 1.7053025658242404e-13,
+      "hazardRate": 0.014064376126157185,
+      "curveId": "ust-par-zero-proxy-2026-09-11",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments"
+    }
+  ],
+  "curves": [
+    {
+      "curveId": "ust-par-zero-proxy-2026-08-31",
+      "asOf": "2026-08-31",
+      "currency": "USD",
+      "sourceLabel": "U.S. Treasury par yields · continuous-zero proxy",
+      "sourceUrl": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates",
+      "nodes": [
+        {
+          "years": 0.08333333333333333,
+          "zeroRate": 0.0385
+        },
+        {
+          "years": 0.125,
+          "zeroRate": 0.038599999999999995
+        },
+        {
+          "years": 0.16666666666666666,
+          "zeroRate": 0.0388
+        },
+        {
+          "years": 0.25,
+          "zeroRate": 0.0391
+        },
+        {
+          "years": 0.3333333333333333,
+          "zeroRate": 0.039599999999999996
+        },
+        {
+          "years": 0.5,
+          "zeroRate": 0.039900000000000005
+        },
+        {
+          "years": 1,
+          "zeroRate": 0.0416
+        },
+        {
+          "years": 2,
+          "zeroRate": 0.0434
+        },
+        {
+          "years": 3,
+          "zeroRate": 0.044000000000000004
+        },
+        {
+          "years": 5,
+          "zeroRate": 0.0449
+        },
+        {
+          "years": 7,
+          "zeroRate": 0.0462
+        },
+        {
+          "years": 10,
+          "zeroRate": 0.0475
+        },
+        {
+          "years": 20,
+          "zeroRate": 0.0524
+        },
+        {
+          "years": 30,
+          "zeroRate": 0.0525
+        }
+      ]
+    },
+    {
+      "curveId": "ust-par-zero-proxy-2026-09-04",
+      "asOf": "2026-09-04",
+      "currency": "USD",
+      "sourceLabel": "U.S. Treasury par yields · continuous-zero proxy",
+      "sourceUrl": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates",
+      "nodes": [
+        {
+          "years": 0.08333333333333333,
+          "zeroRate": 0.0379
+        },
+        {
+          "years": 0.125,
+          "zeroRate": 0.0383
+        },
+        {
+          "years": 0.16666666666666666,
+          "zeroRate": 0.039
+        },
+        {
+          "years": 0.25,
+          "zeroRate": 0.0391
+        },
+        {
+          "years": 0.3333333333333333,
+          "zeroRate": 0.04
+        },
+        {
+          "years": 0.5,
+          "zeroRate": 0.0398
+        },
+        {
+          "years": 1,
+          "zeroRate": 0.041299999999999996
+        },
+        {
+          "years": 2,
+          "zeroRate": 0.0437
+        },
+        {
+          "years": 3,
+          "zeroRate": 0.044500000000000005
+        },
+        {
+          "years": 5,
+          "zeroRate": 0.0454
+        },
+        {
+          "years": 7,
+          "zeroRate": 0.04650000000000001
+        },
+        {
+          "years": 10,
+          "zeroRate": 0.0478
+        },
+        {
+          "years": 20,
+          "zeroRate": 0.0525
+        },
+        {
+          "years": 30,
+          "zeroRate": 0.0524
+        }
+      ]
+    },
+    {
+      "curveId": "ust-par-zero-proxy-2026-09-11",
+      "asOf": "2026-09-11",
+      "currency": "USD",
+      "sourceLabel": "U.S. Treasury par yields · continuous-zero proxy",
+      "sourceUrl": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates",
+      "nodes": [
+        {
+          "years": 0.08333333333333333,
+          "zeroRate": 0.0393
+        },
+        {
+          "years": 0.125,
+          "zeroRate": 0.039900000000000005
+        },
+        {
+          "years": 0.16666666666666666,
+          "zeroRate": 0.0405
+        },
+        {
+          "years": 0.25,
+          "zeroRate": 0.0407
+        },
+        {
+          "years": 0.3333333333333333,
+          "zeroRate": 0.0415
+        },
+        {
+          "years": 0.5,
+          "zeroRate": 0.0412
+        },
+        {
+          "years": 1,
+          "zeroRate": 0.0435
+        },
+        {
+          "years": 2,
+          "zeroRate": 0.0463
+        },
+        {
+          "years": 3,
+          "zeroRate": 0.046900000000000004
+        },
+        {
+          "years": 5,
+          "zeroRate": 0.0478
+        },
+        {
+          "years": 7,
+          "zeroRate": 0.0487
+        },
+        {
+          "years": 10,
+          "zeroRate": 0.0496
+        },
+        {
+          "years": 20,
+          "zeroRate": 0.0538
+        },
+        {
+          "years": 30,
+          "zeroRate": 0.0535
+        }
+      ]
+    }
+  ],
+  "snapshot": {
+    "asOf": "2026-09-11",
+    "sourceKind": "ice_eod_isda",
+    "sourceLabel": "ICE EOD Price · ISDA 换算值",
+    "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+    "batchId": "ice-20260911-85d8b4e131e1",
+    "qualityStatus": "model-derived",
+    "workbookAvailable": true,
+    "historyEstimated": true,
+    "note": "2026-06-10 至 2026-08-21 为用户截图曲线回填估算；最新点由 ICE EOD Price 经 ISDA-compatible 模型换算。未经官方基准验证时不代表 ICE 官方 spread。",
+    "companies": [
+      {
+        "company": "Oracle",
+        "latestBp": 186.92925832177772,
+        "latestEodPrice": 96.5128,
+        "latestInstrumentName": "ORCLE.SNRFOR.USD.XR14.100.2031-06-20",
+        "qualityStatus": "model-derived",
+        "changes": {
+          "oneDayBp": -0.6759990581850275,
+          "sevenDayBp": -14.929401386092593,
+          "oneMonthBp": -9.400741678222289
+        },
+        "history": [
+          {
+            "date": "2026-06-10",
+            "valueBp": 160,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-11",
+            "valueBp": 158.8,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-12",
+            "valueBp": 157.6,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-15",
+            "valueBp": 154,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-16",
+            "valueBp": 154.86,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-17",
+            "valueBp": 155.71,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-18",
+            "valueBp": 156.57,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-19",
+            "valueBp": 157.43,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-22",
+            "valueBp": 160,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-23",
+            "valueBp": 161.57,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-24",
+            "valueBp": 163.14,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-25",
+            "valueBp": 164.71,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-26",
+            "valueBp": 166.29,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-29",
+            "valueBp": 171,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-30",
+            "valueBp": 170.71,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-01",
+            "valueBp": 170.43,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-02",
+            "valueBp": 170.14,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-03",
+            "valueBp": 169.86,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-06",
+            "valueBp": 169,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-07",
+            "valueBp": 171.57,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-08",
+            "valueBp": 174.14,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-09",
+            "valueBp": 176.71,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-10",
+            "valueBp": 179.29,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-13",
+            "valueBp": 187,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-14",
+            "valueBp": 187.14,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-15",
+            "valueBp": 187.29,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-16",
+            "valueBp": 187.43,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-17",
+            "valueBp": 187.57,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-20",
+            "valueBp": 188,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-21",
+            "valueBp": 192.25,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-22",
+            "valueBp": 196.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-23",
+            "valueBp": 200.75,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-24",
+            "valueBp": 205,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-27",
+            "valueBp": 212.2,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-28",
+            "valueBp": 214.6,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-29",
+            "valueBp": 217,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-30",
+            "valueBp": 213.8,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-31",
+            "valueBp": 210.6,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-03",
+            "valueBp": 201,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-04",
+            "valueBp": 197,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-05",
+            "valueBp": 193,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-06",
+            "valueBp": 189,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-07",
+            "valueBp": 190.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-10",
+            "valueBp": 195,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-11",
+            "valueBp": 196.33,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-12",
+            "valueBp": 197.67,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-13",
+            "valueBp": 199,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-14",
+            "valueBp": 197.25,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-17",
+            "valueBp": 192,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-18",
+            "valueBp": 197.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-19",
+            "valueBp": 203,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-20",
+            "valueBp": 208.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-21",
+            "valueBp": 214,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-24",
+            "valueBp": 223.30088522481057,
+            "eodPrice": 95.0309,
+            "instrumentName": "ORCLE.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-25",
+            "valueBp": 215.5305448223161,
+            "eodPrice": 95.3261,
+            "instrumentName": "ORCLE.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-26",
+            "valueBp": 211.73480562095,
+            "eodPrice": 95.4781,
+            "instrumentName": "ORCLE.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-27",
+            "valueBp": 206.188824597763,
+            "eodPrice": 95.6966,
+            "instrumentName": "ORCLE.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-28",
+            "valueBp": 204.60780433759786,
+            "eodPrice": 95.7763,
+            "instrumentName": "ORCLE.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-31",
+            "valueBp": 204.3725603696754,
+            "eodPrice": 95.7863,
+            "instrumentName": "ORCLE.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-02",
+            "valueBp": 209.76313511860334,
+            "eodPrice": 95.5865,
+            "instrumentName": "ORCLE.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-03",
+            "valueBp": 205.87460749072747,
+            "eodPrice": 95.7349,
+            "instrumentName": "ORCLE.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-04",
+            "valueBp": 201.85865970787032,
+            "eodPrice": 95.9002,
+            "instrumentName": "ORCLE.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-07",
+            "valueBp": 201.69691494153687,
+            "eodPrice": 95.9089,
+            "instrumentName": "ORCLE.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-08",
+            "valueBp": 196.04502084532132,
+            "eodPrice": 96.1294,
+            "instrumentName": "ORCLE.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-09",
+            "valueBp": 193.87663903903118,
+            "eodPrice": 96.2192,
+            "instrumentName": "ORCLE.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-10",
+            "valueBp": 187.60525737996275,
+            "eodPrice": 96.4762,
+            "instrumentName": "ORCLE.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-11",
+            "valueBp": 186.92925832177772,
+            "eodPrice": 96.5128,
+            "instrumentName": "ORCLE.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          }
+        ]
+      },
+      {
+        "company": "CoreWeave",
+        "latestBp": 764.5609662734221,
+        "latestEodPrice": 91.3783,
+        "latestInstrumentName": "COREWEI.SNRFOR.USD.XR14.500.2031-06-20",
+        "qualityStatus": "model-derived",
+        "changes": {
+          "oneDayBp": -6.594315156778293,
+          "sevenDayBp": -41.20714450114497,
+          "oneMonthBp": 9.560966273422082
+        },
+        "history": [
+          {
+            "date": "2026-06-10",
+            "valueBp": 510,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-11",
+            "valueBp": 505.71,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-12",
+            "valueBp": 501.43,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-15",
+            "valueBp": 488.57,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-16",
+            "valueBp": 484.29,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-17",
+            "valueBp": 480,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-18",
+            "valueBp": 490.71,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-19",
+            "valueBp": 501.43,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-22",
+            "valueBp": 533.57,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-23",
+            "valueBp": 544.29,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-24",
+            "valueBp": 555,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-25",
+            "valueBp": 554,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-26",
+            "valueBp": 553,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-29",
+            "valueBp": 550,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-30",
+            "valueBp": 561.67,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-01",
+            "valueBp": 573.33,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-02",
+            "valueBp": 585,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-03",
+            "valueBp": 587.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-06",
+            "valueBp": 595,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-07",
+            "valueBp": 597.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-08",
+            "valueBp": 600,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-09",
+            "valueBp": 587.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-10",
+            "valueBp": 575,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-13",
+            "valueBp": 620,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-14",
+            "valueBp": 635,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-15",
+            "valueBp": 650,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-16",
+            "valueBp": 665,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-17",
+            "valueBp": 680,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-20",
+            "valueBp": 687.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-21",
+            "valueBp": 690,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-22",
+            "valueBp": 700,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-23",
+            "valueBp": 710,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-24",
+            "valueBp": 720,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-27",
+            "valueBp": 750,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-28",
+            "valueBp": 816.67,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-29",
+            "valueBp": 883.33,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-30",
+            "valueBp": 950,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-31",
+            "valueBp": 917.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-03",
+            "valueBp": 820,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-04",
+            "valueBp": 783.33,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-05",
+            "valueBp": 746.67,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-06",
+            "valueBp": 710,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-07",
+            "valueBp": 722.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-10",
+            "valueBp": 760,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-11",
+            "valueBp": 755,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-12",
+            "valueBp": 750,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-13",
+            "valueBp": 745,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-14",
+            "valueBp": 740,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-17",
+            "valueBp": 670,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-18",
+            "valueBp": 700,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-19",
+            "valueBp": 730,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-20",
+            "valueBp": 760,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-21",
+            "valueBp": 790,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-24",
+            "valueBp": 806.1392991612953,
+            "eodPrice": 90.0135,
+            "instrumentName": "COREWEI.SNRFOR.USD.XR14.500.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-25",
+            "valueBp": 788.7786693247883,
+            "eodPrice": 90.5145,
+            "instrumentName": "COREWEI.SNRFOR.USD.XR14.500.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-26",
+            "valueBp": 781.9632880309412,
+            "eodPrice": 90.7249,
+            "instrumentName": "COREWEI.SNRFOR.USD.XR14.500.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-27",
+            "valueBp": 768.0860749210395,
+            "eodPrice": 91.1439,
+            "instrumentName": "COREWEI.SNRFOR.USD.XR14.500.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-28",
+            "valueBp": 772.1233513002674,
+            "eodPrice": 91.0569,
+            "instrumentName": "COREWEI.SNRFOR.USD.XR14.500.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-31",
+            "valueBp": 785.1202103787772,
+            "eodPrice": 90.6729,
+            "instrumentName": "COREWEI.SNRFOR.USD.XR14.500.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-02",
+            "valueBp": 824.4015925860327,
+            "eodPrice": 89.5483,
+            "instrumentName": "COREWEI.SNRFOR.USD.XR14.500.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-03",
+            "valueBp": 808.6532203565505,
+            "eodPrice": 89.997,
+            "instrumentName": "COREWEI.SNRFOR.USD.XR14.500.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-04",
+            "valueBp": 805.768110774567,
+            "eodPrice": 90.1002,
+            "instrumentName": "COREWEI.SNRFOR.USD.XR14.500.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-07",
+            "valueBp": 805.3294397292314,
+            "eodPrice": 90.1177,
+            "instrumentName": "COREWEI.SNRFOR.USD.XR14.500.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-08",
+            "valueBp": 772.3386931536619,
+            "eodPrice": 91.0865,
+            "instrumentName": "COREWEI.SNRFOR.USD.XR14.500.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-09",
+            "valueBp": 761.219074848781,
+            "eodPrice": 91.4282,
+            "instrumentName": "COREWEI.SNRFOR.USD.XR14.500.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-10",
+            "valueBp": 771.1552814302004,
+            "eodPrice": 91.161,
+            "instrumentName": "COREWEI.SNRFOR.USD.XR14.500.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-11",
+            "valueBp": 764.5609662734221,
+            "eodPrice": 91.3783,
+            "instrumentName": "COREWEI.SNRFOR.USD.XR14.500.2031-06-20",
+            "qualityStatus": "model-derived"
+          }
+        ]
+      },
+      {
+        "company": "NVIDIA",
+        "latestBp": 77.56402862671325,
+        "latestEodPrice": 100.938,
+        "latestInstrumentName": "NVIDIA.SNRFOR.USD.XR14.100.2031-06-20",
+        "qualityStatus": "model-derived",
+        "changes": {
+          "oneDayBp": -1.8679650623332549,
+          "sevenDayBp": -3.3784906779853117,
+          "oneMonthBp": 2.8940286267132507
+        },
+        "history": [
+          {
+            "date": "2026-06-22",
+            "valueBp": 40,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-23",
+            "valueBp": 40.86,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-24",
+            "valueBp": 41.71,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-25",
+            "valueBp": 42.57,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-26",
+            "valueBp": 43.43,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-29",
+            "valueBp": 46,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-30",
+            "valueBp": 45.89,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-01",
+            "valueBp": 45.78,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-02",
+            "valueBp": 45.67,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-03",
+            "valueBp": 45.56,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-06",
+            "valueBp": 45.22,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-07",
+            "valueBp": 45.11,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-08",
+            "valueBp": 45,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-09",
+            "valueBp": 47,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-10",
+            "valueBp": 49,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-13",
+            "valueBp": 55,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-14",
+            "valueBp": 57,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-15",
+            "valueBp": 57.33,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-16",
+            "valueBp": 57.67,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-17",
+            "valueBp": 58,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-20",
+            "valueBp": 59,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-21",
+            "valueBp": 61.75,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-22",
+            "valueBp": 64.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-23",
+            "valueBp": 67.25,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-24",
+            "valueBp": 70,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-27",
+            "valueBp": 80,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-28",
+            "valueBp": 80.67,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-29",
+            "valueBp": 81.33,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-30",
+            "valueBp": 82,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-31",
+            "valueBp": 80,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-03",
+            "valueBp": 74,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-04",
+            "valueBp": 72,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-05",
+            "valueBp": 70,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-06",
+            "valueBp": 68,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-07",
+            "valueBp": 70,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-10",
+            "valueBp": 76,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-11",
+            "valueBp": 74.67,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-12",
+            "valueBp": 73.33,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-13",
+            "valueBp": 72,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-14",
+            "valueBp": 74.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-17",
+            "valueBp": 82,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-18",
+            "valueBp": 83.25,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-19",
+            "valueBp": 84.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-20",
+            "valueBp": 85.75,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-21",
+            "valueBp": 87,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-24",
+            "valueBp": 87.07546545214814,
+            "eodPrice": 100.5487,
+            "instrumentName": "NVIDIA.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-25",
+            "valueBp": 86.12977500381851,
+            "eodPrice": 100.5896,
+            "instrumentName": "NVIDIA.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-26",
+            "valueBp": 83.71050316982073,
+            "eodPrice": 100.6923,
+            "instrumentName": "NVIDIA.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-27",
+            "valueBp": 82.23904292915736,
+            "eodPrice": 100.7547,
+            "instrumentName": "NVIDIA.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-28",
+            "valueBp": 81.98259593132684,
+            "eodPrice": 100.7623,
+            "instrumentName": "NVIDIA.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-31",
+            "valueBp": 82.16155524536391,
+            "eodPrice": 100.7545,
+            "instrumentName": "NVIDIA.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-02",
+            "valueBp": 83.00979710912543,
+            "eodPrice": 100.7169,
+            "instrumentName": "NVIDIA.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-03",
+            "valueBp": 81.31099894299759,
+            "eodPrice": 100.7894,
+            "instrumentName": "NVIDIA.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-04",
+            "valueBp": 80.94251930469856,
+            "eodPrice": 100.8031,
+            "instrumentName": "NVIDIA.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-07",
+            "valueBp": 80.9732005731751,
+            "eodPrice": 100.8013,
+            "instrumentName": "NVIDIA.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-08",
+            "valueBp": 81.1829871789674,
+            "eodPrice": 100.7921,
+            "instrumentName": "NVIDIA.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-09",
+            "valueBp": 79.34685871324167,
+            "eodPrice": 100.8687,
+            "instrumentName": "NVIDIA.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-10",
+            "valueBp": 79.43199368904651,
+            "eodPrice": 100.8619,
+            "instrumentName": "NVIDIA.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-11",
+            "valueBp": 77.56402862671325,
+            "eodPrice": 100.938,
+            "instrumentName": "NVIDIA.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          }
+        ]
+      },
+      {
+        "company": "Amazon",
+        "latestBp": 63.31203886648256,
+        "latestEodPrice": 101.5422,
+        "latestInstrumentName": "AMZN.SNRFOR.USD.XR14.100.2031-06-20",
+        "qualityStatus": "model-derived",
+        "changes": {
+          "oneDayBp": -0.7041478545073758,
+          "sevenDayBp": 0.3566885222106251,
+          "oneMonthBp": 7.31203886648256
+        },
+        "history": [
+          {
+            "date": "2026-06-10",
+            "valueBp": 51,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-11",
+            "valueBp": 50.86,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-12",
+            "valueBp": 50.71,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-15",
+            "valueBp": 50.29,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-16",
+            "valueBp": 50.14,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-17",
+            "valueBp": 50,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-18",
+            "valueBp": 50.57,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-19",
+            "valueBp": 51.14,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-22",
+            "valueBp": 52.86,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-23",
+            "valueBp": 53.43,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-24",
+            "valueBp": 54,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-25",
+            "valueBp": 54.13,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-26",
+            "valueBp": 54.25,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-29",
+            "valueBp": 54.63,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-30",
+            "valueBp": 54.75,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-01",
+            "valueBp": 54.88,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-02",
+            "valueBp": 55,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-03",
+            "valueBp": 54.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-06",
+            "valueBp": 53,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-07",
+            "valueBp": 54,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-08",
+            "valueBp": 55,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-09",
+            "valueBp": 56,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-10",
+            "valueBp": 57,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-13",
+            "valueBp": 60,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-14",
+            "valueBp": 59.25,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-15",
+            "valueBp": 58.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-16",
+            "valueBp": 57.75,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-17",
+            "valueBp": 57,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-20",
+            "valueBp": 58.2,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-21",
+            "valueBp": 58.6,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-22",
+            "valueBp": 59,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-23",
+            "valueBp": 60.6,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-24",
+            "valueBp": 62.2,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-27",
+            "valueBp": 67,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-28",
+            "valueBp": 67.67,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-29",
+            "valueBp": 68.33,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-30",
+            "valueBp": 69,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-31",
+            "valueBp": 66,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-03",
+            "valueBp": 57,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-04",
+            "valueBp": 56.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-05",
+            "valueBp": 56,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-06",
+            "valueBp": 55.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-07",
+            "valueBp": 55,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-10",
+            "valueBp": 57,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-11",
+            "valueBp": 56,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-12",
+            "valueBp": 55,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-13",
+            "valueBp": 54,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-14",
+            "valueBp": 53,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-17",
+            "valueBp": 58.14,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-18",
+            "valueBp": 59.86,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-19",
+            "valueBp": 61.57,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-20",
+            "valueBp": 63.29,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-21",
+            "valueBp": 65,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-24",
+            "valueBp": 65.73355523599807,
+            "eodPrice": 101.4668,
+            "instrumentName": "AMZN.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-25",
+            "valueBp": 66.35649537009513,
+            "eodPrice": 101.4411,
+            "instrumentName": "AMZN.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-26",
+            "valueBp": 65.56668006177567,
+            "eodPrice": 101.4737,
+            "instrumentName": "AMZN.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-27",
+            "valueBp": 65.02430273961868,
+            "eodPrice": 101.4961,
+            "instrumentName": "AMZN.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-28",
+            "valueBp": 64.82701577990112,
+            "eodPrice": 101.498,
+            "instrumentName": "AMZN.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-31",
+            "valueBp": 65.5674198570739,
+            "eodPrice": 101.4657,
+            "instrumentName": "AMZN.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-02",
+            "valueBp": 65.8984822534474,
+            "eodPrice": 101.4484,
+            "instrumentName": "AMZN.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-03",
+            "valueBp": 64.16795867478342,
+            "eodPrice": 101.5235,
+            "instrumentName": "AMZN.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-04",
+            "valueBp": 62.955350344271935,
+            "eodPrice": 101.5719,
+            "instrumentName": "AMZN.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-07",
+            "valueBp": 63.01390805695253,
+            "eodPrice": 101.5684,
+            "instrumentName": "AMZN.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-08",
+            "valueBp": 63.24180193160861,
+            "eodPrice": 101.558,
+            "instrumentName": "AMZN.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-09",
+            "valueBp": 62.5745924845392,
+            "eodPrice": 101.5843,
+            "instrumentName": "AMZN.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-10",
+            "valueBp": 64.01618672098994,
+            "eodPrice": 101.5168,
+            "instrumentName": "AMZN.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-11",
+            "valueBp": 63.31203886648256,
+            "eodPrice": 101.5422,
+            "instrumentName": "AMZN.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          }
+        ]
+      },
+      {
+        "company": "Google",
+        "latestBp": 61.600501382236914,
+        "latestEodPrice": 101.6152,
+        "latestInstrumentName": "ALPHINC.SNRFOR.USD.XR14.100.2031-06-20",
+        "qualityStatus": "model-derived",
+        "changes": {
+          "oneDayBp": -0.0472381599158993,
+          "sevenDayBp": 3.497181435563121,
+          "oneMonthBp": 9.270501382236915
+        },
+        "history": [
+          {
+            "date": "2026-06-10",
+            "valueBp": 50,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-11",
+            "valueBp": 49.86,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-12",
+            "valueBp": 49.71,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-15",
+            "valueBp": 49.29,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-16",
+            "valueBp": 49.14,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-17",
+            "valueBp": 49,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-18",
+            "valueBp": 49.43,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-19",
+            "valueBp": 49.86,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-22",
+            "valueBp": 51.14,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-23",
+            "valueBp": 51.57,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-24",
+            "valueBp": 52,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-25",
+            "valueBp": 52.29,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-26",
+            "valueBp": 52.57,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-29",
+            "valueBp": 53.43,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-30",
+            "valueBp": 53.71,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-01",
+            "valueBp": 54,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-02",
+            "valueBp": 53.8,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-03",
+            "valueBp": 53.6,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-06",
+            "valueBp": 53,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-07",
+            "valueBp": 54,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-08",
+            "valueBp": 55,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-09",
+            "valueBp": 56,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-10",
+            "valueBp": 57,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-13",
+            "valueBp": 60,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-14",
+            "valueBp": 59.25,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-15",
+            "valueBp": 58.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-16",
+            "valueBp": 57.75,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-17",
+            "valueBp": 57,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-20",
+            "valueBp": 58.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-21",
+            "valueBp": 59,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-22",
+            "valueBp": 60.67,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-23",
+            "valueBp": 62.33,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-24",
+            "valueBp": 64,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-27",
+            "valueBp": 65.8,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-28",
+            "valueBp": 66.4,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-29",
+            "valueBp": 67,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-30",
+            "valueBp": 64.8,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-31",
+            "valueBp": 62.6,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-03",
+            "valueBp": 56,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-04",
+            "valueBp": 55.75,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-05",
+            "valueBp": 55.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-06",
+            "valueBp": 55.25,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-07",
+            "valueBp": 55,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-10",
+            "valueBp": 53,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-11",
+            "valueBp": 52.33,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-12",
+            "valueBp": 51.67,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-13",
+            "valueBp": 51,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-14",
+            "valueBp": 52.25,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-17",
+            "valueBp": 56,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-18",
+            "valueBp": 56.75,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-19",
+            "valueBp": 57.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-20",
+            "valueBp": 58.25,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-21",
+            "valueBp": 59,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-24",
+            "valueBp": 59.408709349107504,
+            "eodPrice": 101.7418,
+            "instrumentName": "ALPHINC.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-25",
+            "valueBp": 59.84862813071712,
+            "eodPrice": 101.7242,
+            "instrumentName": "ALPHINC.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-26",
+            "valueBp": 58.68823969442203,
+            "eodPrice": 101.7728,
+            "instrumentName": "ALPHINC.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-27",
+            "valueBp": 58.28116517873438,
+            "eodPrice": 101.7892,
+            "instrumentName": "ALPHINC.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-28",
+            "valueBp": 58.10083949597112,
+            "eodPrice": 101.7891,
+            "instrumentName": "ALPHINC.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-31",
+            "valueBp": 60.11421570069445,
+            "eodPrice": 101.7014,
+            "instrumentName": "ALPHINC.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-02",
+            "valueBp": 60.30049810021958,
+            "eodPrice": 101.6898,
+            "instrumentName": "ALPHINC.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-03",
+            "valueBp": 58.82669415653371,
+            "eodPrice": 101.7542,
+            "instrumentName": "ALPHINC.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-04",
+            "valueBp": 58.10331994667379,
+            "eodPrice": 101.7811,
+            "instrumentName": "ALPHINC.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-07",
+            "valueBp": 58.17017561990648,
+            "eodPrice": 101.7771,
+            "instrumentName": "ALPHINC.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-08",
+            "valueBp": 59.06073177785933,
+            "eodPrice": 101.738,
+            "instrumentName": "ALPHINC.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-09",
+            "valueBp": 59.51336564982311,
+            "eodPrice": 101.7159,
+            "instrumentName": "ALPHINC.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-10",
+            "valueBp": 61.64773954215281,
+            "eodPrice": 101.6181,
+            "instrumentName": "ALPHINC.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-11",
+            "valueBp": 61.600501382236914,
+            "eodPrice": 101.6152,
+            "instrumentName": "ALPHINC.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          }
+        ]
+      },
+      {
+        "company": "Microsoft",
+        "latestBp": 44.271103359688034,
+        "latestEodPrice": 102.3597,
+        "latestInstrumentName": "MSFT.SNRFOR.USD.XR14.100.2031-06-20",
+        "qualityStatus": "model-derived",
+        "changes": {
+          "oneDayBp": 0.11012874545007634,
+          "sevenDayBp": -0.32913810325009507,
+          "oneMonthBp": 1.6011033596880324
+        },
+        "history": [
+          {
+            "date": "2026-06-10",
+            "valueBp": 39,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-11",
+            "valueBp": 38.86,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-12",
+            "valueBp": 38.71,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-15",
+            "valueBp": 38.29,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-16",
+            "valueBp": 38.14,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-17",
+            "valueBp": 38,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-18",
+            "valueBp": 38.29,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-19",
+            "valueBp": 38.57,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-22",
+            "valueBp": 39.43,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-23",
+            "valueBp": 39.71,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-24",
+            "valueBp": 40,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-25",
+            "valueBp": 40.4,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-26",
+            "valueBp": 40.8,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-29",
+            "valueBp": 42,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-30",
+            "valueBp": 41.86,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-01",
+            "valueBp": 41.71,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-02",
+            "valueBp": 41.57,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-03",
+            "valueBp": 41.43,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-06",
+            "valueBp": 41,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-07",
+            "valueBp": 42,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-08",
+            "valueBp": 43,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-09",
+            "valueBp": 44,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-10",
+            "valueBp": 45,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-13",
+            "valueBp": 48,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-14",
+            "valueBp": 47.75,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-15",
+            "valueBp": 47.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-16",
+            "valueBp": 47.25,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-17",
+            "valueBp": 47,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-20",
+            "valueBp": 47.6,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-21",
+            "valueBp": 47.8,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-22",
+            "valueBp": 48,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-23",
+            "valueBp": 48.8,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-24",
+            "valueBp": 49.6,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-27",
+            "valueBp": 52,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-28",
+            "valueBp": 53,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-29",
+            "valueBp": 54,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-30",
+            "valueBp": 55,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-31",
+            "valueBp": 53,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-03",
+            "valueBp": 47,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-04",
+            "valueBp": 46.75,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-05",
+            "valueBp": 46.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-06",
+            "valueBp": 46.25,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-07",
+            "valueBp": 46,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-10",
+            "valueBp": 43.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-11",
+            "valueBp": 42.67,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-12",
+            "valueBp": 41.83,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-13",
+            "valueBp": 41,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-14",
+            "valueBp": 42,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-17",
+            "valueBp": 45,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-18",
+            "valueBp": 45.75,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-19",
+            "valueBp": 46.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-20",
+            "valueBp": 47.25,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-21",
+            "valueBp": 48,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-24",
+            "valueBp": 48.90425207812754,
+            "eodPrice": 102.2015,
+            "instrumentName": "MSFT.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-25",
+            "valueBp": 48.60206504108383,
+            "eodPrice": 102.2168,
+            "instrumentName": "MSFT.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-26",
+            "valueBp": 47.127226034305586,
+            "eodPrice": 102.2791,
+            "instrumentName": "MSFT.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-27",
+            "valueBp": 45.84642500685006,
+            "eodPrice": 102.3337,
+            "instrumentName": "MSFT.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-28",
+            "valueBp": 45.55503229867812,
+            "eodPrice": 102.3361,
+            "instrumentName": "MSFT.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-31",
+            "valueBp": 45.90748605993371,
+            "eodPrice": 102.3201,
+            "instrumentName": "MSFT.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-02",
+            "valueBp": 46.128114323074,
+            "eodPrice": 102.3056,
+            "instrumentName": "MSFT.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-03",
+            "valueBp": 45.004698800992536,
+            "eodPrice": 102.3556,
+            "instrumentName": "MSFT.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-04",
+            "valueBp": 44.60024146293813,
+            "eodPrice": 102.3674,
+            "instrumentName": "MSFT.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-07",
+            "valueBp": 44.68765508800775,
+            "eodPrice": 102.3621,
+            "instrumentName": "MSFT.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-08",
+            "valueBp": 44.723892324158975,
+            "eodPrice": 102.3596,
+            "instrumentName": "MSFT.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-09",
+            "valueBp": 43.982875595901604,
+            "eodPrice": 102.3883,
+            "instrumentName": "MSFT.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-10",
+            "valueBp": 44.16097461423796,
+            "eodPrice": 102.3717,
+            "instrumentName": "MSFT.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-11",
+            "valueBp": 44.271103359688034,
+            "eodPrice": 102.3597,
+            "instrumentName": "MSFT.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          }
+        ]
+      },
+      {
+        "company": "Meta",
+        "latestBp": 83.72808080653539,
+        "latestEodPrice": 100.6787,
+        "latestInstrumentName": "METAPL.SNRFOR.USD.XR14.100.2031-06-20",
+        "qualityStatus": "model-derived",
+        "changes": {
+          "oneDayBp": -3.288448558554748,
+          "sevenDayBp": -6.185364248062484,
+          "oneMonthBp": -0.7719191934646119
+        },
+        "history": [
+          {
+            "date": "2026-06-10",
+            "valueBp": 71,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-11",
+            "valueBp": 70.71,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-12",
+            "valueBp": 70.43,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-15",
+            "valueBp": 69.57,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-16",
+            "valueBp": 69.29,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-17",
+            "valueBp": 69,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-18",
+            "valueBp": 69.29,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-19",
+            "valueBp": 69.57,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-22",
+            "valueBp": 70.43,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-23",
+            "valueBp": 70.71,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-24",
+            "valueBp": 71,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-25",
+            "valueBp": 70.63,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-26",
+            "valueBp": 70.25,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-29",
+            "valueBp": 69.13,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-06-30",
+            "valueBp": 68.75,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-01",
+            "valueBp": 68.38,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-02",
+            "valueBp": 68,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-03",
+            "valueBp": 68.25,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-06",
+            "valueBp": 69,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-07",
+            "valueBp": 70.43,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-08",
+            "valueBp": 71.86,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-09",
+            "valueBp": 73.29,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-10",
+            "valueBp": 74.71,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-13",
+            "valueBp": 79,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-14",
+            "valueBp": 78.25,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-15",
+            "valueBp": 77.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-16",
+            "valueBp": 76.75,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-17",
+            "valueBp": 76,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-20",
+            "valueBp": 77.8,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-21",
+            "valueBp": 78.4,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-22",
+            "valueBp": 79,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-23",
+            "valueBp": 81.8,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-24",
+            "valueBp": 84.6,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-27",
+            "valueBp": 93,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-28",
+            "valueBp": 94.67,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-29",
+            "valueBp": 96.33,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-30",
+            "valueBp": 98,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-07-31",
+            "valueBp": 94.25,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-03",
+            "valueBp": 83,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-04",
+            "valueBp": 83.43,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-05",
+            "valueBp": 83.86,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-06",
+            "valueBp": 84.29,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-07",
+            "valueBp": 84.71,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-10",
+            "valueBp": 86,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-11",
+            "valueBp": 84.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-12",
+            "valueBp": 83,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-13",
+            "valueBp": 81.5,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-14",
+            "valueBp": 80,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-17",
+            "valueBp": 88.25,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-18",
+            "valueBp": 91,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-19",
+            "valueBp": 92.67,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-20",
+            "valueBp": 94.33,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-21",
+            "valueBp": 96,
+            "qualityStatus": "stale",
+            "sourceKind": "screenshot_backfill"
+          },
+          {
+            "date": "2026-08-24",
+            "valueBp": 97.08682120313722,
+            "eodPrice": 100.1232,
+            "instrumentName": "METAPL.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-25",
+            "valueBp": 95.78044091937431,
+            "eodPrice": 100.1787,
+            "instrumentName": "METAPL.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-26",
+            "valueBp": 92.68057722690345,
+            "eodPrice": 100.31,
+            "instrumentName": "METAPL.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-27",
+            "valueBp": 92.47486513338038,
+            "eodPrice": 100.3185,
+            "instrumentName": "METAPL.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-28",
+            "valueBp": 92.28322107586206,
+            "eodPrice": 100.3252,
+            "instrumentName": "METAPL.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-08-31",
+            "valueBp": 92.99394082582893,
+            "eodPrice": 100.2951,
+            "instrumentName": "METAPL.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-02",
+            "valueBp": 92.03076426894833,
+            "eodPrice": 100.3351,
+            "instrumentName": "METAPL.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-03",
+            "valueBp": 90.43979877585194,
+            "eodPrice": 100.4024,
+            "instrumentName": "METAPL.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-04",
+            "valueBp": 89.91344505459787,
+            "eodPrice": 100.4236,
+            "instrumentName": "METAPL.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-07",
+            "valueBp": 89.92858507807341,
+            "eodPrice": 100.4227,
+            "instrumentName": "METAPL.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-08",
+            "valueBp": 90.3950053389086,
+            "eodPrice": 100.4029,
+            "instrumentName": "METAPL.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-09",
+            "valueBp": 87.79275618213524,
+            "eodPrice": 100.5118,
+            "instrumentName": "METAPL.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-10",
+            "valueBp": 87.01652936509014,
+            "eodPrice": 100.5425,
+            "instrumentName": "METAPL.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          },
+          {
+            "date": "2026-09-11",
+            "valueBp": 83.72808080653539,
+            "eodPrice": 100.6787,
+            "instrumentName": "METAPL.SNRFOR.USD.XR14.100.2031-06-20",
+            "qualityStatus": "model-derived"
+          }
+        ]
+      }
+    ]
+  }
+}

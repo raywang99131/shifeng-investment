@@ -415,3 +415,27 @@ def test_akshare_client_uses_stock_minute_when_tencent_fallback_fails(monkeypatc
 
     assert len(candles) == 1
     assert candles[0].amount == 10_000.0
+
+
+def test_all_failed_sources_raise_instead_of_returning_empty_live_data(monkeypatch):
+    import akshare as ak
+    import pytest
+    def unavailable(*args, **kwargs):
+        raise TimeoutError('source timeout')
+    monkeypatch.setattr(ak, 'fund_etf_hist_min_em', unavailable)
+    monkeypatch.setattr(ak, 'stock_zh_a_minute', unavailable)
+    monkeypatch.setattr(market_data_module, '_fetch_tencent_intraday_frame', unavailable)
+    with pytest.raises(RuntimeError, match='行情源'):
+        AkShareMarketDataClient(Settings()).fetch_intraday_candles('159915.SZ')
+
+
+def test_empty_primary_source_uses_backup(monkeypatch):
+    import akshare as ak
+    monkeypatch.setattr(Settings, 'is_late_session', lambda self, now: False)
+    monkeypatch.setattr(ak, 'fund_etf_hist_min_em', lambda **kwargs: pd.DataFrame())
+    frame = pd.DataFrame([{'time': '2026-09-16 14:00:00', 'open': 1, 'high': 1, 'low': 1,
+                           'close': 1, 'volume': 1000, 'amount': 1000}])
+    monkeypatch.setattr(market_data_module, '_fetch_tencent_intraday_frame', lambda *args: frame)
+    candles = AkShareMarketDataClient(Settings()).fetch_intraday_candles('159915.SZ')
+    assert len(candles) == 1
+    assert candles[0].time.isoformat() == '2026-09-16T14:00:00'

@@ -1,0 +1,275 @@
+{
+  "sourceImage": "/var/folders/dz/rp6w3kvx50x81cwq248swkww0000gn/T/codex-clipboard-15f191f7-1132-4a22-8950-6bc4c4984dd0.jpg",
+  "title": "【兴证固收&多资产】海外科技企业CDS跟踪（周度）",
+  "sourceLabelInImage": "彭博",
+  "asOf": "2026-09-11",
+  "transcription": "manual visual reading of top cards and inset endpoint labels; no curve digitization",
+  "limitations": [
+    "Tenor, Bloomberg ticker/field, source contributor, currency, restructuring, recovery and cutoff not supplied.",
+    "References at different dates share the same rounded latest anchor and are NOT independent observations.",
+    "Date-separated comparisons are retrospective diagnostics, not a prospective out-of-sample trial."
+  ],
+  "companies": [
+    {
+      "company": "Oracle",
+      "latestBpDisplayed": 186.1,
+      "weekChangeBpDisplayed": -14.93,
+      "insetChangeBpDisplayed": -17.2,
+      "referencePoints": [
+        {
+          "date": "2026-08-31",
+          "referenceBp": 203.3,
+          "roundingHalfWidthBp": 0.1,
+          "kind": "derived from rounded latest and inset change"
+        },
+        {
+          "date": "2026-09-04",
+          "referenceBp": 201.03,
+          "roundingHalfWidthBp": 0.055,
+          "kind": "derived from rounded latest and weekly change"
+        },
+        {
+          "date": "2026-09-11",
+          "referenceBp": 186.1,
+          "roundingHalfWidthBp": 0.05,
+          "kind": "displayed latest"
+        }
+      ]
+    },
+    {
+      "company": "Meta",
+      "latestBpDisplayed": 83.5,
+      "weekChangeBpDisplayed": -6.5,
+      "insetChangeBpDisplayed": -9.6,
+      "referencePoints": [
+        {
+          "date": "2026-08-31",
+          "referenceBp": 93.1,
+          "roundingHalfWidthBp": 0.1,
+          "kind": "derived from rounded latest and inset change"
+        },
+        {
+          "date": "2026-09-04",
+          "referenceBp": 90.0,
+          "roundingHalfWidthBp": 0.055,
+          "kind": "derived from rounded latest and weekly change"
+        },
+        {
+          "date": "2026-09-11",
+          "referenceBp": 83.5,
+          "roundingHalfWidthBp": 0.05,
+          "kind": "displayed latest"
+        }
+      ]
+    },
+    {
+      "company": "Google",
+      "latestBpDisplayed": 61.0,
+      "weekChangeBpDisplayed": 2.69,
+      "insetChangeBpDisplayed": 2.5,
+      "referencePoints": [
+        {
+          "date": "2026-08-31",
+          "referenceBp": 58.5,
+          "roundingHalfWidthBp": 0.1,
+          "kind": "derived from rounded latest and inset change"
+        },
+        {
+          "date": "2026-09-04",
+          "referenceBp": 58.31,
+          "roundingHalfWidthBp": 0.055,
+          "kind": "derived from rounded latest and weekly change"
+        },
+        {
+          "date": "2026-09-11",
+          "referenceBp": 61.0,
+          "roundingHalfWidthBp": 0.05,
+          "kind": "displayed latest"
+        }
+      ]
+    },
+    {
+      "company": "Apple",
+      "latestBpDisplayed": 38.5,
+      "weekChangeBpDisplayed": -0.35,
+      "insetChangeBpDisplayed": -0.1,
+      "referencePoints": [
+        {
+          "date": "2026-08-31",
+          "referenceBp": 38.6,
+          "roundingHalfWidthBp": 0.1,
+          "kind": "derived from rounded latest and inset change"
+        },
+        {
+          "date": "2026-09-04",
+          "referenceBp": 38.85,
+          "roundingHalfWidthBp": 0.055,
+          "kind": "derived from rounded latest and weekly change"
+        },
+        {
+          "date": "2026-09-11",
+          "referenceBp": 38.5,
+          "roundingHalfWidthBp": 0.05,
+          "kind": "displayed latest"
+        }
+      ]
+    },
+    {
+      "company": "Microsoft",
+      "latestBpDisplayed": 44.6,
+      "weekChangeBpDisplayed": -0.34,
+      "insetChangeBpDisplayed": -1.5,
+      "referencePoints": [
+        {
+          "date": "2026-08-31",
+          "referenceBp": 46.1,
+          "roundingHalfWidthBp": 0.1,
+          "kind": "derived from rounded latest and inset change"
+        },
+        {
+          "date": "2026-09-04",
+          "referenceBp": 44.94,
+          "roundingHalfWidthBp": 0.055,
+          "kind": "derived from rounded latest and weekly change"
+        },
+        {
+          "date": "2026-09-11",
+          "referenceBp": 44.6,
+          "roundingHalfWidthBp": 0.05,
+          "kind": "displayed latest"
+        }
+      ]
+    },
+    {
+      "company": "Amazon",
+      "latestBpDisplayed": 63.9,
+      "weekChangeBpDisplayed": 0.79,
+      "insetChangeBpDisplayed": -1.9,
+      "referencePoints": [
+        {
+          "date": "2026-08-31",
+          "referenceBp": 65.8,
+          "roundingHalfWidthBp": 0.1,
+          "kind": "derived from rounded latest and inset change"
+        },
+        {
+          "date": "2026-09-04",
+          "referenceBp": 63.11,
+          "roundingHalfWidthBp": 0.055,
+          "kind": "derived from rounded latest and weekly change"
+        },
+        {
+          "date": "2026-09-11",
+          "referenceBp": 63.9,
+          "roundingHalfWidthBp": 0.05,
+          "kind": "displayed latest"
+        }
+      ]
+    },
+    {
+      "company": "NVIDIA",
+      "latestBpDisplayed": 77.7,
+      "weekChangeBpDisplayed": -3.74,
+      "insetChangeBpDisplayed": -4.6,
+      "referencePoints": [
+        {
+          "date": "2026-08-31",
+          "referenceBp": 82.3,
+          "roundingHalfWidthBp": 0.1,
+          "kind": "derived from rounded latest and inset change"
+        },
+        {
+          "date": "2026-09-04",
+          "referenceBp": 81.44,
+          "roundingHalfWidthBp": 0.055,
+          "kind": "derived from rounded latest and weekly change"
+        },
+        {
+          "date": "2026-09-11",
+          "referenceBp": 77.7,
+          "roundingHalfWidthBp": 0.05,
+          "kind": "displayed latest"
+        }
+      ]
+    },
+    {
+      "company": "Broadcom",
+      "latestBpDisplayed": 109.6,
+      "weekChangeBpDisplayed": -11.21,
+      "insetChangeBpDisplayed": -15.0,
+      "referencePoints": [
+        {
+          "date": "2026-08-31",
+          "referenceBp": 124.6,
+          "roundingHalfWidthBp": 0.1,
+          "kind": "derived from rounded latest and inset change"
+        },
+        {
+          "date": "2026-09-04",
+          "referenceBp": 120.81,
+          "roundingHalfWidthBp": 0.055,
+          "kind": "derived from rounded latest and weekly change"
+        },
+        {
+          "date": "2026-09-11",
+          "referenceBp": 109.6,
+          "roundingHalfWidthBp": 0.05,
+          "kind": "displayed latest"
+        }
+      ]
+    },
+    {
+      "company": "SpaceX",
+      "latestBpDisplayed": 155.1,
+      "weekChangeBpDisplayed": -6.82,
+      "insetChangeBpDisplayed": -12.4,
+      "referencePoints": [
+        {
+          "date": "2026-08-31",
+          "referenceBp": 167.5,
+          "roundingHalfWidthBp": 0.1,
+          "kind": "derived from rounded latest and inset change"
+        },
+        {
+          "date": "2026-09-04",
+          "referenceBp": 161.92,
+          "roundingHalfWidthBp": 0.055,
+          "kind": "derived from rounded latest and weekly change"
+        },
+        {
+          "date": "2026-09-11",
+          "referenceBp": 155.1,
+          "roundingHalfWidthBp": 0.05,
+          "kind": "displayed latest"
+        }
+      ]
+    },
+    {
+      "company": "TSLA",
+      "latestBpDisplayed": 136.2,
+      "weekChangeBpDisplayed": 4.05,
+      "insetChangeBpDisplayed": 5.2,
+      "referencePoints": [
+        {
+          "date": "2026-08-31",
+          "referenceBp": 131.0,
+          "roundingHalfWidthBp": 0.1,
+          "kind": "derived from rounded latest and inset change"
+        },
+        {
+          "date": "2026-09-04",
+          "referenceBp": 132.15,
+          "roundingHalfWidthBp": 0.055,
+          "kind": "derived from rounded latest and weekly change"
+        },
+        {
+          "date": "2026-09-11",
+          "referenceBp": 136.2,
+          "roundingHalfWidthBp": 0.05,
+          "kind": "displayed latest"
+        }
+      ]
+    }
+  ],
+  "archivedImage": "evidence/source-chart.jpg"
+}

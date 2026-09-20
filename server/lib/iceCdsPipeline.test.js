@@ -109,6 +109,32 @@ test('change periods use valid clearing-day anchors and return signed absolute b
   });
 });
 
+test('parallel comparison refresh preserves the primary series and workbook', async (t) => {
+  let calls = 0;
+  const comparisonBuilder = async (state, { generatedAt }) => {
+    calls += 1;
+    return { status: 'proxy', mode: 'parallel', asOf: '2026-08-24', sourceBatchId: state.batchId,
+      lastSuccessAt: generatedAt, companies: [] };
+  };
+  const { pipeline, dataDir, snapshotFile } = await tempPipeline(t, { comparisonBuilder });
+  await pipeline.import({ iceText: iceText(), discountCurve: curve });
+  const before = JSON.parse(await fs.promises.readFile(snapshotFile, 'utf8'));
+  const workbook = await fs.promises.readFile(path.join(dataDir, 'ice-cds-history.xlsx'));
+  assert.equal(before.creditRisk.cdsModelComparison.status, 'proxy');
+  await pipeline.refreshComparison();
+  const after = JSON.parse(await fs.promises.readFile(snapshotFile, 'utf8'));
+  assert.deepEqual(after.creditRisk.cds5y, before.creditRisk.cds5y);
+  assert.deepEqual(await fs.promises.readFile(path.join(dataDir, 'ice-cds-history.xlsx')), workbook);
+  assert.equal(calls, 2);
+});
+
+test('parallel engine failure does not prevent an audited primary import', async (t) => {
+  const { pipeline } = await tempPipeline(t, { comparisonBuilder: async () => { throw new Error('engine offline'); } });
+  const result = await pipeline.import({ iceText: iceText(), discountCurve: curve });
+  assert.equal(result.snapshot.creditRisk.cds5y.companies.length, 7);
+  assert.equal(result.snapshot.creditRisk.cdsModelComparison.status, 'error');
+});
+
 test('import is idempotent, records corrections, and commits matching Excel/JSON batches', async (t) => {
   const { dataDir, snapshotFile, pipeline } = await tempPipeline(t);
   const input = { iceText: iceText(), discountCurve: curve };

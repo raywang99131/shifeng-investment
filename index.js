@@ -31,4 +31,24 @@ const shutdown = async () => {
 process.once('SIGINT', shutdown);
 process.once('SIGTERM', shutdown);
 
-await import('./server/index.js');
+const apiPort = Number(process.env.PORT || 3000);
+const configuredHost = process.env.HOST || '127.0.0.1';
+const apiHost = configuredHost === '0.0.0.0' ? '127.0.0.1' : configuredHost;
+const apiUrl = `http://${apiHost.includes(':') ? `[${apiHost === '::' ? '::1' : apiHost}]` : apiHost}:${apiPort}`;
+
+async function backendIsRunning() {
+  try {
+    const response = await fetch(`${apiUrl}/api/health`, {
+      signal: AbortSignal.timeout(2_000),
+    });
+    return response.ok && (await response.json()).status === 'ok';
+  } catch {
+    return false;
+  }
+}
+
+if (await backendIsRunning()) {
+  console.log(`[project] 复用已运行的主站：${apiUrl}；ETF 监控已按启动配置检查。`);
+} else {
+  await import('./server/index.js');
+}

@@ -198,37 +198,22 @@ def _safe_fetch_frame(
     period: str,
     current_date=None,
 ):
-    try:
-        frame = ak.fund_etf_hist_min_em(
-            symbol=normalized_symbol,
-            period=period,
-            adjust="",
-        )
-    except Exception:
-        tencent_frame = None
-        if current_date is not None:
-            try:
-                tencent_frame = _fetch_tencent_intraday_frame(
-                    sina,
-                    period,
-                    current_date,
-                )
-            except Exception:
-                tencent_frame = None
-        if tencent_frame is not None:
-            return tencent_frame
-
+    providers = [
+        lambda: ak.fund_etf_hist_min_em(symbol=normalized_symbol, period=period, adjust=""),
+    ]
+    if current_date is not None:
+        providers.append(lambda: _fetch_tencent_intraday_frame(sina, period, current_date))
+    providers.append(lambda: ak.stock_zh_a_minute(symbol=sina, period=period, adjust=""))
+    last_error = None
+    for fetch in providers:
         try:
-            frame = ak.stock_zh_a_minute(
-                symbol=sina,
-                period=period,
-                adjust="",
-            )
-        except Exception:
-            return None
-    if frame is None or frame.empty:
-        return None
-    return frame
+            frame = fetch()
+            if frame is not None and not frame.empty:
+                return frame
+            last_error = RuntimeError("返回空行情")
+        except Exception as exc:
+            last_error = exc
+    raise RuntimeError(f"所有行情源均不可用（{sina}，{period}分钟）：{last_error}") from last_error
 
 
 def _frame_contains_date(frame, target_date) -> bool:

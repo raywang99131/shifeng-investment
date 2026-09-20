@@ -211,7 +211,7 @@ export const PUBLIC_SOURCE_REGISTRY = validatePublicSourceRegistry([
   },
   {
     id: 'aws-ec2-pricing', slice: 'compute', entity: 'AWS',
-    entryUrl: 'https://aws.amazon.com/ec2/pricing/on-demand/', allowedHosts: ['aws.amazon.com'],
+    entryUrl: 'https://aws.amazon.com/ec2/capacityblocks/pricing/', allowedHosts: ['aws.amazon.com'],
     format: 'html', freshMs: DAY_MS, sourceKind: 'official',
   },
   {
@@ -221,7 +221,7 @@ export const PUBLIC_SOURCE_REGISTRY = validatePublicSourceRegistry([
   },
   {
     id: 'gcp-gpu-pricing', slice: 'compute', entity: 'Google Cloud',
-    entryUrl: 'https://cloud.google.com/compute/gpus-pricing', allowedHosts: ['cloud.google.com'],
+    entryUrl: 'https://cloud.google.com/products/compute/pricing/accelerator-optimized', allowedHosts: ['cloud.google.com'],
     format: 'html', freshMs: DAY_MS, sourceKind: 'official',
   },
   {

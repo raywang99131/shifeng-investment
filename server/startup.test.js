@@ -149,6 +149,27 @@ test('root index.js starts the backend server', async () => {
   }
 });
 
+test('running the root entrypoint again reuses the active backend', async () => {
+  const port = await reservePort();
+  const runningServer = startServer(port);
+  let secondRun;
+  try {
+    await waitForHealth(port, runningServer.child, runningServer.stderr);
+    secondRun = startServer(port, {}, 'index.js');
+    assert.equal(await waitForExit(secondRun.child, 3_000), true);
+    assert.equal(secondRun.child.exitCode, 0, secondRun.stderr.join(''));
+    assert.doesNotMatch(secondRun.stderr.join(''), /EADDRINUSE/);
+    assert.doesNotMatch(secondRun.stdout.join(''), /API 服务已启动/);
+    const { response, body } = await fetchJsonWithTimeout(`http://127.0.0.1:${port}/api/health`);
+    assert.equal(response.status, 200);
+    assert.equal(body.status, 'ok');
+    assert.equal(runningServer.child.exitCode, null);
+  } finally {
+    if (secondRun) await stopServer(secondRun);
+    await stopServer(runningServer);
+  }
+});
+
 test('restored quant strategy serves a real overview', async () => {
   const port = await reservePort();
   const server = startServer(port);

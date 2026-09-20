@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+import os
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
@@ -9,6 +11,7 @@ from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import Settings
+from app.http_timeout import install_http_timeout
 from app.market_data import AkShareMarketDataClient, MarketDataClient
 from app.models import (
     AlertListResponse,
@@ -24,6 +27,13 @@ from app.service import MonitorService
 from app.trading_calendar import TradingDayCalendar
 
 
+def restart_stalled_process(error: str) -> None:
+    logging.getLogger(__name__).critical("%s; exiting for supervisor restart", error)
+    # A blocked Python thread cannot be safely cancelled. The project supervisor
+    # (or container restart policy) restarts this dedicated backend process.
+    os._exit(1)
+
+
 def create_app(
     db_path: str | Path | None = None,
     market_data_client: MarketDataClient | None = None,
@@ -34,6 +44,7 @@ def create_app(
     scheduler_now: Callable[[], datetime] | None = None,
 ) -> FastAPI:
     resolved_settings = settings or Settings()
+    install_http_timeout(resolved_settings.http_request_timeout_seconds)
     resolved_db_path = Path(db_path or resolved_settings.db_path)
     resolved_market_data_client = market_data_client or AkShareMarketDataClient(
         resolved_settings
@@ -56,6 +67,7 @@ def create_app(
         trading_calendar=trading_calendar,
         now=scheduler_now,
         enabled=should_run_scheduler,
+        on_stall=restart_stalled_process,
     )
 
     @asynccontextmanager
@@ -80,13 +92,21 @@ def create_app(
     def health() -> HealthResponse:
         data_status, last_updated, error = service.health()
         scheduler_health = scheduler.status()
+        notification_health = service.notification_health()
+        if scheduler_health.stalled or scheduler_health.error:
+            data_status = "degraded"
+            error = scheduler_health.error
+        if notification_health["error"]:
+            mail_error = f"邮件有 {notification_health['pending']} 封待发送/重试：{notification_health['error']}"
+            error = f"{error}；{mail_error}" if error else mail_error
         return HealthResponse(
-            status="ok",
+            status="degraded" if error else "ok",
             symbol=resolved_settings.symbol,
             data_status=data_status,
             last_updated=last_updated,
             error=error,
             scheduler=scheduler_health,
+            notifications=notification_health,
         )
 
     @app.get("/api/monitor/snapshot", response_model=MonitorSnapshot)

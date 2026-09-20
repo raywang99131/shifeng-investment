@@ -199,6 +199,12 @@ class Settings(BaseModel):
     poll_interval_seconds: int = Field(
         default_factory=lambda: _int_env("POLL_INTERVAL_SECONDS", 60)
     )
+    http_request_timeout_seconds: float = Field(
+        default_factory=lambda: _float_env("HTTP_REQUEST_TIMEOUT_SECONDS", 10), gt=0
+    )
+    poll_stall_timeout_seconds: float = Field(
+        default_factory=lambda: _float_env("POLL_STALL_TIMEOUT_SECONDS", 300), gt=0
+    )
     candle_completion_delay_seconds: int = Field(
         default_factory=lambda: _int_env("CANDLE_COMPLETION_DELAY_SECONDS", 60)
     )

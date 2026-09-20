@@ -17,6 +17,7 @@ from app.models import AlertLog, Candle
 
 
 class AlertNotifier(Protocol):
+    def send_recovery_alerts(self, alerts: Sequence[AlertLog]) -> None: ...
     def send_alert(self, alert: AlertLog) -> None: ...
 
     def send_alerts(self, alerts: Sequence[AlertLog]) -> None: ...
@@ -37,6 +38,9 @@ class AlertNotifier(Protocol):
 
 
 class NoopAlertNotifier:
+    def send_recovery_alerts(self, alerts: Sequence[AlertLog]) -> None:
+        return None
+
     def send_alert(self, alert: AlertLog) -> None:
         return None
 
@@ -62,8 +66,20 @@ class NoopAlertNotifier:
 
 
 class SMTPAlertNotifier:
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings, *, message_id: str | None = None):
         self.settings = settings
+        self.message_id = message_id
+
+    def send_recovery_alerts(self, alerts: Sequence[AlertLog]) -> None:
+        if not alerts or not self._should_send():
+            return
+        message = self._alerts_message(alerts)
+        first = min(alert.candle_time for alert in alerts)
+        last = max(alert.candle_time for alert in alerts)
+        message.replace_header(
+            "Subject", f"【延迟补发】ETF Monitor | {len(alerts)} 个异动 | {first:%Y-%m-%d %H:%M}–{last:%H:%M}"
+        )
+        self._deliver(message)
 
     def send_alert(self, alert: AlertLog) -> None:
         if not self._should_send():
@@ -133,9 +149,13 @@ class SMTPAlertNotifier:
         )
 
     def _send_message(self, client, message: EmailMessage) -> None:
+        if self.message_id:
+            message["Message-ID"] = self.message_id
         if self.settings.smtp_username and self.settings.smtp_password:
             client.login(self.settings.smtp_username, self.settings.smtp_password)
-        client.send_message(message)
+        refused = client.send_message(message)
+        if refused:
+            raise smtplib.SMTPRecipientsRefused(refused)
 
     def _message(self, alert: AlertLog) -> EmailMessage:
         recipients = _recipients(self.settings.smtp_to)

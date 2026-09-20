@@ -64,6 +64,26 @@ class StaticTradingCalendar:
         return TradingDayResolution(True, "confirmed")
 
 
+def test_health_marks_stalled_scheduler_as_degraded(tmp_path):
+    now = [datetime(2026, 9, 16, 10, 23, tzinfo=ZoneInfo('Asia/Shanghai'))]
+    app = create_app(
+        db_path=tmp_path / 'stalled.db',
+        market_data_client=FakeMarketDataClient(),
+        scheduler_enabled=True,
+        trading_calendar=StaticTradingCalendar(),
+        scheduler_now=lambda: now[0],
+    )
+    app.state.poll_scheduler.run_once()
+    now[0] = datetime(2026, 9, 16, 14, 3, tzinfo=ZoneInfo('Asia/Shanghai'))
+
+    health = TestClient(app).get('/api/health').json()
+
+    assert health['status'] == 'degraded'
+    assert health['data_status'] == 'degraded'
+    assert health['scheduler']['monitoring_active'] is False
+    assert health['error']
+
+
 class SymbolAwareMarketDataClient:
     def __init__(self, candles_by_symbol=None):
         self.calls = []
@@ -108,7 +128,11 @@ class SymbolErrorMarketDataClient:
 
 
 class RecordingNotifier:
+    def send_recovery_alerts(self, alerts):
+        self.recovery_batches.append(list(alerts))
+
     def __init__(self):
+        self.recovery_batches = []
         self.alerts = []
         self.alert_batches = []
         self.no_anomaly_notifications = []
@@ -600,7 +624,7 @@ def test_poll_all_does_not_resend_late_alert_after_current_alert_batch(tmp_path)
     assert notifier.alert_batches[0][0].candle_time == alert_time
 
 
-def test_poll_all_does_not_send_stale_alert_batch_after_restart(monkeypatch, tmp_path):
+def test_poll_all_labels_stale_alerts_as_recovery_after_restart(monkeypatch, tmp_path):
     class FrozenDateTime(datetime):
         @classmethod
         def now(cls, tz=None):
@@ -641,6 +665,8 @@ def test_poll_all_does_not_send_stale_alert_batch_after_restart(monkeypatch, tmp
     assert response.status_code == 200
     assert notifier.alert_batches == []
     assert notifier.no_anomaly_batches == []
+    assert len(notifier.recovery_batches) == 1
+    assert notifier.recovery_batches[0][0].candle_time == datetime(2026, 7, 21, 11, 30)
 
 
 def test_poll_all_does_not_wait_for_delayed_first_candle_before_it_is_due(tmp_path):

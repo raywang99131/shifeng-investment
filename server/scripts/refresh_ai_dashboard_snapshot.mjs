@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { enrichComputeQuotes } from '../lib/aiComputeData.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildAiDashboardSeedPayload } from '../lib/aiDashboardSeedData.js';
@@ -54,6 +55,9 @@ export async function seedDashboardSnapshot({
       ...(previous || {}),
       ...payload,
       ...growth.payload,
+      computeRental: enrichComputeQuotes([...(payload.computeRental || []), ...(previous?.computeRental || [])]),
+      computeSourceReports: [...new Map([...(payload.computeSourceReports || []), ...(previous?.computeSourceReports || [])]
+        .map(report => [report.sourceId, report])).values()],
       schemaVersion: 2,
       generatedAt,
       sources: {

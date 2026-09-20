@@ -143,6 +143,28 @@ test('overview keeps healthy symbols when one cached snapshot fails', async (t) 
   assert.match(payload.items[1].error, /snapshot read failed/);
 });
 
+test('overview reports a stalled scheduler even while cached candles remain available', async (t) => {
+  const fallback = createFetchStub([]);
+  const app = express();
+  app.use('/api/etf-monitor', createEtfMonitorRouter({
+    fetchImpl: async (url, init) => new URL(url).pathname === '/api/health'
+      ? jsonResponse({
+        status: 'degraded', data_status: 'degraded', error: '自动轮询停止更新',
+        scheduler: { monitoring_active: false, stalled: true },
+      })
+      : fallback(url, init),
+  }));
+  const server = await listen(app);
+  t.after(server.close);
+  const response = await fetch(`${server.baseUrl}/api/etf-monitor/overview`);
+  const payload = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(payload.data_status, 'degraded');
+  assert.equal(payload.monitoring_active, false);
+  assert.equal(payload.error, '自动轮询停止更新');
+  assert.ok(payload.items[0].latest_candle);
+});
+
 test('manual refresh polls all monitored ETFs before returning the latest overview', async (t) => {
   const calls = [];
   const app = express();

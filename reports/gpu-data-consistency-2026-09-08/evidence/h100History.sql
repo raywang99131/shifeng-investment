@@ -1,0 +1,1 @@
+SELECT substr(json_extract(value,'$.timestamp'),1,10) AS date, json_extract(value,'$.timestamp') AS timestamp, 'H100 SXM' AS gpu, json_extract(value,'$.index_value') AS price, 'USD/GPU/hour' AS unit, 'daily settled' AS priceType, 'Ornn' AS provider FROM json_each(readfile('evidence/ornn-H100%20SXM.json'),'$.data') ORDER BY date;

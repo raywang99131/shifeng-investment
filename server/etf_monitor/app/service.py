@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import smtplib
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from pathlib import Path
@@ -18,7 +19,8 @@ from app.models import (
     PollResponse,
     SymbolInfo,
 )
-from app.notifier import AlertNotifier, NoopAlertNotifier
+from app.notifier import AlertNotifier, NoopAlertNotifier, SMTPAlertNotifier
+from app.notification_outbox import NotificationOutbox
 from app.store import AlertStore
 
 
@@ -51,6 +53,9 @@ class MonitorService:
         self.alert_store = AlertStore(db_path)
         self.candle_cache = self.alert_store
         self.notifier = notifier or NoopAlertNotifier()
+        self.outbox = NotificationOutbox(
+            db_path, lease_seconds=max(330, self.settings.poll_stall_timeout_seconds + 30)
+        )
         self.last_error: str | None = None
         self.last_status: DataStatus = "empty"
 
@@ -61,6 +66,7 @@ class MonitorService:
             notify_no_anomaly=True,
             send_notifications=True,
         )
+        self.retry_notifications()
         return response
 
     def poll_all(self) -> list[PollResponse]:
@@ -92,6 +98,13 @@ class MonitorService:
         self._send_batch_notifications_if_all_symbols_ready(results, latest_candles)
 
         self._send_daily_summary_if_market_closed(latest_candles)
+        self._enqueue_missed_alerts()
+        self.retry_notifications()
+        # A later healthy symbol must not hide an earlier source failure.
+        failures = [result.error for result in results if result.error]
+        if failures:
+            self.last_status = "degraded"
+            self.last_error = "; ".join(failures)
         return results
 
     def snapshot(self, symbol: str | None = None) -> MonitorSnapshot:
@@ -306,51 +319,142 @@ class MonitorService:
         delay = timedelta(seconds=self.settings.no_anomaly_confirmation_delay_seconds)
         return candle_time + delay <= now
 
-    def _send_alert_notification(self, alert: AlertLog) -> None:
-        try:
-            self.notifier.send_alert(alert)
-        except Exception:
-            logger.exception("failed to send alert notification")
+    def _queue_notification(self, events, payload) -> None:
+        if isinstance(self.notifier, SMTPAlertNotifier):
+            payload["recipients"] = [
+                item.strip() for item in self.notifier.settings.smtp_to.split(",") if item.strip()
+            ]
+        self.outbox.enqueue(events, payload)
 
-    def _send_alert_notifications(self, alerts: Sequence[AlertLog]) -> None:
-        if not alerts:
-            return
-        try:
-            self.notifier.send_alerts(alerts)
-        except Exception:
-            logger.exception("failed to send alert notifications")
+    def _send_alert_notification(self, alert: AlertLog) -> None:
+        self._queue_notification(
+            [(alert.symbol, alert.candle_time, "alert_single")],
+            {"kind": "alert", "alerts": [alert.model_dump(mode="json")]},
+        )
+
+    def _send_alert_notifications(self, alerts: Sequence[AlertLog], event_type="alert_batch") -> None:
+        if alerts:
+            self._queue_notification(
+                [(ALERT_BATCH_SYMBOL, alerts[0].candle_time, event_type)],
+                {"kind": "alerts", "alerts": [alert.model_dump(mode="json") for alert in alerts]},
+            )
 
     def _send_no_anomaly_notification(self, candle: Candle) -> None:
-        notified_at, inserted = self.alert_store.save_notification_event_with_status(
-            symbol=candle.symbol,
-            candle_time=candle.time,
-            event_type="no_anomaly",
+        self._queue_notification(
+            [(candle.symbol, candle.time, "no_anomaly")],
+            {"kind": "no_anomaly", "candles": [candle.model_dump(mode="json")],
+             "notified_at": datetime.now(ZoneInfo(self.settings.timezone)).isoformat()},
         )
-        if not inserted:
-            return
-        try:
-            self.notifier.send_no_anomaly(candle, notified_at)
-        except Exception:
-            logger.exception("failed to send no-anomaly notification")
 
     def _send_no_anomaly_notifications(self, candles: Sequence[Candle]) -> None:
-        notified_at: datetime | None = None
-        new_candles: list[Candle] = []
-        for candle in candles:
-            event_time, inserted = self.alert_store.save_notification_event_with_status(
-                symbol=candle.symbol,
-                candle_time=candle.time,
-                event_type="no_anomaly",
+        new_candles = [candle for candle in candles
+                       if not self.outbox.has_event(candle.symbol, candle.time, "no_anomaly")]
+        if new_candles:
+            self._queue_notification(
+                [(candle.symbol, candle.time, "no_anomaly") for candle in new_candles],
+                {"kind": "no_anomalies", "candles": [c.model_dump(mode="json") for c in new_candles],
+                 "notified_at": datetime.now(ZoneInfo(self.settings.timezone)).isoformat()},
             )
-            if inserted:
-                notified_at = event_time
-                new_candles.append(candle)
-        if not new_candles or notified_at is None:
+
+    def notification_health(self) -> dict:
+        status = self.outbox.health()
+        enabled = not isinstance(self.notifier, NoopAlertNotifier)
+        if isinstance(self.notifier, SMTPAlertNotifier):
+            enabled = self.notifier.settings.email_enabled
+            if enabled and not self.notifier._should_send():
+                status["error"] = "邮件发送配置不完整，待发邮件已保留"
+        return {**status, "enabled": enabled}
+
+    def retry_notifications(self) -> None:
+        if isinstance(self.notifier, NoopAlertNotifier):
             return
-        try:
-            self.notifier.send_no_anomalies(new_candles, notified_at)
-        except Exception:
-            logger.exception("failed to send no-anomaly notifications")
+        if isinstance(self.notifier, SMTPAlertNotifier) and not self.notifier._should_send():
+            return
+        # Bounded work keeps retries from starving market checks. Jobs persist
+        # across restarts and retries continue even outside trading sessions.
+        for _ in range(5):
+            job = self.outbox.claim()
+            if job is None:
+                break
+            try:
+                self._deliver_notification(job)
+            except smtplib.SMTPRecipientsRefused as exc:
+                # SMTP can accept one recipient and refuse another. Retry only
+                # the refused recipients, preserving the same message ID.
+                job["payload"]["recipients"] = list(exc.recipients)
+                self.outbox.fail(job, exc)
+                logger.warning("ETF mail recipient refusal; retry queued: %s", job["id"])
+            except Exception as exc:
+                self.outbox.fail(job, exc)
+                logger.warning("ETF mail failed; retry queued: %s (%s)", job["id"], type(exc).__name__)
+            else:
+                self.outbox.accept(job)
+                logger.info("ETF mail accepted by SMTP: %s", job["id"])
+
+    def _deliver_notification(self, job) -> None:
+        payload = job["payload"]
+        notifier = self.notifier
+        if isinstance(notifier, SMTPAlertNotifier):
+            recipients = payload.get("recipients") or [
+                value.strip() for value in notifier.settings.smtp_to.split(",") if value.strip()
+            ]
+            notifier = SMTPAlertNotifier(
+                notifier.settings.model_copy(update={"smtp_to": ",".join(recipients)}),
+                message_id=f"<etf-{job['id']}@shifeng-monitor.local>",
+            )
+        kind = payload["kind"]
+        alerts = [AlertLog.model_validate(value) for value in payload.get("alerts", [])]
+        if kind == "alert":
+            notifier.send_alert(alerts[0])
+        elif kind == "alerts":
+            notifier.send_alerts(alerts)
+        elif kind == "recovery":
+            notifier.send_recovery_alerts(alerts)
+        elif kind in {"no_anomaly", "no_anomalies"}:
+            candles = [Candle.model_validate(value) for value in payload["candles"]]
+            notified_at = datetime.fromisoformat(payload["notified_at"])
+            if kind == "no_anomaly":
+                notifier.send_no_anomaly(candles[0], notified_at)
+            else:
+                notifier.send_no_anomalies(candles, notified_at)
+        elif kind == "daily_summary":
+            notifier.send_daily_summary(
+                date.fromisoformat(payload["date"]),
+                [EtfSymbolConfig.model_validate(value) for value in payload["symbols"]],
+                alerts, datetime.fromisoformat(payload["notified_at"]),
+            )
+        else:
+            raise ValueError(f"Unknown notification kind: {kind}")
+
+    def _enqueue_missed_alerts(self) -> None:
+        # Only today's unnotified alerts are inferred from legacy records.
+        # Already queued messages remain retryable on subsequent days.
+        today = datetime.now(ZoneInfo(self.settings.timezone)).date()
+        cached = {item.symbol: self.candle_cache.list_candles(item.symbol, limit=500)
+                  for item in self.settings.monitored_symbols()}
+        times = {symbol: {c.time for c in candles} for symbol, candles in cached.items()}
+        latest = max((c.time for candles in cached.values() for c in candles), default=None)
+        missed = []
+        events = set()
+        for alert in self.alert_store.list_alerts_for_date(today):
+            if latest is None or alert.candle_time > latest:
+                continue
+            # Leave the fresh latest batch to the ordinary all-symbol readiness
+            # path. Historical recovery retains the original event timestamps.
+            if alert.candle_time == latest and self._fresh_enough_for_batch_notification(latest):
+                continue
+            if any(self.settings.should_wait_for_symbol_at(symbol, alert.candle_time)
+                   and alert.candle_time not in slots for symbol, slots in times.items()):
+                continue
+            event_type = self._alert_batch_event_type(alert.candle_time)
+            if event_type is None:
+                continue
+            missed.append(alert)
+            events.add((ALERT_BATCH_SYMBOL, alert.candle_time, event_type))
+        if missed:
+            self._queue_notification(events, {
+                "kind": "recovery", "alerts": [alert.model_dump(mode="json") for alert in missed],
+            })
 
     def _send_batch_notifications_if_all_symbols_ready(
         self,
@@ -376,9 +480,10 @@ class MonitorService:
         if alerts:
             if not self._fresh_enough_for_batch_notification(latest_time):
                 return
-            if not self._claim_alert_batch_notification(latest_time):
+            event_type = self._alert_batch_event_type(latest_time)
+            if event_type is None:
                 return
-            self._send_alert_notifications(alerts)
+            self._send_alert_notifications(alerts, event_type)
             return
         if not all(
             self._ready_for_no_anomaly_notification(candle)
@@ -387,44 +492,20 @@ class MonitorService:
             return
         self._send_no_anomaly_notifications(ready_candles)
 
-    def _claim_alert_batch_notification(self, candle_time: datetime) -> bool:
-        _, inserted = self.alert_store.save_notification_event_with_status(
-            symbol=ALERT_BATCH_SYMBOL,
-            candle_time=candle_time,
-            event_type="alert_batch",
+    def _alert_batch_event_type(self, candle_time: datetime) -> str | None:
+        if not self.outbox.has_event(ALERT_BATCH_SYMBOL, candle_time, "alert_batch"):
+            return "alert_batch"
+        if not self.alert_store.notification_event_exists(candle_time, event_type="no_anomaly"):
+            return None
+        batch_at = self.alert_store.notification_event_created_at(
+            ALERT_BATCH_SYMBOL, candle_time, "alert_batch"
         )
-        if inserted:
-            return True
-
-        if not self.alert_store.notification_event_exists(
-            candle_time,
-            event_type="no_anomaly",
-        ):
-            return False
-
-        alert_batch_created_at = self.alert_store.notification_event_created_at(
-            ALERT_BATCH_SYMBOL,
-            candle_time,
-            event_type="alert_batch",
-        )
-        earliest_alert_created_at = (
-            self.alert_store.earliest_alert_created_at_for_candle_time(candle_time)
-        )
-        if (
-            alert_batch_created_at is None
-            or earliest_alert_created_at is None
-            or alert_batch_created_at >= earliest_alert_created_at
-        ):
-            return False
-
-        _, inserted_after_no_anomaly = (
-            self.alert_store.save_notification_event_with_status(
-                symbol=ALERT_BATCH_SYMBOL,
-                candle_time=candle_time,
-                event_type=ALERT_AFTER_NO_ANOMALY_EVENT_TYPE,
-            )
-        )
-        return inserted_after_no_anomaly
+        alert_at = self.alert_store.earliest_alert_created_at_for_candle_time(candle_time)
+        if batch_at is None or alert_at is None or batch_at >= alert_at:
+            return None
+        if self.outbox.has_event(ALERT_BATCH_SYMBOL, candle_time, ALERT_AFTER_NO_ANOMALY_EVENT_TYPE):
+            return None
+        return ALERT_AFTER_NO_ANOMALY_EVENT_TYPE
 
     def _ready_batch_candles(
         self,
@@ -467,26 +548,14 @@ class MonitorService:
         if any(candle.time.time() < DAILY_SUMMARY_TIME for candle in latest_candles):
             return
 
-        notified_at, inserted = self.alert_store.save_notification_event_with_status(
-            symbol=DAILY_SUMMARY_SYMBOL,
-            candle_time=datetime.combine(latest_date, DAILY_SUMMARY_TIME),
-            event_type="daily_summary",
+        alerts = _daily_summary_alerts(self.alert_store.list_alerts_for_date(latest_date))
+        self._queue_notification(
+            [(DAILY_SUMMARY_SYMBOL, datetime.combine(latest_date, DAILY_SUMMARY_TIME), "daily_summary")],
+            {"kind": "daily_summary", "date": latest_date.isoformat(),
+             "symbols": [item.model_dump(mode="json") for item in self.settings.monitored_symbols()],
+             "alerts": [alert.model_dump(mode="json") for alert in alerts],
+             "notified_at": datetime.now(ZoneInfo(self.settings.timezone)).isoformat()},
         )
-        if not inserted:
-            return
-
-        alerts = _daily_summary_alerts(
-            self.alert_store.list_alerts_for_date(latest_date)
-        )
-        try:
-            self.notifier.send_daily_summary(
-                latest_date,
-                self.settings.monitored_symbols(),
-                alerts,
-                notified_at,
-            )
-        except Exception:
-            logger.exception("failed to send daily summary notification")
 
     def _current_alert(
         self, symbol: str, latest_candle: Candle | None

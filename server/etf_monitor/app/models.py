@@ -83,6 +83,7 @@ class PollAllResponse(BaseModel):
 class SchedulerHealth(BaseModel):
     enabled: bool
     running: bool
+    stalled: bool = False
     phase: Literal[
         "initializing",
         "pre_open",
@@ -105,6 +106,14 @@ class SchedulerHealth(BaseModel):
     error: str | None = None
 
 
+class NotificationHealth(BaseModel):
+    enabled: bool
+    pending: int
+    failed: int
+    last_sent_at: float | None = None
+    error: str | None = None
+
+
 class HealthResponse(BaseModel):
     status: Literal["ok", "degraded"]
     symbol: str
@@ -112,3 +121,4 @@ class HealthResponse(BaseModel):
     last_updated: datetime | None
     error: str | None = None
     scheduler: SchedulerHealth
+    notifications: NotificationHealth | None = None

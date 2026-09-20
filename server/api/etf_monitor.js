@@ -16,6 +16,7 @@ function latestIso(values) {
 }
 
 function aggregateStatus(health, items) {
+  if (health?.status === 'degraded' || health?.data_status === 'degraded') return 'degraded';
   if (items.some((item) => item.data_status === 'degraded')) return 'degraded';
   if (health?.data_status === 'live') return 'live';
   if (items.some((item) => item.data_status === 'live')) return 'live';
@@ -104,6 +105,7 @@ export function createEtfMonitorRouter({
       success: items.some((item) => Boolean(item.latest_candle)),
       generated_at: now().toISOString(),
       data_status: aggregateStatus(health, items),
+      error: health?.error || health?.scheduler?.error || null,
       last_updated: latestIso(items.map((item) => item.last_updated)),
       market_phase: health?.scheduler?.phase || 'unknown',
       monitoring_active: Boolean(health?.scheduler?.monitoring_active),

@@ -1,0 +1,10 @@
+version = 1
+name = "shifeng-investment"
+
+[setup]
+script = ""
+
+[[actions]]
+name = "运行项目（含ETF监控）"
+icon = "run"
+command = "npm start"
