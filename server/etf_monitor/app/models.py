@@ -60,6 +60,7 @@ class PollResponse(BaseModel):
     data_status: DataStatus
     candle_count: int
     alert: AlertLog | None
+    latest_candle_time: datetime | None = None
     error: str | None = None
 
 

@@ -119,6 +119,7 @@ class PollScheduler:
         should_execute = decision.should_poll or is_final_poll
         wait_seconds = self._wait_seconds_for(decision.should_poll)
         poll_succeeded = False
+        closing_candles_complete = False
         poll_error: str | None = None
 
         with self._lock:
@@ -139,6 +140,23 @@ class PollScheduler:
                 poll_succeeded = bool(results) and all(
                     getattr(result, "error", None) is None for result in results
                 )
+                if is_final_poll and poll_succeeded:
+                    close_at = datetime.combine(
+                        local_now.date(), self.settings.afternoon_close_time,
+                        tzinfo=local_now.tzinfo,
+                    )
+                    completed_symbols = set()
+                    for result in results:
+                        candle_time = result.latest_candle_time
+                        if candle_time is None:
+                            continue
+                        if candle_time.tzinfo is None:
+                            candle_time = candle_time.replace(tzinfo=local_now.tzinfo)
+                        if candle_time == close_at:
+                            completed_symbols.add(result.symbol)
+                    closing_candles_complete = all(
+                        item.symbol in completed_symbols for item in self.settings.monitored_symbols()
+                    )
 
         with self._lock:
             if should_execute:
@@ -146,7 +164,7 @@ class PollScheduler:
             if poll_succeeded:
                 self._last_poll_success = local_now
                 self._last_poll_at = local_now
-            if is_final_poll and poll_succeeded:
+            if is_final_poll and poll_succeeded and closing_candles_complete:
                 self._finalized_for_date = local_now.date()
 
     def status(self) -> SchedulerHealth:

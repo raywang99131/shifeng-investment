@@ -203,3 +203,41 @@ def test_recovery_email_is_clearly_labelled_with_original_time_range(monkeypatch
     SMTPAlertNotifier(settings).send_recovery_alerts([first, last])
     assert '延迟补发' in messages[0]['Subject']
     assert '10:45' in messages[0]['Subject'] and '13:45' in messages[0]['Subject']
+
+
+@pytest.mark.parametrize('use_ssl', [True, False])
+@pytest.mark.parametrize('partial', [False, True])
+def test_smtp_quit_failure_does_not_retry_accepted_recipients(tmp_path, monkeypatch, clock, use_ssl, partial):
+    delivered_to = []
+
+    class QuitFailureSMTP(FakeSMTP):
+        def send_message(self, message):
+            delivered_to.append(str(message['To']))
+            if partial and len(delivered_to) == 1:
+                return {'second@example.com': (450, b'try later')}
+            return {}
+
+        def starttls(self):
+            pass
+
+        def quit(self):
+            raise smtplib.SMTPResponseException(421, b'connection closing')
+
+        def close(self):
+            pass
+
+        def __exit__(self, *args):
+            self.quit()
+
+    monkeypatch.setattr(smtplib, 'SMTP_SSL' if use_ssl else 'SMTP', QuitFailureSMTP)
+    settings = Settings(email_enabled=True, smtp_host='smtp.example.com', smtp_from='sender@example.com',
+                        smtp_to='first@example.com,second@example.com', smtp_username='', smtp_password='',
+                        smtp_use_ssl=use_ssl, smtp_starttls=not use_ssl)
+    service = monitor(tmp_path, SMTPAlertNotifier(settings))
+    service.poll_all()
+    service.outbox.now = lambda: 10**10
+    service.retry_notifications()
+    assert delivered_to == (['first@example.com, second@example.com', 'second@example.com']
+                            if partial else ['first@example.com, second@example.com'])
+    assert service.notification_health()['pending'] == 0
+    assert service.alert_store.notification_event_exists(datetime(2026, 9, 16, 14), 'alert_batch')

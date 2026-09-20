@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import threading
+import pytest
 from datetime import date, datetime
 from types import SimpleNamespace
 from zoneinfo import ZoneInfo
@@ -43,7 +44,8 @@ class RecordingService:
     def poll_all(self):
         self.poll_count += 1
         self.polled.set()
-        return [SimpleNamespace(error=None)]
+        return [SimpleNamespace(error=None, symbol=item.symbol, latest_candle_time=at(15, 0))
+                for item in self.settings.monitored_symbols()]
 
 
 def at(hour: int, minute: int, second: int = 0) -> datetime:
@@ -239,15 +241,52 @@ def test_pending_mail_retries_even_when_market_is_closed():
 
 def test_failed_closing_poll_is_retried_until_all_symbols_succeed():
     service = RecordingService(Settings(scheduler_enabled=True))
-    results = [SimpleNamespace(error=None), SimpleNamespace(error='source offline')]
+    results = [SimpleNamespace(error=None, symbol=item.symbol, latest_candle_time=at(15, 0))
+               for item in service.settings.monitored_symbols()]
+    results[-1].error = 'source offline'
     service.poll_all = lambda: results
     clock = MutableClock(at(15, 1))
     scheduler = PollScheduler(service, 60, trading_calendar=StaticCalendar(), now=clock)
     scheduler.run_once()
     assert scheduler.status().finalized_for_date is None
     assert scheduler.status().last_poll_success is None
-    results[1] = SimpleNamespace(error=None)
+    results[-1].error = None
     clock.value = at(15, 2)
     scheduler.run_once()
     assert scheduler.status().finalized_for_date == date(2026, 8, 12)
     assert scheduler.status().last_poll_success == at(15, 2)
+
+
+@pytest.mark.parametrize('delayed_time', [None, '2026-08-12T14:55:00', '2026-08-11T15:00:00'])
+def test_closing_poll_waits_for_current_day_final_candle_for_every_symbol(tmp_path, monkeypatch, delayed_time):
+    from app import service as service_module
+    from app.config import EtfSymbolConfig
+    from app.service import MonitorService
+    from test_api import RecordingNotifier, SymbolAwareMarketDataClient, candle
+
+    clock = MutableClock(at(15, 1))
+    class ServiceClock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return clock.value.astimezone(tz) if tz else clock.value.replace(tzinfo=None)
+    monkeypatch.setattr(service_module, 'datetime', ServiceClock)
+    symbols = [EtfSymbolConfig(symbol='159915.SZ', name='ETF A'),
+               EtfSymbolConfig(symbol='510300.SH', name='ETF B')]
+    data = {'159915.SZ': [candle('2026-08-12T15:00:00', 1000)],
+            '510300.SH': [candle(delayed_time, 1000, symbol='510300.SH')] if delayed_time else []}
+    client = SymbolAwareMarketDataClient(data)
+    notifier = RecordingNotifier()
+    service = MonitorService(Settings(symbols=symbols, scheduler_enabled=True), client,
+                             tmp_path / 'monitor.db', notifier)
+    scheduler = PollScheduler(service, 60, trading_calendar=StaticCalendar(), now=clock)
+    scheduler.run_once()
+    assert scheduler.status().finalized_for_date is None
+    assert notifier.daily_summaries == []
+    data['510300.SH'] = [candle('2026-08-12T15:00:00', 1000, symbol='510300.SH')]
+    clock.value = at(15, 2)
+    scheduler.run_once()
+    assert scheduler.status().finalized_for_date == date(2026, 8, 12)
+    assert len(notifier.daily_summaries) == 1
+    clock.value = at(15, 3)
+    scheduler.run_once()
+    assert len(notifier.daily_summaries) == 1

@@ -225,6 +225,7 @@ class MonitorService:
                     data_status=self.last_status,
                     candle_count=len(latest_day_candles),
                     alert=detection.latest_inserted_alert,
+                    latest_candle_time=detection.latest_candle.time if detection.latest_candle else None,
                 ),
                 detection,
             )
@@ -249,6 +250,7 @@ class MonitorService:
                 data_status=self.last_status,
                 candle_count=len(latest_day_cached),
                 alert=detection.latest_inserted_alert,
+                latest_candle_time=detection.latest_candle.time if detection.latest_candle else None,
                 error=str(exc),
             ),
             detection,

@@ -122,23 +122,26 @@ class SMTPAlertNotifier:
         )
 
     def _deliver(self, message: EmailMessage) -> None:
-        if self.settings.smtp_use_ssl:
-            with smtplib.SMTP_SSL(
-                self.settings.smtp_host,
-                self.settings.smtp_port,
-                timeout=self.settings.smtp_timeout_seconds,
-            ) as client:
-                self._send_message(client, message)
-            return
-
-        with smtplib.SMTP(
+        smtp_class = smtplib.SMTP_SSL if self.settings.smtp_use_ssl else smtplib.SMTP
+        client = smtp_class(
             self.settings.smtp_host,
             self.settings.smtp_port,
             timeout=self.settings.smtp_timeout_seconds,
-        ) as client:
-            if self.settings.smtp_starttls:
+        )
+        try:
+            if not self.settings.smtp_use_ssl and self.settings.smtp_starttls:
                 client.starttls()
             self._send_message(client, message)
+        finally:
+            # QUIT happens after SMTP acceptance. Cleanup must not change the
+            # delivery outcome or replace a partial-recipient refusal.
+            try:
+                client.quit()
+            except Exception:
+                try:
+                    client.close()
+                except Exception:
+                    pass
 
     def _should_send(self) -> bool:
         return (

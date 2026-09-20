@@ -135,6 +135,12 @@ class FakeSMTP:
     def __exit__(self, exc_type, exc, traceback):
         return False
 
+    def quit(self):
+        pass
+
+    def close(self):
+        pass
+
     def login(self, username, password):
         self.logged_in = (username, password)
 
