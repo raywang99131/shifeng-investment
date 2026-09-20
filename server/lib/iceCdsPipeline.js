@@ -8,6 +8,7 @@ import { ICE_CDS_CONTRACT_REGISTRY } from './iceCdsRegistry.js';
 import { buildIceCdsWorkbook, readIceCdsWorkbook } from './iceCdsWorkbook.js';
 import { enqueueIceCdsSnapshotWrite } from './iceCdsSnapshotWriteQueue.js';
 import { cleanPriceToParSpread, validateDiscountCurve } from './isdaCdsSpread.js';
+import { createIceCdsComparisonBuilder, comparisonFailure } from './iceCdsComparison.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ICE_CDS_EOD_URL = 'https://www.ice.com/cds-settlement-prices/icc/single-name-instruments';
@@ -446,11 +447,16 @@ export function createIceCdsPipeline({
   fsImpl = fs.promises,
   now = () => new Date(),
   localWriteAllowed = true,
+  comparisonBuilder = null,
 } = {}) {
   const workbookFile = path.join(dataDir, WORKBOOK_NAME);
   let importQueue = Promise.resolve();
 
   const preview = async (input) => previewInput(input);
+  const compare = async (state, previous, generatedAt) => {
+    try { return await comparisonBuilder(state, { previous, generatedAt }); }
+    catch (error) { return comparisonFailure(previous, generatedAt, error); }
+  };
   const performImportUnlocked = async (input) => {
     if (!localWriteAllowed) throw new IceCdsPipelineError('Local ICE CDS writes are disabled', 'write-disabled');
     const importPreview = previewInput(input);
@@ -468,6 +474,8 @@ export function createIceCdsPipeline({
     const state = createArchiveState(previousState, importPreview, generatedAt);
     const previousSnapshot = await readSnapshot(fsImpl, snapshotFile, generatedAt);
     const cds5y = createCdsSnapshot(state, importPreview, generatedAt);
+    const comparison = comparisonBuilder
+      ? await compare(state, previousSnapshot.creditRisk?.cdsModelComparison, generatedAt) : undefined;
     const snapshot = {
       ...previousSnapshot,
       sources: {
@@ -484,6 +492,7 @@ export function createIceCdsPipeline({
       creditRisk: {
         ...(previousSnapshot.creditRisk || {}),
         cds5y,
+        ...(comparison ? { cdsModelComparison: comparison } : {}),
       },
     };
     await commitAtomically({ fsImpl, dataDir, snapshotFile, workbookFile, state, snapshot });
@@ -500,6 +509,26 @@ export function createIceCdsPipeline({
       const queued = importQueue.then(() => performImport(input));
       importQueue = queued.catch(() => undefined);
       return queued;
+    },
+    async refreshComparison() {
+      if (!localWriteAllowed) throw new IceCdsPipelineError('Local ICE CDS writes are disabled', 'write-disabled');
+      if (!comparisonBuilder) throw new IceCdsPipelineError('Parallel CDS engine is disabled', 'comparison-disabled');
+      return enqueueIceCdsSnapshotWrite(async () => {
+        const generatedAt = isoNow(now);
+        const state = await readIceCdsWorkbook(await fsImpl.readFile(workbookFile));
+        const snapshot = await readSnapshot(fsImpl, snapshotFile, generatedAt);
+        if (snapshot.creditRisk?.cds5y?.batchId !== state.batchId) {
+          throw new IceCdsPipelineError('Snapshot and workbook batches differ', 'batch-mismatch');
+        }
+        const comparison = await compare(state, snapshot.creditRisk?.cdsModelComparison, generatedAt);
+        snapshot.creditRisk.cdsModelComparison = comparison;
+        const staged = `${snapshotFile}.comparison-${process.pid}.tmp`;
+        try {
+          await fsImpl.writeFile(staged, `${JSON.stringify(snapshot, null, 2)}\n`, 'utf8');
+          await fsImpl.rename(staged, snapshotFile);
+        } finally { await fsImpl.rm(staged, { force: true }); }
+        return comparison;
+      }, { lockFile: `${snapshotFile}.lock` });
     },
     async status() {
       try {
@@ -543,5 +572,6 @@ export function createIceCdsPipelineFromEnv(options = {}) {
     fsImpl: options.fsImpl,
     now: options.now,
     localWriteAllowed: options.localWriteAllowed ?? process.env.ICE_CDS_LOCAL_WRITES_DISABLED !== '1',
+    comparisonBuilder: options.comparisonBuilder ?? createIceCdsComparisonBuilder(),
   });
 }

@@ -1,0 +1,8 @@
+{
+  "desktop": true,
+  "historyExpansion": true,
+  "mobileHorizontalScroll": true,
+  "mobileHistoryHorizontalScroll": true,
+  "failureStatePreservesLastSuccess": true,
+  "pageErrors": []
+}

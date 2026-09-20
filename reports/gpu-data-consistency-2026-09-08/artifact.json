@@ -1,0 +1,707 @@
+{
+  "surface": "report",
+  "manifest": {
+    "version": 1,
+    "surface": "report",
+    "title": "GPU 租金数据一致性核验",
+    "description": "两份算力租金材料的数值、口径及事件核对；截至2026年9月8日。",
+    "generatedAt": "2026-09-08T07:12:57.606Z",
+    "sources": [
+      {
+        "id": "ornn-history",
+        "label": "Ornn OCPI 官方逐日结算历史，2026年8月27日至9月7日",
+        "href": "https://index.ornn.com/docs",
+        "path": "evidence/h100History.sql",
+        "query": {
+          "engine": "SQLite",
+          "language": "sql",
+          "sql": "SELECT substr(json_extract(value,'$.timestamp'),1,10) AS date, json_extract(value,'$.timestamp') AS timestamp, 'H100 SXM' AS gpu, json_extract(value,'$.index_value') AS price, 'USD/GPU/hour' AS unit, 'daily settled' AS priceType, 'Ornn' AS provider FROM json_each(readfile('evidence/ornn-H100%20SXM.json'),'$.data') ORDER BY date;",
+          "description": "直接从保存的原始JSON计算交付表及图；数值与JavaScript独立复算核对。",
+          "tables_used": [
+            "Ornn OCPI daily settled history",
+            "User-provided compute monitoring notes"
+          ]
+        }
+      },
+      {
+        "id": "user-notes",
+        "label": "用户提供的两份算力跟踪材料；第二份平台名称缺失",
+        "path": "evidence/secondComparison.sql",
+        "query": {
+          "engine": "SQLite",
+          "language": "sql",
+          "sql": "WITH rows AS (SELECT CAST(key AS INTEGER) AS ord, json_extract(value,'$[0]') AS provider, json_extract(value,'$[1]') AS gpu, json_extract(value,'$[2]') AS before, json_extract(value,'$[3]') AS after FROM json_each(readfile('evidence/user-inputs.json'),'$.secondNote.rows')) SELECT ord AS 'order', provider, gpu, before, after, after*1.0/before-1.0 AS change, CASE provider WHEN 'Ornn' THEN '官方历史逐日已核实' WHEN 'Silicon Data' THEN '官网当前展示值吻合；区间历史待核实' WHEN 'Compute Desk' THEN '方法已核实；本期数值待核实' ELSE '来源、样本及日期待补' END AS verification FROM rows ORDER BY ord;",
+          "description": "直接从保存的原始JSON计算交付表及图；数值与JavaScript独立复算核对。",
+          "tables_used": [
+            "User-provided compute monitoring notes"
+          ]
+        }
+      },
+      {
+        "id": "reconciliation",
+        "label": "用户材料与 Ornn 官方历史逐项对照",
+        "path": "evidence/firstComparison.sql",
+        "href": "https://index.ornn.com/docs",
+        "query": {
+          "engine": "SQLite",
+          "language": "sql",
+          "sql": "WITH prices AS (SELECT 'A100 SXM4' AS gpu, substr(json_extract(value,'$.timestamp'),1,10) AS date, json_extract(value,'$.index_value') AS price FROM json_each(readfile('evidence/ornn-A100%20SXM4.json'),'$.data') UNION ALL SELECT 'B200' AS gpu, substr(json_extract(value,'$.timestamp'),1,10) AS date, json_extract(value,'$.index_value') AS price FROM json_each(readfile('evidence/ornn-B200.json'),'$.data') UNION ALL SELECT 'H100 SXM' AS gpu, substr(json_extract(value,'$.timestamp'),1,10) AS date, json_extract(value,'$.index_value') AS price FROM json_each(readfile('evidence/ornn-H100%20SXM.json'),'$.data') UNION ALL SELECT 'H200' AS gpu, substr(json_extract(value,'$.timestamp'),1,10) AS date, json_extract(value,'$.index_value') AS price FROM json_each(readfile('evidence/ornn-H200.json'),'$.data') UNION ALL SELECT 'RTX 5090' AS gpu, substr(json_extract(value,'$.timestamp'),1,10) AS date, json_extract(value,'$.index_value') AS price FROM json_each(readfile('evidence/ornn-RTX%205090.json'),'$.data')), notes AS (SELECT CAST(key AS INTEGER) AS ord, json_extract(value,'$[0]') AS gpu, json_extract(value,'$[2]')/100.0 AS reportedChange FROM json_each(readfile('evidence/user-inputs.json'),'$.firstNote.rows')) SELECT n.ord AS 'order', n.gpu, a.price AS before, b.price AS after, n.reportedChange, b.price/a.price-1.0 AS calculatedChange, CASE WHEN round((b.price/a.price-1.0)*100.0,1)=round(n.reportedChange*100.0,1) THEN '吻合（按原文精度）' ELSE '不一致' END AS status FROM notes n JOIN prices a ON a.gpu=n.gpu AND a.date='2026-08-29' JOIN prices b ON b.gpu=n.gpu AND b.date='2026-09-05' ORDER BY n.ord;",
+          "description": "直接从保存的原始JSON计算交付表及图；数值与JavaScript独立复算核对。",
+          "tables_used": [
+            "Ornn OCPI daily settled history",
+            "User-provided compute monitoring notes"
+          ]
+        }
+      },
+      {
+        "id": "sd",
+        "label": "sd",
+        "href": "https://www.silicondata.com/products/silicon-index/h100"
+      },
+      {
+        "id": "sdb",
+        "label": "sdb",
+        "href": "https://www.silicondata.com/products/silicon-index/b200"
+      },
+      {
+        "id": "sdChanges",
+        "label": "sdChanges",
+        "href": "https://docs.silicondata.com/products/gpu-index-announcements"
+      },
+      {
+        "id": "desk",
+        "label": "desk",
+        "href": "https://www.general-index.com/post/compute-desks-indexes-are-now-regulated"
+      },
+      {
+        "id": "lambda",
+        "label": "lambda",
+        "href": "https://ca.finance.yahoo.com/news/anthropic-signs-35-billion-cloud-005022618.html"
+      },
+      {
+        "id": "cerebras",
+        "label": "cerebras",
+        "href": "https://cerebras.gcs-web.com/news-releases/news-release-details/cerebras-and-compute-nordic-finland-announce-new-165-mw-ai-data"
+      },
+      {
+        "id": "crusoe",
+        "label": "crusoe",
+        "href": "https://finance.yahoo.com/technology/ai/articles/crusoe-signs-13-billion-ai-195326470.html"
+      },
+      {
+        "id": "bytedance",
+        "label": "bytedance",
+        "href": "https://www.investing.com/news/stock-market-news/bytedance-secures-296-billion-loan-in-ai-push-sources-say-4889439"
+      },
+      {
+        "id": "yangguang",
+        "label": "yangguang",
+        "href": "https://file.finance.sina.com.cn/211.154.219.97%3A9494/MRGG/CNSESZ_STOCK/2026/2026-9/2026-09-02/12579716.PDF"
+      },
+      {
+        "id": "yangdian",
+        "label": "yangdian",
+        "href": "https://finance.sina.com.cn/stock/aigc/zdht/2026-09-01/doc-iniqitrq4734815.shtml"
+      },
+      {
+        "id": "xingyun",
+        "label": "xingyun",
+        "href": "https://finance.sina.com.cn/stock/zqgd/2026-09-04/doc-iniqriie1517859.shtml"
+      },
+      {
+        "id": "thailand",
+        "label": "thailand",
+        "href": "https://www.nationthailand.com/business/economy/40070655"
+      }
+    ],
+    "blocks": [
+      {
+        "id": "title",
+        "type": "markdown",
+        "body": "# GPU 租金数据一致性核验"
+      },
+      {
+        "id": "summary",
+        "type": "markdown",
+        "body": "## Executive Summary\n\n**核心价格可以对上，但两份材料不能合并成“各口径全面上涨”。** 第一份五个周涨幅全部吻合 Ornn 2026年9月5日结算值相对8月29日的变化；第二份 Ornn H100 的2.83→3.17及途中2.89也吻合官方历史。\n\n**需要修正第一份的时间和单位，并保留不同来源。** 3.06美元是每GPU每小时，所匹配结算日为9月5日，其时间戳在中国是9月6日凌晨，无法支持“截至9月4日”。第二份同时列举不同指数及未注明平台的报价，不能将它们相互替代。\n\n**第二份有一处明确事件错误。** 阳光股份6.33亿元合同的双方是子公司阳光金汇与外部A公司。其他产业事件主要金额可找到官方公告或公开报道支持，但媒体报道、合同签署、交付、收入和资金到账必须区别记录。"
+      },
+      {
+        "id": "basis",
+        "type": "markdown",
+        "body": "## 先对齐日期、单位和对象\n\n本次按2026年处理材料中的月日。价格统一为美元/GPU/小时。Ornn 的当前小时值与每日结算值是两个字段；本次使用官方每日结算历史。7日变化定义为P(t)/P(t−7日)−1。9月1日到9月7日虽覆盖7个日期，但首末相隔6天，称为区间变化，不应直接等同滚动7日涨幅。[Ornn 官方接口说明](https://index.ornn.com/docs)\n\n原始来源、GPU具体规格、地区、合约期限、样本和指数方法都属于价格的身份。Hopper/Blackwell系列指数与单型号报价存在覆盖范围差异。[General Index 官方说明](https://www.general-index.com/post/compute-desks-indexes-are-now-regulated)"
+      },
+      {
+        "id": "first-finding",
+        "type": "markdown",
+        "body": "## 第一份五档周涨幅全部可复算\n\n下表以Ornn官方8月29日和9月5日结算价计算，五档均与第一份材料的一位小数涨幅一致；H100的3.06及B200的6.42也精确吻合。这是数值对应关系，不能据此证明Valliance的原始采集链路。材料中的“每天”及“截至9/4”应修正。"
+      },
+      {
+        "id": "first-table-block",
+        "type": "table",
+        "tableId": "first-table"
+      },
+      {
+        "id": "h100-finding",
+        "type": "markdown",
+        "body": "## 第二份 H100 历史吻合，涨幅窗口不同\n\n官方结算历史显示：9月1日2.83，9月3日2.92，9月4日2.89，9月5日3.06，9月7日3.17。第二份列出的起点、回落值和终点均吻合，区间涨幅为**+12.01%**。\n\n若严格计算9月7日滚动7日变化，基准应为8月31日2.97，结果是**+6.73%**；第一份的**+6.62%**则是9月5日相对8月29日。三者均可成立，差异来自窗口。下图仅绘Ornn这一条同口径历史，不与其他指数拼接。[官方历史接口](https://index.ornn.com/docs)"
+      },
+      {
+        "id": "h100-chart-block",
+        "type": "chart",
+        "chartId": "h100-history"
+      },
+      {
+        "id": "second-finding",
+        "type": "markdown",
+        "body": "## 其余价格呈现来源分化\n\n按第二份提供的首末值计算，Silicon Data B200约+1.25%、A100约−0.63%、H100持平；未注明平台的报价共有**3涨、5跌、1平**。H100平台报价约−2.11%，A100约−1.98%，L40S为−7.00%。因此这些报价不支持“所有GPU、所有来源都上涨”的概括。\n\nSilicon Data官网当前展示的B200 5.69、A100 1.59及H100 2.63与材料终值吻合；尚未取得其本期完整历史，不能确认9月1日起值、区间路径或7月14日高点。平台报价尚缺平台名、计费模式、地区、样本及明确观察时刻，以下为**材料内算术核对，不是全部独立验真**。[H100页面](https://www.silicondata.com/products/silicon-index/h100) · [B200页面](https://www.silicondata.com/products/silicon-index/b200)\n\n跨来源价差并不自动意味着错误。Silicon Data对租期、集群规模等做标准化，H100又区分Neo-Cloud与Hyperscaler；Compute Desk的家族指数覆盖多个芯片。只能在同一系列内计算变化。[Silicon Data口径](https://www.silicondata.com/products/silicon-index/h100) · [Compute Desk/GX口径](https://www.general-index.com/post/compute-desks-indexes-are-now-regulated)"
+      },
+      {
+        "id": "second-table-block",
+        "type": "table",
+        "tableId": "second-table"
+      },
+      {
+        "id": "events",
+        "type": "markdown",
+        "body": "## 产业更新：金额多数有出处，合同主体需修正\n\n- **Anthropic–Lambda：报道一致。** 路透8月31日援引知情人士报道350亿美元云计算协议，应保留“据报道”。[路透原稿转载](https://ca.finance.yahoo.com/news/anthropic-signs-35-billion-cloud-005022618.html)\n- **扬电科技：公开报道支持。** 32节点、9月1日起计费、约2.15亿元及约25%相符。对应的是已交付部分的合同金额，不能写成当期确认收入；本轮未直接取得公告PDF。[公告摘要报道](https://finance.sina.com.cn/stock/aigc/zdht/2026-09-01/doc-iniqitrq4734815.shtml)\n- **Cerebras：官方确认。** 公司9月1日新闻稿载明芬兰Mikkeli项目165MW、首期50MW在建。规划规模不等于已投运规模。[公司新闻稿](https://cerebras.gcs-web.com/news-releases/news-release-details/cerebras-and-compute-nordic-finland-announce-new-165-mw-ai-data)\n- **阳光股份：合同主体写错，金额与期限相符。** 公告原文写子公司阳光金汇向A公司提供服务器租赁综合服务，含税6.33亿元、自计费起5年；公告落款9月1日、披露文件日期9月2日。原材料把母子公司写成交易双方，应更正。[公告原文](https://file.finance.sina.com.cn/211.154.219.97%3A9494/MRGG/CNSESZ_STOCK/2026/2026-9/2026-09-02/12579716.PDF)\n- **Crusoe–Jane Street：报道一致。** 路透9月3日转述彭博的130亿美元、5年云合同，属于媒体报道。[路透原稿转载](https://finance.yahoo.com/technology/ai/articles/crusoe-signs-13-billion-ai-195326470.html)\n- **行云科技：公开报道支持。** 9.216亿元、VD客户、5年相符。本轮核验至证券时报公告报道，未直接取得公告PDF。[证券时报报道](https://finance.sina.com.cn/stock/zqgd/2026-09-04/doc-iniqriie1517859.shtml)\n- **字节跳动：金额及主要条款有报道支持。** 路透9月4日报道296亿美元无抵押贷款、初始3年；正式用途为一般公司用途，知情人士称主要支持AI。报道还称即将签署，不能记为全部到账。[路透原稿](https://www.investing.com/news/stock-market-news/bytedance-secures-296-billion-loan-in-ai-push-sources-say-4889439)\n- **泰国：当地报道支持数量和会议日期。** 9月4日会议、约49在建及117待批项目暂缓，与The Nation相符；应记为监管进程及项目延期，不能改写为永久取消。[当地报道](https://www.nationthailand.com/business/economy/40070655)"
+      },
+      {
+        "id": "next",
+        "type": "markdown",
+        "body": "## 在 shifeng-investment 中如何使用\n\n1. 在AI看板→算力租赁下，为Ornn、Silicon Data、Compute Desk和厂商报价保留各自系列，并注明GPU范围、期限、地区及单位。\n2. Ornn五档可优先作为本次已核验的数据来源；本次仅保存核验快照，自动采集需另行接入。\n3. 每条数据同时保存来源结算日期、原始时间戳、北京时间展示日期及抓取时间。严格使用同系列、同方法的t−7日基准，缺值时不冒充7日涨幅。\n4. 合同、交付、起租、收入及融资到账分别标注事件状态。阳光股份修正签约主体。"
+      },
+      {
+        "id": "questions",
+        "type": "markdown",
+        "body": "## 尚需补充的证据\n\n“算力平台报价”的原始链接和平台名称；Silicon Data及Compute Desk本期逐日导出、准确ticker及方法版本；Valliance原始出处；第一份“连续第二周全部上涨”和“30日基准切换”的依据。后两句话目前不应作为已核实事实。"
+      },
+      {
+        "id": "caveats",
+        "type": "markdown",
+        "body": "## 核验边界\n\n**高置信度：** 五档Ornn价格及周涨幅、第二份H100路径、首末变化算术、单位与时间窗口问题、阳光股份签约主体。\n\n**部分核实：** Silicon Data官网当前展示终值、Compute Desk指数含义、多数产业报道。\n\n**待核实：** 未注明平台的原始价格、本期Silicon Data/Compute Desk完整历史、连续两周及基准切换说法。公开API也可能回补历史，保存的原始JSON代表本次查询结果。价格上涨可作为供需观察，不能单独证明需求增加、全产业链景气或盈利改善。"
+      }
+    ],
+    "charts": [
+      {
+        "id": "h100-history",
+        "title": "Ornn H100 每日结算价格",
+        "description": "2026年8月27日至9月7日；美元/GPU/小时。",
+        "type": "line",
+        "dataset": "h100History",
+        "sourceId": "ornn-history",
+        "valueFormat": "number",
+        "encodings": {
+          "x": {
+            "field": "date",
+            "type": "temporal",
+            "label": "结算日"
+          },
+          "y": {
+            "field": "price",
+            "type": "quantitative",
+            "label": "美元/GPU/小时"
+          }
+        }
+      }
+    ],
+    "tables": [
+      {
+        "id": "first-table",
+        "title": "第一份材料与 Ornn 历史对照",
+        "dataset": "firstComparison",
+        "sourceId": "reconciliation",
+        "defaultSort": {
+          "field": "gpu",
+          "direction": "asc"
+        },
+        "columns": [
+          {
+            "field": "gpu",
+            "label": "GPU",
+            "type": "text"
+          },
+          {
+            "field": "before",
+            "label": "8月29日"
+          },
+          {
+            "field": "after",
+            "label": "9月5日"
+          },
+          {
+            "field": "reportedChange",
+            "label": "原文7日变化",
+            "format": "percent"
+          },
+          {
+            "field": "calculatedChange",
+            "label": "复算7日变化",
+            "format": "percent"
+          },
+          {
+            "field": "status",
+            "label": "判断",
+            "type": "text"
+          }
+        ]
+      },
+      {
+        "id": "second-table",
+        "title": "第二份材料首末值与区间变化",
+        "dataset": "secondComparison",
+        "sourceId": "user-notes",
+        "defaultSort": {
+          "field": "provider",
+          "direction": "asc"
+        },
+        "columns": [
+          {
+            "field": "provider",
+            "label": "来源",
+            "type": "text"
+          },
+          {
+            "field": "gpu",
+            "label": "GPU / 指数",
+            "type": "text"
+          },
+          {
+            "field": "before",
+            "label": "材料起值"
+          },
+          {
+            "field": "after",
+            "label": "材料终值"
+          },
+          {
+            "field": "change",
+            "label": "区间变化",
+            "format": "percent",
+            "movement": true
+          },
+          {
+            "field": "verification",
+            "label": "核验状态",
+            "type": "text"
+          }
+        ]
+      }
+    ]
+  },
+  "snapshot": {
+    "version": 1,
+    "status": "partial",
+    "generatedAt": "2026-09-08T07:12:57.606Z",
+    "datasets": {
+      "firstComparison": [
+        {
+          "order": 0,
+          "gpu": "H100 SXM",
+          "before": 2.87,
+          "after": 3.06,
+          "reportedChange": 0.066,
+          "calculatedChange": 0.0662020905923344,
+          "status": "吻合（按原文精度）"
+        },
+        {
+          "order": 1,
+          "gpu": "H200",
+          "before": 4.44,
+          "after": 4.55,
+          "reportedChange": 0.025,
+          "calculatedChange": 0.024774774774774633,
+          "status": "吻合（按原文精度）"
+        },
+        {
+          "order": 2,
+          "gpu": "B200",
+          "before": 6.06,
+          "after": 6.42,
+          "reportedChange": 0.059000000000000004,
+          "calculatedChange": 0.05940594059405946,
+          "status": "吻合（按原文精度）"
+        },
+        {
+          "order": 3,
+          "gpu": "A100 SXM4",
+          "before": 1.03,
+          "after": 1.09,
+          "reportedChange": 0.057999999999999996,
+          "calculatedChange": 0.058252427184465994,
+          "status": "吻合（按原文精度）"
+        },
+        {
+          "order": 4,
+          "gpu": "RTX 5090",
+          "before": 0.53,
+          "after": 0.63,
+          "reportedChange": 0.18899999999999997,
+          "calculatedChange": 0.18867924528301883,
+          "status": "吻合（按原文精度）"
+        }
+      ],
+      "secondComparison": [
+        {
+          "order": 0,
+          "provider": "Silicon Data",
+          "gpu": "B200",
+          "before": 5.62,
+          "after": 5.69,
+          "change": 0.012455516014235002,
+          "verification": "官网当前展示值吻合；区间历史待核实"
+        },
+        {
+          "order": 1,
+          "provider": "Silicon Data",
+          "gpu": "A100",
+          "before": 1.6,
+          "after": 1.59,
+          "change": -0.006249999999999978,
+          "verification": "官网当前展示值吻合；区间历史待核实"
+        },
+        {
+          "order": 2,
+          "provider": "Silicon Data",
+          "gpu": "H100",
+          "before": 2.63,
+          "after": 2.63,
+          "change": 0,
+          "verification": "官网当前展示值吻合；区间历史待核实"
+        },
+        {
+          "order": 3,
+          "provider": "Ornn",
+          "gpu": "H100 SXM",
+          "before": 2.83,
+          "after": 3.17,
+          "change": 0.12014134275618371,
+          "verification": "官方历史逐日已核实"
+        },
+        {
+          "order": 4,
+          "provider": "Compute Desk",
+          "gpu": "Hopper US",
+          "before": 2.93,
+          "after": 2.98,
+          "change": 0.017064846416382284,
+          "verification": "方法已核实；本期数值待核实"
+        },
+        {
+          "order": 5,
+          "provider": "Compute Desk",
+          "gpu": "Blackwell US",
+          "before": 5.26,
+          "after": 5.28,
+          "change": 0.0038022813688214363,
+          "verification": "方法已核实；本期数值待核实"
+        },
+        {
+          "order": 6,
+          "provider": "平台未注明",
+          "gpu": "B300",
+          "before": 7.89,
+          "after": 7.89,
+          "change": 0,
+          "verification": "来源、样本及日期待补"
+        },
+        {
+          "order": 7,
+          "provider": "平台未注明",
+          "gpu": "B200",
+          "before": 6.01,
+          "after": 6.25,
+          "change": 0.03993344425956735,
+          "verification": "来源、样本及日期待补"
+        },
+        {
+          "order": 8,
+          "provider": "平台未注明",
+          "gpu": "H100",
+          "before": 3.32,
+          "after": 3.25,
+          "change": -0.02108433734939752,
+          "verification": "来源、样本及日期待补"
+        },
+        {
+          "order": 9,
+          "provider": "平台未注明",
+          "gpu": "H200",
+          "before": 4.4,
+          "after": 4.4046,
+          "change": 0.0010454545454545716,
+          "verification": "来源、样本及日期待补"
+        },
+        {
+          "order": 10,
+          "provider": "平台未注明",
+          "gpu": "A100",
+          "before": 1.76,
+          "after": 1.7252,
+          "change": -0.019772727272727275,
+          "verification": "来源、样本及日期待补"
+        },
+        {
+          "order": 11,
+          "provider": "平台未注明",
+          "gpu": "L4",
+          "before": 0.8938,
+          "after": 0.8856,
+          "change": -0.00917431192660545,
+          "verification": "来源、样本及日期待补"
+        },
+        {
+          "order": 12,
+          "provider": "平台未注明",
+          "gpu": "RTX Pro 6000",
+          "before": 2.2,
+          "after": 2.195,
+          "change": -0.002272727272727426,
+          "verification": "来源、样本及日期待补"
+        },
+        {
+          "order": 13,
+          "provider": "平台未注明",
+          "gpu": "L40S",
+          "before": 1.5,
+          "after": 1.395,
+          "change": -0.06999999999999995,
+          "verification": "来源、样本及日期待补"
+        },
+        {
+          "order": 14,
+          "provider": "平台未注明",
+          "gpu": "RTX 4090",
+          "before": 0.42,
+          "after": 0.4385,
+          "change": 0.04404761904761911,
+          "verification": "来源、样本及日期待补"
+        }
+      ],
+      "h100History": [
+        {
+          "date": "2026-08-27",
+          "timestamp": "2026-08-27T20:00:00.000Z",
+          "gpu": "H100 SXM",
+          "price": 2.76,
+          "unit": "USD/GPU/hour",
+          "priceType": "daily settled",
+          "provider": "Ornn"
+        },
+        {
+          "date": "2026-08-28",
+          "timestamp": "2026-08-28T20:00:00.000Z",
+          "gpu": "H100 SXM",
+          "price": 2.93,
+          "unit": "USD/GPU/hour",
+          "priceType": "daily settled",
+          "provider": "Ornn"
+        },
+        {
+          "date": "2026-08-29",
+          "timestamp": "2026-08-29T20:00:00.000Z",
+          "gpu": "H100 SXM",
+          "price": 2.87,
+          "unit": "USD/GPU/hour",
+          "priceType": "daily settled",
+          "provider": "Ornn"
+        },
+        {
+          "date": "2026-08-30",
+          "timestamp": "2026-08-30T20:00:00.000Z",
+          "gpu": "H100 SXM",
+          "price": 3.01,
+          "unit": "USD/GPU/hour",
+          "priceType": "daily settled",
+          "provider": "Ornn"
+        },
+        {
+          "date": "2026-08-31",
+          "timestamp": "2026-08-31T20:00:00.000Z",
+          "gpu": "H100 SXM",
+          "price": 2.97,
+          "unit": "USD/GPU/hour",
+          "priceType": "daily settled",
+          "provider": "Ornn"
+        },
+        {
+          "date": "2026-09-01",
+          "timestamp": "2026-09-01T20:00:00.000Z",
+          "gpu": "H100 SXM",
+          "price": 2.83,
+          "unit": "USD/GPU/hour",
+          "priceType": "daily settled",
+          "provider": "Ornn"
+        },
+        {
+          "date": "2026-09-02",
+          "timestamp": "2026-09-02T20:00:00.000Z",
+          "gpu": "H100 SXM",
+          "price": 2.83,
+          "unit": "USD/GPU/hour",
+          "priceType": "daily settled",
+          "provider": "Ornn"
+        },
+        {
+          "date": "2026-09-03",
+          "timestamp": "2026-09-03T20:00:00.000Z",
+          "gpu": "H100 SXM",
+          "price": 2.92,
+          "unit": "USD/GPU/hour",
+          "priceType": "daily settled",
+          "provider": "Ornn"
+        },
+        {
+          "date": "2026-09-04",
+          "timestamp": "2026-09-04T20:00:00.000Z",
+          "gpu": "H100 SXM",
+          "price": 2.89,
+          "unit": "USD/GPU/hour",
+          "priceType": "daily settled",
+          "provider": "Ornn"
+        },
+        {
+          "date": "2026-09-05",
+          "timestamp": "2026-09-05T20:00:00.000Z",
+          "gpu": "H100 SXM",
+          "price": 3.06,
+          "unit": "USD/GPU/hour",
+          "priceType": "daily settled",
+          "provider": "Ornn"
+        },
+        {
+          "date": "2026-09-06",
+          "timestamp": "2026-09-06T20:00:00.000Z",
+          "gpu": "H100 SXM",
+          "price": 3.07,
+          "unit": "USD/GPU/hour",
+          "priceType": "daily settled",
+          "provider": "Ornn"
+        },
+        {
+          "date": "2026-09-07",
+          "timestamp": "2026-09-07T20:00:00.000Z",
+          "gpu": "H100 SXM",
+          "price": 3.17,
+          "unit": "USD/GPU/hour",
+          "priceType": "daily settled",
+          "provider": "Ornn"
+        }
+      ]
+    },
+    "accessIssues": [
+      {
+        "id": "missing-originals",
+        "dataset": "secondComparison",
+        "message": "未注明平台的原始报价，以及Silicon Data / Compute Desk本期完整历史仍缺失；对应行仅按用户材料复算。"
+      }
+    ]
+  },
+  "sources": [
+    {
+      "id": "ornn-history",
+      "label": "Ornn OCPI 官方逐日结算历史，2026年8月27日至9月7日",
+      "href": "https://index.ornn.com/docs",
+      "path": "evidence/h100History.sql",
+      "query": {
+        "engine": "SQLite",
+        "language": "sql",
+        "sql": "SELECT substr(json_extract(value,'$.timestamp'),1,10) AS date, json_extract(value,'$.timestamp') AS timestamp, 'H100 SXM' AS gpu, json_extract(value,'$.index_value') AS price, 'USD/GPU/hour' AS unit, 'daily settled' AS priceType, 'Ornn' AS provider FROM json_each(readfile('evidence/ornn-H100%20SXM.json'),'$.data') ORDER BY date;",
+        "description": "直接从保存的原始JSON计算交付表及图；数值与JavaScript独立复算核对。",
+        "tables_used": [
+          "Ornn OCPI daily settled history",
+          "User-provided compute monitoring notes"
+        ]
+      }
+    },
+    {
+      "id": "user-notes",
+      "label": "用户提供的两份算力跟踪材料；第二份平台名称缺失",
+      "path": "evidence/secondComparison.sql",
+      "query": {
+        "engine": "SQLite",
+        "language": "sql",
+        "sql": "WITH rows AS (SELECT CAST(key AS INTEGER) AS ord, json_extract(value,'$[0]') AS provider, json_extract(value,'$[1]') AS gpu, json_extract(value,'$[2]') AS before, json_extract(value,'$[3]') AS after FROM json_each(readfile('evidence/user-inputs.json'),'$.secondNote.rows')) SELECT ord AS 'order', provider, gpu, before, after, after*1.0/before-1.0 AS change, CASE provider WHEN 'Ornn' THEN '官方历史逐日已核实' WHEN 'Silicon Data' THEN '官网当前展示值吻合；区间历史待核实' WHEN 'Compute Desk' THEN '方法已核实；本期数值待核实' ELSE '来源、样本及日期待补' END AS verification FROM rows ORDER BY ord;",
+        "description": "直接从保存的原始JSON计算交付表及图；数值与JavaScript独立复算核对。",
+        "tables_used": [
+          "User-provided compute monitoring notes"
+        ]
+      }
+    },
+    {
+      "id": "reconciliation",
+      "label": "用户材料与 Ornn 官方历史逐项对照",
+      "path": "evidence/firstComparison.sql",
+      "href": "https://index.ornn.com/docs",
+      "query": {
+        "engine": "SQLite",
+        "language": "sql",
+        "sql": "WITH prices AS (SELECT 'A100 SXM4' AS gpu, substr(json_extract(value,'$.timestamp'),1,10) AS date, json_extract(value,'$.index_value') AS price FROM json_each(readfile('evidence/ornn-A100%20SXM4.json'),'$.data') UNION ALL SELECT 'B200' AS gpu, substr(json_extract(value,'$.timestamp'),1,10) AS date, json_extract(value,'$.index_value') AS price FROM json_each(readfile('evidence/ornn-B200.json'),'$.data') UNION ALL SELECT 'H100 SXM' AS gpu, substr(json_extract(value,'$.timestamp'),1,10) AS date, json_extract(value,'$.index_value') AS price FROM json_each(readfile('evidence/ornn-H100%20SXM.json'),'$.data') UNION ALL SELECT 'H200' AS gpu, substr(json_extract(value,'$.timestamp'),1,10) AS date, json_extract(value,'$.index_value') AS price FROM json_each(readfile('evidence/ornn-H200.json'),'$.data') UNION ALL SELECT 'RTX 5090' AS gpu, substr(json_extract(value,'$.timestamp'),1,10) AS date, json_extract(value,'$.index_value') AS price FROM json_each(readfile('evidence/ornn-RTX%205090.json'),'$.data')), notes AS (SELECT CAST(key AS INTEGER) AS ord, json_extract(value,'$[0]') AS gpu, json_extract(value,'$[2]')/100.0 AS reportedChange FROM json_each(readfile('evidence/user-inputs.json'),'$.firstNote.rows')) SELECT n.ord AS 'order', n.gpu, a.price AS before, b.price AS after, n.reportedChange, b.price/a.price-1.0 AS calculatedChange, CASE WHEN round((b.price/a.price-1.0)*100.0,1)=round(n.reportedChange*100.0,1) THEN '吻合（按原文精度）' ELSE '不一致' END AS status FROM notes n JOIN prices a ON a.gpu=n.gpu AND a.date='2026-08-29' JOIN prices b ON b.gpu=n.gpu AND b.date='2026-09-05' ORDER BY n.ord;",
+        "description": "直接从保存的原始JSON计算交付表及图；数值与JavaScript独立复算核对。",
+        "tables_used": [
+          "Ornn OCPI daily settled history",
+          "User-provided compute monitoring notes"
+        ]
+      }
+    },
+    {
+      "id": "sd",
+      "label": "sd",
+      "href": "https://www.silicondata.com/products/silicon-index/h100"
+    },
+    {
+      "id": "sdb",
+      "label": "sdb",
+      "href": "https://www.silicondata.com/products/silicon-index/b200"
+    },
+    {
+      "id": "sdChanges",
+      "label": "sdChanges",
+      "href": "https://docs.silicondata.com/products/gpu-index-announcements"
+    },
+    {
+      "id": "desk",
+      "label": "desk",
+      "href": "https://www.general-index.com/post/compute-desks-indexes-are-now-regulated"
+    },
+    {
+      "id": "lambda",
+      "label": "lambda",
+      "href": "https://ca.finance.yahoo.com/news/anthropic-signs-35-billion-cloud-005022618.html"
+    },
+    {
+      "id": "cerebras",
+      "label": "cerebras",
+      "href": "https://cerebras.gcs-web.com/news-releases/news-release-details/cerebras-and-compute-nordic-finland-announce-new-165-mw-ai-data"
+    },
+    {
+      "id": "crusoe",
+      "label": "crusoe",
+      "href": "https://finance.yahoo.com/technology/ai/articles/crusoe-signs-13-billion-ai-195326470.html"
+    },
+    {
+      "id": "bytedance",
+      "label": "bytedance",
+      "href": "https://www.investing.com/news/stock-market-news/bytedance-secures-296-billion-loan-in-ai-push-sources-say-4889439"
+    },
+    {
+      "id": "yangguang",
+      "label": "yangguang",
+      "href": "https://file.finance.sina.com.cn/211.154.219.97%3A9494/MRGG/CNSESZ_STOCK/2026/2026-9/2026-09-02/12579716.PDF"
+    },
+    {
+      "id": "yangdian",
+      "label": "yangdian",
+      "href": "https://finance.sina.com.cn/stock/aigc/zdht/2026-09-01/doc-iniqitrq4734815.shtml"
+    },
+    {
+      "id": "xingyun",
+      "label": "xingyun",
+      "href": "https://finance.sina.com.cn/stock/zqgd/2026-09-04/doc-iniqriie1517859.shtml"
+    },
+    {
+      "id": "thailand",
+      "label": "thailand",
+      "href": "https://www.nationthailand.com/business/economy/40070655"
+    }
+  ]
+}

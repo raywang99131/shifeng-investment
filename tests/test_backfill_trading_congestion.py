@@ -62,6 +62,32 @@ class HistoricalSnapshotTest(unittest.TestCase):
             source_less_top100,
         )
 
+    def test_ifind_reconstruction_survives_both_refresh_filters(self):
+        trend_row = {
+            "date": "20260819",
+            "source": "ifind_historical_reconstruction",
+            "top1_ratio": 23.11,
+        }
+        top100_by_date = {
+            "20260819": [{
+                "code": "300308",
+                "name": "中际旭创",
+                "amount": 32_882_412_000,
+                "source": "ifind_historical_reconstruction",
+            }]
+        }
+
+        self.assertTrue(tmt_margin._is_eastmoney_trading_source(trend_row))
+        self.assertTrue(congestion.is_eastmoney_row(trend_row))
+        self.assertEqual(
+            tmt_margin._filter_eastmoney_top100_cache(top100_by_date),
+            top100_by_date,
+        )
+        self.assertEqual(
+            congestion.filter_eastmoney_top100(top100_by_date),
+            top100_by_date,
+        )
+
     def test_normalize_code_handles_baostock_market_prefixes(self):
         self.assertEqual(congestion.normalize_code("sh.600000"), "600000")
         self.assertEqual(congestion.normalize_code("sz.000001"), "000001")

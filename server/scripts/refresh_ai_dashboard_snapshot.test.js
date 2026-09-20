@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { normalizeComputeQuote } from '../lib/aiComputeData.js';
 import {
   refreshDashboardSnapshot,
   seedDashboardSnapshot,
@@ -77,4 +78,24 @@ test('normal dashboard refresh does not run a seed write before collectors', asy
 
   const persisted = JSON.parse(await fs.promises.readFile(dataFile, 'utf8'));
   assert.equal(persisted.creditRisk.cds5y.batchId, 'ice-survives-refresh');
+});
+
+test('reseeding retains every collected compute day instead of replacing history with the ledger', async (t) => {
+  const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'compute-history-seed-'));
+  t.after(() => fs.promises.rm(root, { recursive: true, force: true }));
+  const dataFile = path.join(root, 'snapshot.json');
+  const ledgerFile = path.join(root, 'ledger.json');
+  const computeRental = ['2026-09-09', '2026-09-10'].map(asOf => normalizeComputeQuote({
+    platform: 'AWS', gpu: 'H100', instanceSpec: 'p5.48xlarge', gpuCount: 8, region: 'us-east-1',
+    billingMode: 'on_demand', currency: 'USD', instanceHourlyPrice: 40, asOf,
+    sourceLabel: 'AWS', sourceUrl: 'https://aws.amazon.com/', retrievedAt: `${asOf}T01:00:00Z`,
+  }));
+  const computeSourceReports = [{ sourceId: 'aws-ec2-pricing', status: 'ready', asOf: '2026-09-10', rows: 1 }];
+  await fs.promises.writeFile(dataFile, JSON.stringify({ computeRental, computeSourceReports }));
+  await fs.promises.writeFile(ledgerFile, '{"records":[]}');
+  await seedDashboardSnapshot({ dataFile, ledgerFile });
+  const saved = JSON.parse(await fs.promises.readFile(dataFile, 'utf8'));
+  assert.deepEqual(saved.computeRental.map(row => row.asOf), ['2026-09-10', '2026-09-09']);
+  assert.equal(saved.computeRental.filter(row => row.latest).length, 1);
+  assert.deepEqual(saved.computeSourceReports, computeSourceReports);
 });

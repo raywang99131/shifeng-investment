@@ -9,6 +9,8 @@ export function configureProjectPythonRuntime({
   projectRoot = PROJECT_ROOT,
   existsSync = fs.existsSync,
 } = {}) {
+  const etfProjectPython = path.join(projectRoot, 'server', 'data', 'etf-python-venv', 'bin', 'python3');
+  if (existsSync(etfProjectPython)) env.ETF_MONITOR_PYTHON ||= etfProjectPython;
   const projectPython = path.join(projectRoot, 'server', 'data', 'python-venv', 'bin', 'python3');
   const pythonBin = env.SHIFENG_PYTHON_BIN || projectPython;
   if (path.isAbsolute(pythonBin) && !existsSync(pythonBin)) return null;
@@ -24,5 +26,6 @@ export function configureProjectPythonRuntime({
   env.PRICE_TRACKING_PYTHON ||= pythonBin;
   env.NEWS_INTELLIGENCE_PYTHON ||= pythonBin;
   env.QUANT_PYTHON_BIN ||= pythonBin;
+  env.ETF_MONITOR_PYTHON ||= pythonBin;
   return pythonBin;
 }

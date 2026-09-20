@@ -1,0 +1,234 @@
+{
+  "formula": "end/start - 1",
+  "firstComparison": [
+    {
+      "order": 0,
+      "gpu": "H100 SXM",
+      "before": 2.87,
+      "after": 3.06,
+      "reportedChange": 0.066,
+      "calculatedChange": 0.0662020905923344,
+      "status": "吻合（按原文精度）"
+    },
+    {
+      "order": 1,
+      "gpu": "H200",
+      "before": 4.44,
+      "after": 4.55,
+      "reportedChange": 0.025,
+      "calculatedChange": 0.024774774774774633,
+      "status": "吻合（按原文精度）"
+    },
+    {
+      "order": 2,
+      "gpu": "B200",
+      "before": 6.06,
+      "after": 6.42,
+      "reportedChange": 0.059000000000000004,
+      "calculatedChange": 0.05940594059405946,
+      "status": "吻合（按原文精度）"
+    },
+    {
+      "order": 3,
+      "gpu": "A100 SXM4",
+      "before": 1.03,
+      "after": 1.09,
+      "reportedChange": 0.057999999999999996,
+      "calculatedChange": 0.058252427184465994,
+      "status": "吻合（按原文精度）"
+    },
+    {
+      "order": 4,
+      "gpu": "RTX 5090",
+      "before": 0.53,
+      "after": 0.63,
+      "reportedChange": 0.18899999999999997,
+      "calculatedChange": 0.18867924528301883,
+      "status": "吻合（按原文精度）"
+    }
+  ],
+  "secondComparison": [
+    {
+      "order": 0,
+      "provider": "Silicon Data",
+      "gpu": "B200",
+      "before": 5.62,
+      "after": 5.69,
+      "change": 0.012455516014235002,
+      "verification": "官网当前展示值吻合；区间历史待核实"
+    },
+    {
+      "order": 1,
+      "provider": "Silicon Data",
+      "gpu": "A100",
+      "before": 1.6,
+      "after": 1.59,
+      "change": -0.006249999999999978,
+      "verification": "官网当前展示值吻合；区间历史待核实"
+    },
+    {
+      "order": 2,
+      "provider": "Silicon Data",
+      "gpu": "H100",
+      "before": 2.63,
+      "after": 2.63,
+      "change": 0,
+      "verification": "官网当前展示值吻合；区间历史待核实"
+    },
+    {
+      "order": 3,
+      "provider": "Ornn",
+      "gpu": "H100 SXM",
+      "before": 2.83,
+      "after": 3.17,
+      "change": 0.12014134275618371,
+      "verification": "官方历史逐日已核实"
+    },
+    {
+      "order": 4,
+      "provider": "Compute Desk",
+      "gpu": "Hopper US",
+      "before": 2.93,
+      "after": 2.98,
+      "change": 0.017064846416382284,
+      "verification": "方法已核实；本期数值待核实"
+    },
+    {
+      "order": 5,
+      "provider": "Compute Desk",
+      "gpu": "Blackwell US",
+      "before": 5.26,
+      "after": 5.28,
+      "change": 0.0038022813688214363,
+      "verification": "方法已核实；本期数值待核实"
+    },
+    {
+      "order": 6,
+      "provider": "平台未注明",
+      "gpu": "B300",
+      "before": 7.89,
+      "after": 7.89,
+      "change": 0,
+      "verification": "来源、样本及日期待补"
+    },
+    {
+      "order": 7,
+      "provider": "平台未注明",
+      "gpu": "B200",
+      "before": 6.01,
+      "after": 6.25,
+      "change": 0.03993344425956735,
+      "verification": "来源、样本及日期待补"
+    },
+    {
+      "order": 8,
+      "provider": "平台未注明",
+      "gpu": "H100",
+      "before": 3.32,
+      "after": 3.25,
+      "change": -0.02108433734939752,
+      "verification": "来源、样本及日期待补"
+    },
+    {
+      "order": 9,
+      "provider": "平台未注明",
+      "gpu": "H200",
+      "before": 4.4,
+      "after": 4.4046,
+      "change": 0.0010454545454545716,
+      "verification": "来源、样本及日期待补"
+    },
+    {
+      "order": 10,
+      "provider": "平台未注明",
+      "gpu": "A100",
+      "before": 1.76,
+      "after": 1.7252,
+      "change": -0.019772727272727275,
+      "verification": "来源、样本及日期待补"
+    },
+    {
+      "order": 11,
+      "provider": "平台未注明",
+      "gpu": "L4",
+      "before": 0.8938,
+      "after": 0.8856,
+      "change": -0.00917431192660545,
+      "verification": "来源、样本及日期待补"
+    },
+    {
+      "order": 12,
+      "provider": "平台未注明",
+      "gpu": "RTX Pro 6000",
+      "before": 2.2,
+      "after": 2.195,
+      "change": -0.002272727272727426,
+      "verification": "来源、样本及日期待补"
+    },
+    {
+      "order": 13,
+      "provider": "平台未注明",
+      "gpu": "L40S",
+      "before": 1.5,
+      "after": 1.395,
+      "change": -0.06999999999999995,
+      "verification": "来源、样本及日期待补"
+    },
+    {
+      "order": 14,
+      "provider": "平台未注明",
+      "gpu": "RTX 4090",
+      "before": 0.42,
+      "after": 0.4385,
+      "change": 0.04404761904761911,
+      "verification": "来源、样本及日期待补"
+    }
+  ],
+  "platformCounts": {
+    "up": 3,
+    "flat": 1,
+    "down": 5
+  },
+  "sourceUrls": {
+    "ornn": "https://index.ornn.com/docs",
+    "sd": "https://www.silicondata.com/products/silicon-index/h100",
+    "sdb": "https://www.silicondata.com/products/silicon-index/b200",
+    "sdChanges": "https://docs.silicondata.com/products/gpu-index-announcements",
+    "desk": "https://www.general-index.com/post/compute-desks-indexes-are-now-regulated",
+    "lambda": "https://ca.finance.yahoo.com/news/anthropic-signs-35-billion-cloud-005022618.html",
+    "cerebras": "https://cerebras.gcs-web.com/news-releases/news-release-details/cerebras-and-compute-nordic-finland-announce-new-165-mw-ai-data",
+    "crusoe": "https://finance.yahoo.com/technology/ai/articles/crusoe-signs-13-billion-ai-195326470.html",
+    "bytedance": "https://www.investing.com/news/stock-market-news/bytedance-secures-296-billion-loan-in-ai-push-sources-say-4889439",
+    "yangguang": "https://file.finance.sina.com.cn/211.154.219.97%3A9494/MRGG/CNSESZ_STOCK/2026/2026-9/2026-09-02/12579716.PDF",
+    "yangdian": "https://finance.sina.com.cn/stock/aigc/zdht/2026-09-01/doc-iniqitrq4734815.shtml",
+    "xingyun": "https://finance.sina.com.cn/stock/zqgd/2026-09-04/doc-iniqriie1517859.shtml",
+    "thailand": "https://www.nationthailand.com/business/economy/40070655"
+  },
+  "apiEndpoints": [
+    {
+      "gpu": "A100 SXM4",
+      "file": "ornn-A100%20SXM4.json",
+      "url": "https://api.ornnai.com/api/gpu/A100%20SXM4/index-history?startDate=2026-08-27&endDate=2026-09-07"
+    },
+    {
+      "gpu": "B200",
+      "file": "ornn-B200.json",
+      "url": "https://api.ornnai.com/api/gpu/B200/index-history?startDate=2026-08-27&endDate=2026-09-07"
+    },
+    {
+      "gpu": "H100 SXM",
+      "file": "ornn-H100%20SXM.json",
+      "url": "https://api.ornnai.com/api/gpu/H100%20SXM/index-history?startDate=2026-08-27&endDate=2026-09-07"
+    },
+    {
+      "gpu": "H200",
+      "file": "ornn-H200.json",
+      "url": "https://api.ornnai.com/api/gpu/H200/index-history?startDate=2026-08-27&endDate=2026-09-07"
+    },
+    {
+      "gpu": "RTX 5090",
+      "file": "ornn-RTX%205090.json",
+      "url": "https://api.ornnai.com/api/gpu/RTX%205090/index-history?startDate=2026-08-27&endDate=2026-09-07"
+    }
+  ]
+}

@@ -1334,6 +1334,7 @@ const isIndustryPriceSignal = (item: EnrichedNewsItem) => {
 };
 
 const buildDateLabel = (time: string, fallback: string) => {
+  if (!time.trim()) return '时间未确认';
   const parsed = parseNewsDate(time);
   if (parsed) {
     return formatChinaDateLabel(time);
@@ -1734,7 +1735,7 @@ const DailyNewsItem: React.FC<{
 
 const NewsPanel: React.FC = () => {
   const { theme } = useTheme();
-  const { news, lastUpdated, loading, apiStatus, isMockData, refresh } = useNewsFeed();
+  const { news, lastCheckedAt, latestNewsAt, contentStale, loading, apiStatus, isMockData, refresh } = useNewsFeed();
   const [searchText, setSearchText] = useState('');
   const [topicFilter, setTopicFilter] = useState<NewsTopic>('全部');
   const [signalFilter, setSignalFilter] = useState<SignalBucket | '全部'>('全部');
@@ -1905,8 +1906,11 @@ const NewsPanel: React.FC = () => {
           </Text>
         </div>
         <Space size={14} wrap>
-          <Text style={{ color: theme === 'dark' ? '#c4c4c4' : '#374151', fontSize: 14 }}>
-            刷新时间：{formatChinaFullDateTime(lastUpdated)}
+          <Text style={{ color: contentStale ? '#b45309' : (theme === 'dark' ? '#c4c4c4' : '#374151'), fontSize: 14 }}>
+            最新新闻：{formatChinaFullDateTime(latestNewsAt)}
+          </Text>
+          <Text type="secondary" style={{ fontSize: 13 }}>
+            最近检查：{formatChinaFullDateTime(lastCheckedAt)}
           </Text>
           <Button icon={<ReloadOutlined />} onClick={refresh} loading={loading}>刷新</Button>
         </Space>
@@ -1928,7 +1932,7 @@ const NewsPanel: React.FC = () => {
             <Tooltip title="只看过去8小时内的新闻，按当前热度模型取前三。"><Text type="secondary" style={{ cursor: 'help' }}>ⓘ</Text></Tooltip>
           </Space>
           <Space size={8}>
-            <Tag color={apiStatus === 'offline' || isMockData ? 'warning' : 'success'}>
+            <Tag color={apiStatus === 'offline' || isMockData || contentStale ? 'warning' : 'success'}>
               <Tooltip
                 title={(
                   <div style={{ maxWidth: 280 }}>
@@ -1941,7 +1945,7 @@ const NewsPanel: React.FC = () => {
                   </div>
                 )}
               >
-                {apiStatus === 'offline' || isMockData ? '离线缓存' : '热度源在线'}
+                {apiStatus === 'offline' || isMockData ? '离线缓存' : contentStale ? '内容过期' : '资讯源在线'}
               </Tooltip>
             </Tag>
             <Tag color="default">今日池 {todayStats.count}</Tag>
