@@ -1,6 +1,7 @@
 import { load } from 'cheerio';
 import { enrichComputeQuotes, normalizeComputeQuote } from './aiComputeData.js';
 import { PUBLIC_SOURCE_REGISTRY } from './publicSourceRegistry.js';
+import { computeObservationDate, parseMonitoredComputeTables } from './aiComputeOfficialTables.js';
 
 const PLATFORM_BY_ID = Object.freeze({
   'aws-ec2-pricing': 'AWS',
@@ -44,12 +45,12 @@ function billingMode(value) {
   return 'on_demand';
 }
 
-function parseTables(definition, document) {
+function parseTables(definition, document, trackedQuotes = []) {
   if (!document?.text) return [];
   const finalUrl = new URL(document.finalUrl || definition.entryUrl);
   if (!definition.allowedHosts.includes(finalUrl.hostname.toLowerCase())) throw new Error('compute final URL host is not allowlisted');
   const $ = load(document.text);
-  const quotes = [];
+  const quotes = parseMonitoredComputeTables($, definition, { ...document, finalUrl: finalUrl.toString() }, trackedQuotes);
   $('table').each((_, table) => {
     const rows = [];
     $(table).find('tr').each((__, row) => {
@@ -84,7 +85,7 @@ function parseTables(definition, document) {
         billingMode: billingMode(row[billingIndex]),
         currency,
         instanceHourlyPrice,
-        asOf: document.retrievedAt.slice(0, 10),
+        asOf: computeObservationDate(document.retrievedAt),
         sourceLabel: `${definition.platform} 官网`,
         sourceUrl: finalUrl.toString(),
         sourceKind: 'official',
@@ -97,7 +98,7 @@ function parseTables(definition, document) {
 
 export function createComputeSourceAdapter(definition) {
   const registered = validateDefinition(definition);
-  return Object.freeze({ sourceId: registered.id, parseDocument: (document) => parseTables(registered, document) });
+  return Object.freeze({ sourceId: registered.id, parseDocument: (document, trackedQuotes) => parseTables(registered, document, trackedQuotes) });
 }
 
 function mergeHistory(previous, incoming) {
@@ -117,13 +118,13 @@ export function createAiComputeCollector({ documentClient, registry = AI_COMPUTE
     const results = await Promise.all(sources.map(async ({ definition, adapter }) => {
       try {
         const document = await documentClient.fetchDocument(definition);
-        return { definition, quotes: adapter.parseDocument(document), status: 'ready' };
+        const quotes = adapter.parseDocument(document, previous.computeRental);
+        return { definition, quotes, status: quotes.length ? 'ready' : 'unavailable' };
       } catch (error) {
         return { definition, quotes: [], error, status: 'error' };
       }
     }));
     const succeeded = results.filter((result) => result.status === 'ready');
-    if (succeeded.length === 0) throw new Error(`all ${sources.length} official compute sources failed`);
     const computeRental = mergeHistory(previous.computeRental, succeeded.flatMap((result) => result.quotes));
     const failed = results.length - succeeded.length;
     const previousReports = new Map((previous.computeSourceReports || []).map((report) => [report.sourceId, report]));
@@ -134,15 +135,19 @@ export function createAiComputeCollector({ documentClient, registry = AI_COMPUTE
           const previousReport = previousReports.get(result.definition.id);
           return {
             sourceId: result.definition.id, platform: result.definition.platform, url: result.definition.entryUrl,
-            status: result.status, asOf: result.status === 'ready' ? generatedAt.slice(0, 10) : previousReport?.asOf || null,
+            status: result.status, asOf: result.quotes.map(row => row.asOf).sort().at(-1)
+              || computeRental.filter(row => row.platform === result.definition.platform).map(row => row.asOf).sort().at(-1)
+              || null,
             rows: result.quotes.length || previousReport?.rows || 0,
             message: result.error?.message
-              || (result.quotes.length === 0 ? previousReport?.message || '官网可访问，但未解析出新的精确报价；沿用上一版。' : null),
+              || (result.quotes.length === 0 ? previousReport?.message || '本次未取得有效报价；保留已有历史，缺失日期暂不补值。' : null),
           };
         }),
       },
       source: {
-        status: 'ready', stale: failed > 0, asOf: generatedAt.slice(0, 10), url: succeeded[0].definition.entryUrl,
+        status: succeeded.length ? 'ready' : 'error', stale: failed > 0,
+        asOf: computeRental.map(row => row.asOf).sort().at(-1) || null,
+        url: (succeeded[0] || results[0]).definition.entryUrl,
         message: `${succeeded.length}/${results.length} 个算力官网价格源同步成功${failed ? `；${failed} 个沿用上一版` : ''}`,
       },
     };

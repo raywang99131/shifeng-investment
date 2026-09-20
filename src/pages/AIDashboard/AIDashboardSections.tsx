@@ -1,6 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import OpenRouterWeeklyChart from './OpenRouterWeeklyChart';
+import CdsModelComparisonPanel from './CdsModelComparisonPanel';
+import NebiusComputeResearch from './NebiusComputeResearch';
+import { buildComputeHistory } from './computeHistory';
 import { arrChartSeries, arrSourceCategory, arrValueLabel, primaryArrMetrics, latestCompanyValuations, type LatestCompanyValuation } from './arrChart';
 import {
   Alert,
@@ -325,6 +328,7 @@ function CdsRiskSection({
             : null}
         </Space>
       </Flex>
+      <CdsModelComparisonPanel comparison={data.creditRisk?.cdsModelComparison} primaryAsOf={cds?.asOf ?? null} />
       {companies.length === 0 ? (
         <Card className="ai-cds-empty-card" variant="outlined"><NoData description="等待导入 ICE EOD Price" /></Card>
       ) : (
@@ -1188,6 +1192,7 @@ function ComputeLatestChart({ quotes }: { quotes: ComputeRentalQuote[] }) {
   const compact = !screens.sm;
   const rows = quotes.toReversed();
   const option = useMemo(() => ({
+    animation: false,
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (value: number) => formatCurrencyPrice(value, rows[0]?.currency, 3) },
     grid: { left: compact ? 112 : 230, right: compact ? 8 : 32, top: 28, bottom: 32 },
     xAxis: { type: 'value', name: compact ? '' : `${rows[0]?.currency || ''} / GPU / 小时`, axisLabel: { color: palette.text, fontSize: compact ? 8 : 12 }, splitLine: { lineStyle: { color: palette.line } } },
@@ -1202,52 +1207,52 @@ function ComputeHistoryChart({ quotes }: { quotes: ComputeRentalQuote[] }) {
   const palette = useChartPalette();
   const screens = Grid.useBreakpoint();
   const compact = !screens.sm;
-  const dates = [...new Set(quotes.map((row) => row.asOf))].sort();
-  const groups = new Map<string, ComputeRentalQuote[]>();
-  for (const row of quotes) {
-    groups.set(row.quoteKey, [...(groups.get(row.quoteKey) || []), row]);
-  }
-  const series = [...groups.values()].slice(0, 14).map((rows) => {
-    const byDate = new Map(rows.map((row) => [row.asOf, row]));
-    const first = rows[0];
-    return {
-      name: `${first.platform} · ${first.gpu} · ${first.region} · ${first.billingMode}`,
-      type: 'line',
-      showSymbol: true,
-      connectNulls: true,
-      data: dates.map((date) => byDate.get(date)?.pricePerGpuHour ?? null),
-    };
-  });
+  const { dates, series, observedDays, missingDays } = useMemo(() => buildComputeHistory(quotes), [quotes]);
   const option = useMemo(() => ({
+    animation: false,
     tooltip: { trigger: 'axis', valueFormatter: (value: number) => formatUsd(value, 3) },
-    legend: { type: 'scroll', top: 0, textStyle: { color: palette.text } },
-    grid: { left: compact ? 44 : 70, right: compact ? 8 : 24, top: 64, bottom: 44 },
-    xAxis: { type: 'category', data: dates, axisLabel: { color: palette.text, fontSize: compact ? 8 : 12 }, axisLine: { lineStyle: { color: palette.line } } },
+    legend: { type: 'scroll', top: 0, textStyle: { color: palette.text, width: compact ? 210 : 360, overflow: 'truncate' }, tooltip: { show: true } },
+    grid: { left: compact ? 44 : 70, right: compact ? 8 : 24, top: 64, bottom: 78 },
+    xAxis: { type: 'category', data: dates, axisLabel: { color: palette.text, fontSize: compact ? 8 : 12, showMinLabel: true, showMaxLabel: true, formatter: (date: string) => date.slice(5) }, axisLine: { lineStyle: { color: palette.line } } },
     yAxis: { type: 'value', name: compact ? '' : 'USD/GPU/h', axisLabel: { color: palette.text, fontSize: compact ? 8 : 12 }, splitLine: { lineStyle: { color: palette.line } } },
+    dataZoom: [{ type: 'slider', bottom: 4, height: 22, start: 0, end: 100 }, { type: 'inside' }],
     series,
   }), [compact, dates, series, palette]);
   if (quotes.length === 0) return <NoData description="暂无租赁历史" />;
-  return <ReactECharts option={option} style={{ height: 400 }} notMerge />;
+  return <>
+    <Text type="secondary">
+      {observedDays === 1 ? `目前仅有 ${dates[0]} 的报价，尚不足以形成趋势。` : `${dates[0]} 至 ${dates.at(-1)} · 已收录 ${observedDays} 个报价日`}
+      {missingDays > 0 ? ` · ${missingDays} 天暂无报价，图中留空` : ''}
+    </Text>
+    <ReactECharts option={option} style={{ height: 400 }} notMerge />
+  </>;
 }
 
 export function ComputeRentalSection({ data }: DashboardProps) {
+  const [quoteView, setQuoteView] = useState('latest');
   const latest = data.computeRental.filter((row) => row.latest);
   const comparableLatest = latest.filter((row) => row.currency === 'USD');
   return (
     <div className="ai-section-stack">
-      <Alert type="info" showIcon title="精确报价口径" description="涨跌只在同平台、同 GPU、同实例规格、同地区、同计费方式、同币种内计算。Spot / 抢占式、按需与预留价格不会互相拼接；实例总价仅在 GPU 数量明确时折算为每 GPU 小时。" />
+      <NebiusComputeResearch />
+      <Alert type="info" showIcon title="报价说明" description="按北京时间记录每日实际采集的报价。涨跌比较同平台、同 GPU、同规格、同地区和同计费方式的价格；未取得报价的日期留空。" />
       <Row gutter={[16, 16]}>
-        <Col xs={24} xl={12}><ChartCard title="最新 USD 精确报价横向对比"><ComputeLatestChart quotes={comparableLatest} /></ChartCard></Col>
-        <Col xs={24} xl={12}><ChartCard title="同一精确报价键历史趋势"><ComputeHistoryChart quotes={data.computeRental.filter((row) => row.currency === 'USD')} /></ChartCard></Col>
+        <Col xs={24} xl={12}><ChartCard title="最新报价（USD）"><ComputeLatestChart quotes={comparableLatest} /></ChartCard></Col>
+        <Col xs={24} xl={12}><ChartCard title="历史趋势"><ComputeHistoryChart quotes={data.computeRental.filter((row) => row.currency === 'USD')} /></ChartCard></Col>
       </Row>
-      <ChartCard title="最新报价、同口径绝对涨跌与环比">
+      <ChartCard title="报价明细">
+        <Tabs activeKey={quoteView} onChange={setQuoteView} items={[
+          { key: 'latest', label: '最新报价' },
+          { key: 'history', label: `历史每日报价（${data.computeRental.length}）` },
+        ]} />
         <Table
+          key={quoteView}
           rowKey={(row) => `${row.quoteKey}-${row.asOf}`}
           size="small"
-          pagination={{ pageSize: 15, showSizeChanger: false }}
+          pagination={{ pageSize: 20, showSizeChanger: false, showTotal: total => `共 ${total} 条报价` }}
           scroll={{ x: 1500 }}
           locale={{ emptyText: <NoData description="暂无算力租赁数据" /> }}
-          dataSource={latest}
+          dataSource={quoteView === 'latest' ? latest : data.computeRental.toSorted((a, b) => b.asOf.localeCompare(a.asOf) || a.quoteKey.localeCompare(b.quoteKey))}
           columns={[
             { title: '平台', dataIndex: 'platform', fixed: 'left', width: 140 },
             { title: 'GPU', dataIndex: 'gpu', fixed: 'left', width: 130 },
@@ -1263,10 +1268,10 @@ export function ComputeRentalSection({ data }: DashboardProps) {
           ]}
         />
       </ChartCard>
-      <ChartCard title="算力官网来源状态" extra={<Text type="secondary">动态计算器不可复现时保留上一版</Text>}>
+      <ChartCard title="数据更新状态" extra={<Text type="secondary">日期为实际报价日期</Text>}>
         <Table rowKey="sourceId" size="small" pagination={false} dataSource={data.computeSourceReports || []} locale={{ emptyText: <NoData description="等待首次算力官网同步" /> }} columns={[
           { title: '平台', dataIndex: 'platform' },
-          { title: '状态', dataIndex: 'status', width: 100, render: (value) => <Tag color={value === 'ready' ? 'success' : 'error'}>{value === 'ready' ? '已同步' : '失败'}</Tag> },
+          { title: '状态', dataIndex: 'status', width: 100, render: (value) => <Tag color={value === 'ready' ? 'success' : value === 'unavailable' ? 'warning' : 'error'}>{value === 'ready' ? '已更新' : value === 'unavailable' ? '未取得报价' : '采集失败'}</Tag> },
           { title: '报价行', dataIndex: 'rows', width: 90, align: 'right' },
           { title: '日期', dataIndex: 'asOf', width: 112, render: dateLabel },
           { title: '详情', dataIndex: 'message', render: (value) => value || '—' },

@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "start": "node index.js",
     "dev": "node scripts/dev-cloud-research.mjs",
     "server": "node index.js",
     "public:tunnel": "bash scripts/cloudflare-tunnel.sh",
@@ -11,6 +12,9 @@
     "verify:ai-sources": "node server/scripts/verify_ai_dashboard_sources.mjs",
     "refresh:ai-dashboard": "node server/scripts/refresh_ai_dashboard_snapshot.mjs",
     "refresh:ice-cds": "node server/scripts/refresh_ice_cds_snapshot.mjs",
+    "refresh:cds-comparison": "node server/scripts/refresh_ice_cds_comparison.mjs",
+    "setup:cds-pricing": "node server/scripts/setup_cds_pricing.mjs",
+    "test:cds-pricing": "node server/scripts/test_cds_pricing.mjs",
     "backfill:ice-cds-screenshot": "node server/scripts/backfill_ice_cds_screenshot.mjs",
     "init:ice-cds-workbook": "node server/scripts/init_ice_cds_workbook.mjs",
     "verify:ice-cds-workbook": "node server/scripts/verify_ice_cds_workbook.mjs",

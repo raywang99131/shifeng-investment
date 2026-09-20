@@ -6,7 +6,67 @@
 
 完整部署、历史数据迁移和回滚方法见 [docs/cloud-research-deployment.md](docs/cloud-research-deployment.md)。原来的 Named Tunnel 只用于尚未云化的旧接口。
 
+## 日常启动（含 ETF 监控和邮件）
+
+在 Codex 打开本项目后，点击顶部的 **运行项目（含ETF监控）**。也可以在项目根目录运行 `npm start`（与 `npm run server` 相同）。启动入口会检查并启动 ETF 后台，再启动主站；已有健康服务会直接复用。
+
+邮件配置从本机 `server/.env` 加载，该文件不进入 Git。配置好后每次启动都会自动启用邮件，无需单独启动监控。电脑须保持唤醒和联网；仅打开项目文件夹不会运行服务。午间休息和非交易时段，监控保持待命。
+
+`npm run dev` 启动网页开发服务，并同步云端公告数据；ETF 监控使用上述完整运行入口。修改网页后，可先运行 `npm run build` 更新主站使用的页面。
+
+## ETF 成交额异动监控
+
+“拥挤度追踪 → ETF 成交额异动”使用仓库内的 FastAPI/AkShare 服务、SQLite 缓存和 Express 聚合接口，不再依赖 Downloads 或 Desktop 中的外部 `etf_monitor` 文件夹。
+
+首次在本机运行时，需要准备 Python 3.11 以上的独立环境：
+
+```bash
+python3.12 -m venv server/data/etf-python-venv
+server/data/etf-python-venv/bin/python3 -m pip install \
+  -r server/etf_monitor/requirements-dev.txt
+npm install
+npm run build
+npm run server
+```
+
+`npm run server` 会自动启动并管理 ETF 服务（默认 `127.0.0.1:8000`）：复用已有健康进程、异常退出后重启，并在主站退出时一并关闭。可用以下接口检查：
+
+```bash
+curl http://127.0.0.1:3000/api/etf-monitor/health
+curl http://127.0.0.1:3000/api/etf-monitor/overview
+curl -X POST http://127.0.0.1:3000/api/etf-monitor/refresh
+```
+
+自动行情轮询使用 `Asia/Shanghai` 时间，只在已确认交易日的 `09:30–11:30` 和 `13:00–15:00` 执行；午休、盘前、收盘后及休市日不访问行情源。15:00 后按 K 线完成延迟补抓一次。页面的每分钟更新只读 SQLite 缓存；“立即刷新”是用户显式触发的全量行情请求，在非交易时段也允许执行。
+
+运行数据默认保存在被 Git 忽略的 `server/data/etf-monitor/`：
+
+- `etf_monitor.db`：K 线、异动记录和通知去重状态；
+- `trading_calendar.json`：A 股交易日日历缓存。
+
+邮件使用同一数据库中的持久化待发队列：失败会重试，重启不丢失，部分收件地址被拒绝时只重试失败地址。恢复后，当天遗漏的异动会合并为“延迟补发”邮件。健康接口同时显示待发、失败数量和最近发送确认时间。收盘补抓失败会继续尝试，邮件重试在非交易时段也运行。故障原因、验证和运行边界见 [ETF 监控可靠性说明](docs/etf-monitor-reliability.md)。
+
+常用环境变量：
+
+- `ETF_MONITOR_ENABLED=0`：关闭本地主站的 ETF 子进程管理；
+- `ETF_MONITOR_PORT` / `ETF_MONITOR_URL`：修改端口或复用已有服务；
+- `ETF_MONITOR_PYTHON`：指定 ETF 服务使用的 Python 3.11+；
+- `HTTP_REQUEST_TIMEOUT_SECONDS`：行情与交易日历接口未设置超时时，默认等待 10 秒；
+- `POLL_STALL_TIMEOUT_SECONDS`：单轮检查卡住超过 300 秒时退出 ETF 后台，由主站自动重启；健康状态和页面会显示异常。正常的轮询间隔不计入这段等待时间。
+- `DB_PATH` / `TRADING_CALENDAR_PATH`：修改持久化路径；
+- `POLL_INTERVAL_SECONDS`：修改盘中轮询间隔，默认 60 秒。
+
+Docker Compose 会运行独立的 `etf-monitor` 服务，API 通过 `http://etf-monitor:8000` 访问它，数据库与日历保存在 `etf-monitor-data` 命名卷中：
+
+```bash
+docker compose up --build
+```
+
+行情源暂时不可用时，页面继续展示最近缓存，并分别标识数据降级和交易日日历降级；旧缓存不会被标成实时数据。
+
 ## AI 投资看板配置
+
+CDS 已增加 ISDA 新模型并行对比。安装、验证、曲线导入及状态说明见 [CDS 并行验证](docs/cds-isda-parallel.md)。
 
 AI 看板位于 `/ai-dashboard`，沿用网站现有访问边界，不再要求单独输入访问口令。ARR 与估值使用已核对的表格快照 `server/data/ai-dashboard/growth-reference.json`，同时保留已核验的公司官网历史 ARR。总览和 ARR 页共用 OpenAI、Anthropic 全历史图，每家公司一条线，数据点颜色区分来源，预测不进入历史图。月度区以亿美元计，Yipit 区以十亿美元计；读取时统一单位并重算日期和倍数公式，不使用 Excel 的零值公式缓存。历史 P/ARR 按月份使用同月或此前 ARR，原表的前瞻分母及公式假设另行标注。该文件是人工核对快照，刷新不会重新下载飞书或改变实际观测日期；后续需核对原表并更新该文件。价格、融资、官网模型卡、算力租赁等板块继续读取登记过的公开网页。
 

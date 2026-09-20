@@ -2362,6 +2362,7 @@ def is_eastmoney_row(row: Dict[str, Any]) -> bool:
         TUSHARE_HISTORICAL_SOURCE,
         "tushare_daily_fallback",
         "baostock_historical_reconstruction",
+        "ifind_historical_reconstruction",
     }:
         return True
     if source:

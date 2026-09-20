@@ -1,0 +1,997 @@
+{
+  "quantlibVersion": "1.43",
+  "verification": {
+    "expectedNpv": -16070.7,
+    "actualNpv": -16070.725360070412,
+    "absoluteNpvError": 0.025360070410897606,
+    "accrualRebate": 999.9999999998898
+  },
+  "referenceStatus": "rounded secondary screenshot; Bloomberg field and tenor unverified",
+  "validationStatus": "retrospective diagnostics only; dates share screenshot anchor",
+  "productionModified": false,
+  "observations": [
+    {
+      "batchId": "ice-20260831-97f11462974c",
+      "clearingDate": "2026-08-31",
+      "company": "Oracle",
+      "instrumentName": "ORCLE.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 95.7863,
+      "couponBp": 100,
+      "spreadBp": 204.3725603696754,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 95.78630000003596,
+      "priceResidual": 3.596767328417627e-11,
+      "hazardRate": 0.03434414677570885,
+      "curveId": "ust-par-zero-proxy-2026-08-31",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "date": "2026-08-31",
+      "referenceBp": 203.3,
+      "roundingHalfWidthBp": 0.1,
+      "kind": "derived from rounded latest and inset change",
+      "originalBp": 204.3725603696754,
+      "quantlibBp": 204.31197119621015,
+      "impliedSharedCurveShiftBp": -39.61053604966482,
+      "equivalentCleanPriceForReference": 95.82558302756489,
+      "equivalentCleanPriceDifference": 0.03928302756489188
+    },
+    {
+      "batchId": "ice-20260831-97f11462974c",
+      "clearingDate": "2026-08-31",
+      "company": "NVIDIA",
+      "instrumentName": "NVIDIA.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 100.7545,
+      "couponBp": 100,
+      "spreadBp": 82.16155524536391,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 100.75450000000272,
+      "priceResidual": 2.7284841053187847e-12,
+      "hazardRate": 0.013806622158369919,
+      "curveId": "ust-par-zero-proxy-2026-08-31",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "date": "2026-08-31",
+      "referenceBp": 82.3,
+      "roundingHalfWidthBp": 0.1,
+      "kind": "derived from rounded latest and inset change",
+      "originalBp": 82.16155524536391,
+      "quantlibBp": 82.17144694664367,
+      "impliedSharedCurveShiftBp": -30.25101388520568,
+      "equivalentCleanPriceForReference": 100.74902266211421,
+      "equivalentCleanPriceDifference": -0.005477337885778866
+    },
+    {
+      "batchId": "ice-20260831-97f11462974c",
+      "clearingDate": "2026-08-31",
+      "company": "Amazon",
+      "instrumentName": "AMZN.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 101.4657,
+      "couponBp": 100,
+      "spreadBp": 65.5674198570739,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 101.46570000000987,
+      "priceResidual": 9.876544027065393e-12,
+      "hazardRate": 0.011018068996691,
+      "curveId": "ust-par-zero-proxy-2026-08-31",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "date": "2026-08-31",
+      "referenceBp": 65.8,
+      "roundingHalfWidthBp": 0.1,
+      "kind": "derived from rounded latest and inset change",
+      "originalBp": 65.5674198570739,
+      "quantlibBp": 65.58638374472544,
+      "impliedSharedCurveShiftBp": -26.131943876393397,
+      "equivalentCleanPriceForReference": 101.45648207381784,
+      "equivalentCleanPriceDifference": -0.009217926182159886
+    },
+    {
+      "batchId": "ice-20260831-97f11462974c",
+      "clearingDate": "2026-08-31",
+      "company": "Google",
+      "instrumentName": "ALPHINC.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 101.7014,
+      "couponBp": 100,
+      "spreadBp": 60.11421570069445,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 101.70139999999907,
+      "priceResidual": 9.379164112033322e-13,
+      "hazardRate": 0.01010169212747769,
+      "curveId": "ust-par-zero-proxy-2026-08-31",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "date": "2026-08-31",
+      "referenceBp": 58.5,
+      "roundingHalfWidthBp": 0.1,
+      "kind": "derived from rounded latest and inset change",
+      "originalBp": 60.11421570069445,
+      "quantlibBp": 60.13613382426186,
+      "impliedSharedCurveShiftBp": 170.34415085687726,
+      "equivalentCleanPriceForReference": 101.77234834097482,
+      "equivalentCleanPriceDifference": 0.07094834097480884
+    },
+    {
+      "batchId": "ice-20260831-97f11462974c",
+      "clearingDate": "2026-08-31",
+      "company": "Microsoft",
+      "instrumentName": "MSFT.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 102.3201,
+      "couponBp": 100,
+      "spreadBp": 45.90748605993371,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 102.32009999996504,
+      "priceResidual": 3.495870259939693e-11,
+      "hazardRate": 0.007714349269747345,
+      "curveId": "ust-par-zero-proxy-2026-08-31",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "date": "2026-08-31",
+      "referenceBp": 46.1,
+      "roundingHalfWidthBp": 0.1,
+      "kind": "derived from rounded latest and inset change",
+      "originalBp": 45.90748605993371,
+      "quantlibBp": 45.93703243476777,
+      "impliedSharedCurveShiftBp": -12.733466807944184,
+      "equivalentCleanPriceForReference": 102.31296066859765,
+      "equivalentCleanPriceDifference": -0.007139331402342464
+    },
+    {
+      "batchId": "ice-20260831-97f11462974c",
+      "clearingDate": "2026-08-31",
+      "company": "Meta",
+      "instrumentName": "METAPL.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 100.2951,
+      "couponBp": 100,
+      "spreadBp": 92.99394082582893,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 100.29509999994337,
+      "priceResidual": 5.6630256040079985e-11,
+      "hazardRate": 0.015626955309073765,
+      "curveId": "ust-par-zero-proxy-2026-08-31",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "date": "2026-08-31",
+      "referenceBp": 93.1,
+      "roundingHalfWidthBp": 0.1,
+      "kind": "derived from rounded latest and inset change",
+      "originalBp": 92.99394082582893,
+      "quantlibBp": 92.99784218570395,
+      "impliedSharedCurveShiftBp": -61.21007140974655,
+      "equivalentCleanPriceForReference": 100.29078327312678,
+      "equivalentCleanPriceDifference": -0.004316726873227594
+    },
+    {
+      "batchId": "ice-20260904-5617a923de2f",
+      "clearingDate": "2026-09-04",
+      "company": "Oracle",
+      "instrumentName": "ORCLE.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 95.9002,
+      "couponBp": 100,
+      "spreadBp": 201.85865970787032,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 95.90019999995474,
+      "priceResidual": 4.526157226791838e-11,
+      "hazardRate": 0.03391928469824279,
+      "curveId": "ust-par-zero-proxy-2026-09-04",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "date": "2026-09-04",
+      "referenceBp": 201.03,
+      "roundingHalfWidthBp": 0.055,
+      "kind": "derived from rounded latest and weekly change",
+      "originalBp": 201.85865970787032,
+      "quantlibBp": 201.65216001885088,
+      "impliedSharedCurveShiftBp": -25.10381807987018,
+      "equivalentCleanPriceForReference": 95.92433710430491,
+      "equivalentCleanPriceDifference": 0.024137104304912782
+    },
+    {
+      "batchId": "ice-20260904-5617a923de2f",
+      "clearingDate": "2026-09-04",
+      "company": "NVIDIA",
+      "instrumentName": "NVIDIA.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 100.8031,
+      "couponBp": 100,
+      "spreadBp": 80.94251930469856,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 100.80310000002173,
+      "priceResidual": 2.1728396859543864e-11,
+      "hazardRate": 0.013600804853979298,
+      "curveId": "ust-par-zero-proxy-2026-09-04",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "date": "2026-09-04",
+      "referenceBp": 81.44,
+      "roundingHalfWidthBp": 0.055,
+      "kind": "derived from rounded latest and weekly change",
+      "originalBp": 80.94251930469856,
+      "quantlibBp": 80.98036110481021,
+      "impliedSharedCurveShiftBp": -102.51386861331471,
+      "equivalentCleanPriceForReference": 100.78355378208077,
+      "equivalentCleanPriceDifference": -0.019546217919227615
+    },
+    {
+      "batchId": "ice-20260904-5617a923de2f",
+      "clearingDate": "2026-09-04",
+      "company": "Amazon",
+      "instrumentName": "AMZN.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 101.5719,
+      "couponBp": 100,
+      "spreadBp": 62.955350344271935,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 101.57189999997591,
+      "priceResidual": 2.4087398742267396e-11,
+      "hazardRate": 0.010578376029286574,
+      "curveId": "ust-par-zero-proxy-2026-09-04",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "date": "2026-09-04",
+      "referenceBp": 63.11,
+      "roundingHalfWidthBp": 0.055,
+      "kind": "derived from rounded latest and weekly change",
+      "originalBp": 62.955350344271935,
+      "quantlibBp": 63.028672061993674,
+      "impliedSharedCurveShiftBp": -9.300200439852803,
+      "equivalentCleanPriceForReference": 101.56839321710098,
+      "equivalentCleanPriceDifference": -0.0035067828990236194
+    },
+    {
+      "batchId": "ice-20260904-5617a923de2f",
+      "clearingDate": "2026-09-04",
+      "company": "Google",
+      "instrumentName": "ALPHINC.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 101.7811,
+      "couponBp": 100,
+      "spreadBp": 58.10331994667379,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 101.78109999993872,
+      "priceResidual": 6.127720553195104e-11,
+      "hazardRate": 0.009763081092444281,
+      "curveId": "ust-par-zero-proxy-2026-09-04",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "date": "2026-09-04",
+      "referenceBp": 58.31,
+      "roundingHalfWidthBp": 0.055,
+      "kind": "derived from rounded latest and weekly change",
+      "originalBp": 58.10331994667379,
+      "quantlibBp": 58.18617382243106,
+      "impliedSharedCurveShiftBp": -12.537092690067205,
+      "equivalentCleanPriceForReference": 101.77574094195026,
+      "equivalentCleanPriceDifference": -0.005359058049734244
+    },
+    {
+      "batchId": "ice-20260904-5617a923de2f",
+      "clearingDate": "2026-09-04",
+      "company": "Microsoft",
+      "instrumentName": "MSFT.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 102.3674,
+      "couponBp": 100,
+      "spreadBp": 44.60024146293813,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 102.36739999999511,
+      "priceResidual": 4.888534022029489e-12,
+      "hazardRate": 0.007494144126098945,
+      "curveId": "ust-par-zero-proxy-2026-09-04",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "date": "2026-09-04",
+      "referenceBp": 44.94,
+      "roundingHalfWidthBp": 0.055,
+      "kind": "derived from rounded latest and weekly change",
+      "originalBp": 44.60024146293813,
+      "quantlibBp": 44.709531505747606,
+      "impliedSharedCurveShiftBp": -17.707782525590684,
+      "equivalentCleanPriceForReference": 102.35732257891767,
+      "equivalentCleanPriceDifference": -0.010077421082328897
+    },
+    {
+      "batchId": "ice-20260904-5617a923de2f",
+      "clearingDate": "2026-09-04",
+      "company": "Meta",
+      "instrumentName": "METAPL.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 100.4236,
+      "couponBp": 100,
+      "spreadBp": 89.91344505459787,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 100.42359999998543,
+      "priceResidual": 1.4566126083082054e-11,
+      "hazardRate": 0.01510822039648474,
+      "curveId": "ust-par-zero-proxy-2026-09-04",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "date": "2026-09-04",
+      "referenceBp": 90.0,
+      "roundingHalfWidthBp": 0.055,
+      "kind": "derived from rounded latest and weekly change",
+      "originalBp": 89.91344505459787,
+      "quantlibBp": 89.93350553148746,
+      "impliedSharedCurveShiftBp": -27.79803615381127,
+      "equivalentCleanPriceForReference": 100.42079118707763,
+      "equivalentCleanPriceDifference": -0.002808812922367565
+    },
+    {
+      "batchId": "ice-20260911-85d8b4e131e1",
+      "clearingDate": "2026-09-11",
+      "company": "Oracle",
+      "instrumentName": "ORCLE.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 96.5128,
+      "couponBp": 100,
+      "spreadBp": 186.92925832177772,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 96.51279999999721,
+      "priceResidual": 2.7853275241795927e-12,
+      "hazardRate": 0.031400479507226464,
+      "curveId": "ust-par-zero-proxy-2026-09-11",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "date": "2026-09-11",
+      "referenceBp": 186.1,
+      "roundingHalfWidthBp": 0.05,
+      "kind": "displayed latest",
+      "originalBp": 186.92925832177772,
+      "quantlibBp": 186.74872327357483,
+      "impliedSharedCurveShiftBp": -30.975201539391147,
+      "equivalentCleanPriceForReference": 96.53803491582394,
+      "equivalentCleanPriceDifference": 0.025234915823943993
+    },
+    {
+      "batchId": "ice-20260911-85d8b4e131e1",
+      "clearingDate": "2026-09-11",
+      "company": "NVIDIA",
+      "instrumentName": "NVIDIA.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 100.938,
+      "couponBp": 100,
+      "spreadBp": 77.56402862671325,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 100.93799999997115,
+      "priceResidual": 2.8848035071860068e-11,
+      "hazardRate": 0.013028942284165623,
+      "curveId": "ust-par-zero-proxy-2026-09-11",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "date": "2026-09-11",
+      "referenceBp": 77.7,
+      "roundingHalfWidthBp": 0.05,
+      "kind": "displayed latest",
+      "originalBp": 77.56402862671325,
+      "quantlibBp": 77.60974692719294,
+      "impliedSharedCurveShiftBp": -17.09358528368909,
+      "equivalentCleanPriceForReference": 100.93418686854241,
+      "equivalentCleanPriceDifference": -0.003813131457590657
+    },
+    {
+      "batchId": "ice-20260911-85d8b4e131e1",
+      "clearingDate": "2026-09-11",
+      "company": "Amazon",
+      "instrumentName": "AMZN.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 101.5422,
+      "couponBp": 100,
+      "spreadBp": 63.31203886648256,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 101.54220000002796,
+      "priceResidual": 2.7966962079517543e-11,
+      "hazardRate": 0.010634911668887526,
+      "curveId": "ust-par-zero-proxy-2026-09-11",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "date": "2026-09-11",
+      "referenceBp": 63.9,
+      "roundingHalfWidthBp": 0.05,
+      "kind": "displayed latest",
+      "originalBp": 63.31203886648256,
+      "quantlibBp": 63.38660666034908,
+      "impliedSharedCurveShiftBp": -59.852034860810484,
+      "equivalentCleanPriceForReference": 101.52027716829937,
+      "equivalentCleanPriceDifference": -0.02192283170062126
+    },
+    {
+      "batchId": "ice-20260911-85d8b4e131e1",
+      "clearingDate": "2026-09-11",
+      "company": "Google",
+      "instrumentName": "ALPHINC.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 101.6152,
+      "couponBp": 100,
+      "spreadBp": 61.600501382236914,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 101.61519999999578,
+      "priceResidual": 4.220623850414995e-12,
+      "hazardRate": 0.01034741078171919,
+      "curveId": "ust-par-zero-proxy-2026-09-11",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "date": "2026-09-11",
+      "referenceBp": 61.0,
+      "roundingHalfWidthBp": 0.05,
+      "kind": "displayed latest",
+      "originalBp": 61.600501382236914,
+      "quantlibBp": 61.6785229785282,
+      "impliedSharedCurveShiftBp": 74.81750180669167,
+      "equivalentCleanPriceForReference": 101.64422508757696,
+      "equivalentCleanPriceDifference": 0.029025087576954434
+    },
+    {
+      "batchId": "ice-20260911-85d8b4e131e1",
+      "clearingDate": "2026-09-11",
+      "company": "Microsoft",
+      "instrumentName": "MSFT.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 102.3597,
+      "couponBp": 100,
+      "spreadBp": 44.271103359688034,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 102.35970000005634,
+      "priceResidual": 5.633182809106074e-11,
+      "hazardRate": 0.007436461804957162,
+      "curveId": "ust-par-zero-proxy-2026-09-11",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "date": "2026-09-11",
+      "referenceBp": 44.6,
+      "roundingHalfWidthBp": 0.05,
+      "kind": "displayed latest",
+      "originalBp": 44.271103359688034,
+      "quantlibBp": 44.383981655478244,
+      "impliedSharedCurveShiftBp": -16.59356594772987,
+      "equivalentCleanPriceForReference": 102.3503402497213,
+      "equivalentCleanPriceDifference": -0.009359750278704837
+    },
+    {
+      "batchId": "ice-20260911-85d8b4e131e1",
+      "clearingDate": "2026-09-11",
+      "company": "Meta",
+      "instrumentName": "METAPL.SNRFOR.USD.XR14.100.2031-06-20",
+      "eodPrice": 100.6787,
+      "couponBp": 100,
+      "spreadBp": 83.72808080653539,
+      "maturityDate": "2031-06-20",
+      "roundTripPrice": 100.67869999999984,
+      "priceResidual": 1.7053025658242404e-13,
+      "hazardRate": 0.014064376126157185,
+      "curveId": "ust-par-zero-proxy-2026-09-11",
+      "recoveryRate": 0.4,
+      "modelVersion": "ice-isda-compatible-v1",
+      "qualityStatus": "model-derived",
+      "officialSpreadBp": null,
+      "relativeError": null,
+      "sourceUrl": "https://www.ice.com/cds-settlement-prices/icc/single-name-instruments",
+      "date": "2026-09-11",
+      "referenceBp": 83.5,
+      "roundingHalfWidthBp": 0.05,
+      "kind": "displayed latest",
+      "originalBp": 83.72808080653539,
+      "quantlibBp": 83.76127495670956,
+      "impliedSharedCurveShiftBp": 67.68406905423775,
+      "equivalentCleanPriceForReference": 100.6896886575146,
+      "equivalentCleanPriceDifference": 0.010988657514587885
+    }
+  ],
+  "allDateLevelMetrics": {
+    "originalBp": {
+      "n": 18,
+      "maeBp": 0.4544904074736434,
+      "rmseBp": 0.604337336223743,
+      "maxAbsBp": 1.6142157006944515
+    },
+    "quantlibBp": {
+      "n": 18,
+      "maeBp": 0.40263898148913074,
+      "rmseBp": 0.564992114782398,
+      "maxAbsBp": 1.6361338242618615
+    }
+  },
+  "weekChangeMetrics": {
+    "originalBp": {
+      "n": 6,
+      "maeBp": 0.32134974966033525,
+      "rmseBp": 0.4221184060075588,
+      "maxAbsBp": 0.8071814355631233
+    },
+    "quantlibBp": {
+      "n": 6,
+      "maeBp": 0.32876386830019183,
+      "rmseBp": 0.4233276459207174,
+      "maxAbsBp": 0.8023491560971436
+    }
+  },
+  "comparison": [
+    {
+      "method": "production_unadjusted",
+      "trainingDates": [],
+      "targetDate": "2026-09-11",
+      "parameters": null,
+      "n": 6,
+      "maeBp": 0.4517782762776979,
+      "rmseBp": 0.5119654346250647,
+      "maxAbsBp": 0.8292583217777292,
+      "predictions": [
+        {
+          "company": "Oracle",
+          "referenceBp": 186.1,
+          "predictionBp": 186.92925832177772,
+          "errorBp": 0.8292583217777292
+        },
+        {
+          "company": "NVIDIA",
+          "referenceBp": 77.7,
+          "predictionBp": 77.56402862671325,
+          "errorBp": -0.13597137328675046
+        },
+        {
+          "company": "Amazon",
+          "referenceBp": 63.9,
+          "predictionBp": 63.31203886648256,
+          "errorBp": -0.5879611335174388
+        },
+        {
+          "company": "Google",
+          "referenceBp": 61.0,
+          "predictionBp": 61.600501382236914,
+          "errorBp": 0.6005013822369136
+        },
+        {
+          "company": "Microsoft",
+          "referenceBp": 44.6,
+          "predictionBp": 44.271103359688034,
+          "errorBp": -0.3288966403119673
+        },
+        {
+          "company": "Meta",
+          "referenceBp": 83.5,
+          "predictionBp": 83.72808080653539,
+          "errorBp": 0.2280808065353881
+        }
+      ]
+    },
+    {
+      "method": "quantlib_isda_with_treasury_proxy",
+      "trainingDates": [],
+      "targetDate": "2026-09-11",
+      "parameters": null,
+      "n": 6,
+      "maeBp": 0.4013643276320534,
+      "rmseBp": 0.45968869621932995,
+      "maxAbsBp": 0.6785229785281999,
+      "predictions": [
+        {
+          "company": "Oracle",
+          "referenceBp": 186.1,
+          "predictionBp": 186.74872327357483,
+          "errorBp": 0.6487232735748307
+        },
+        {
+          "company": "NVIDIA",
+          "referenceBp": 77.7,
+          "predictionBp": 77.60974692719294,
+          "errorBp": -0.09025307280705874
+        },
+        {
+          "company": "Amazon",
+          "referenceBp": 63.9,
+          "predictionBp": 63.38660666034908,
+          "errorBp": -0.5133933396509178
+        },
+        {
+          "company": "Google",
+          "referenceBp": 61.0,
+          "predictionBp": 61.6785229785282,
+          "errorBp": 0.6785229785281999
+        },
+        {
+          "company": "Microsoft",
+          "referenceBp": 44.6,
+          "predictionBp": 44.383981655478244,
+          "errorBp": -0.21601834452175694
+        },
+        {
+          "company": "Meta",
+          "referenceBp": 83.5,
+          "predictionBp": 83.76127495670956,
+          "errorBp": 0.26127495670955625
+        }
+      ]
+    },
+    {
+      "method": "originalBp_issuer_offset_0904",
+      "trainingDates": [
+        "2026-09-04"
+      ],
+      "targetDate": "2026-09-11",
+      "parameters": {
+        "Google": 0.20668005332620965,
+        "Microsoft": 0.33975853706186854,
+        "Oracle": -0.8286597078703153,
+        "Amazon": 0.15464965572806477,
+        "Meta": 0.08655494540212771,
+        "NVIDIA": 0.4974806953014337
+      },
+      "n": 6,
+      "maeBp": 0.32134974966033525,
+      "rmseBp": 0.4221184060075588,
+      "maxAbsBp": 0.8071814355631233,
+      "predictions": [
+        {
+          "company": "Oracle",
+          "referenceBp": 186.1,
+          "predictionBp": 186.1005986139074,
+          "errorBp": 0.0005986139074138919
+        },
+        {
+          "company": "NVIDIA",
+          "referenceBp": 77.7,
+          "predictionBp": 78.06150932201469,
+          "errorBp": 0.3615093220146832
+        },
+        {
+          "company": "Amazon",
+          "referenceBp": 63.9,
+          "predictionBp": 63.466688522210625,
+          "errorBp": -0.43331147778937407
+        },
+        {
+          "company": "Google",
+          "referenceBp": 61.0,
+          "predictionBp": 61.80718143556312,
+          "errorBp": 0.8071814355631233
+        },
+        {
+          "company": "Microsoft",
+          "referenceBp": 44.6,
+          "predictionBp": 44.6108618967499,
+          "errorBp": 0.010861896749901234
+        },
+        {
+          "company": "Meta",
+          "referenceBp": 83.5,
+          "predictionBp": 83.81463575193752,
+          "errorBp": 0.3146357519375158
+        }
+      ]
+    },
+    {
+      "method": "quantlibBp_issuer_offset_0904",
+      "trainingDates": [
+        "2026-09-04"
+      ],
+      "targetDate": "2026-09-11",
+      "parameters": {
+        "Google": 0.12382617756894376,
+        "Microsoft": 0.23046849425239202,
+        "Oracle": -0.6221600188508773,
+        "Amazon": 0.08132793800632498,
+        "Meta": 0.06649446851254481,
+        "NVIDIA": 0.4596388951897836
+      },
+      "n": 6,
+      "maeBp": 0.32876386830019183,
+      "rmseBp": 0.4233276459207174,
+      "maxAbsBp": 0.8023491560971436,
+      "predictions": [
+        {
+          "company": "Oracle",
+          "referenceBp": 186.1,
+          "predictionBp": 186.12656325472395,
+          "errorBp": 0.026563254723953378
+        },
+        {
+          "company": "NVIDIA",
+          "referenceBp": 77.7,
+          "predictionBp": 78.06938582238273,
+          "errorBp": 0.3693858223827249
+        },
+        {
+          "company": "Amazon",
+          "referenceBp": 63.9,
+          "predictionBp": 63.467934598355406,
+          "errorBp": -0.43206540164459284
+        },
+        {
+          "company": "Google",
+          "referenceBp": 61.0,
+          "predictionBp": 61.802349156097144,
+          "errorBp": 0.8023491560971436
+        },
+        {
+          "company": "Microsoft",
+          "referenceBp": 44.6,
+          "predictionBp": 44.61445014973064,
+          "errorBp": 0.014450149730635076
+        },
+        {
+          "company": "Meta",
+          "referenceBp": 83.5,
+          "predictionBp": 83.8277694252221,
+          "errorBp": 0.32776942522210106
+        }
+      ]
+    },
+    {
+      "method": "originalBp_issuer_offset_0831_and_0904",
+      "trainingDates": [
+        "2026-08-31",
+        "2026-09-04"
+      ],
+      "targetDate": "2026-09-11",
+      "parameters": {
+        "Google": -0.7037678236841209,
+        "Microsoft": 0.26613623856408,
+        "Oracle": -0.9506100387728509,
+        "Amazon": 0.19361489932708054,
+        "Meta": 0.09630705978659648,
+        "NVIDIA": 0.31796272496875844
+      },
+      "n": 6,
+      "maeBp": 0.19801733539742847,
+      "rmseBp": 0.23208703737264985,
+      "maxAbsBp": 0.3943462341903583,
+      "predictions": [
+        {
+          "company": "Oracle",
+          "referenceBp": 186.1,
+          "predictionBp": 185.97864828300487,
+          "errorBp": -0.1213517169951217
+        },
+        {
+          "company": "NVIDIA",
+          "referenceBp": 77.7,
+          "predictionBp": 77.88199135168202,
+          "errorBp": 0.18199135168201508
+        },
+        {
+          "company": "Amazon",
+          "referenceBp": 63.9,
+          "predictionBp": 63.50565376580964,
+          "errorBp": -0.3943462341903583
+        },
+        {
+          "company": "Google",
+          "referenceBp": 61.0,
+          "predictionBp": 60.896733558552796,
+          "errorBp": -0.10326644144720376
+        },
+        {
+          "company": "Microsoft",
+          "referenceBp": 44.6,
+          "predictionBp": 44.537239598252114,
+          "errorBp": -0.06276040174788733
+        },
+        {
+          "company": "Meta",
+          "referenceBp": 83.5,
+          "predictionBp": 83.82438786632198,
+          "errorBp": 0.3243878663219846
+        }
+      ]
+    },
+    {
+      "method": "quantlibBp_issuer_offset_0831_and_0904",
+      "trainingDates": [
+        "2026-08-31",
+        "2026-09-04"
+      ],
+      "targetDate": "2026-09-11",
+      "parameters": {
+        "Google": -0.7561538233464589,
+        "Microsoft": 0.19671802974231056,
+        "Oracle": -0.8170656075305089,
+        "Amazon": 0.14747209664044192,
+        "Meta": 0.08432614140429706,
+        "NVIDIA": 0.29409597427305556
+      },
+      "n": 6,
+      "maeBp": 0.19677312269061886,
+      "rmseBp": 0.23438877788883816,
+      "maxAbsBp": 0.3659212430104759,
+      "predictions": [
+        {
+          "company": "Oracle",
+          "referenceBp": 186.1,
+          "predictionBp": 185.93165766604432,
+          "errorBp": -0.16834233395567821
+        },
+        {
+          "company": "NVIDIA",
+          "referenceBp": 77.7,
+          "predictionBp": 77.90384290146599,
+          "errorBp": 0.2038429014659897
+        },
+        {
+          "company": "Amazon",
+          "referenceBp": 63.9,
+          "predictionBp": 63.53407875698952,
+          "errorBp": -0.3659212430104759
+        },
+        {
+          "company": "Google",
+          "referenceBp": 61.0,
+          "predictionBp": 60.92236915518174,
+          "errorBp": -0.07763084481825899
+        },
+        {
+          "company": "Microsoft",
+          "referenceBp": 44.6,
+          "predictionBp": 44.58069968522055,
+          "errorBp": -0.019300314779449934
+        },
+        {
+          "company": "Meta",
+          "referenceBp": 83.5,
+          "predictionBp": 83.84560109811386,
+          "errorBp": 0.3456010981138604
+        }
+      ]
+    },
+    {
+      "method": "quantlib_one_shared_curve_shift_0904",
+      "trainingDates": [
+        "2026-09-04"
+      ],
+      "targetDate": "2026-09-11",
+      "parameters": {
+        "parallelShiftBp": -22.96520238461226
+      },
+      "n": 6,
+      "maeBp": 0.3052559147093146,
+      "rmseBp": 0.41657756291334114,
+      "maxAbsBp": 0.8852183236703652,
+      "predictions": [
+        {
+          "company": "Oracle",
+          "referenceBp": 186.1,
+          "predictionBp": 186.26743930223063,
+          "errorBp": 0.1674393022306333
+        },
+        {
+          "company": "NVIDIA",
+          "referenceBp": 77.7,
+          "predictionBp": 77.73094586836956,
+          "errorBp": 0.030945868369556706
+        },
+        {
+          "company": "Amazon",
+          "referenceBp": 63.9,
+          "predictionBp": 63.58416466615623,
+          "errorBp": -0.31583533384377205
+        },
+        {
+          "company": "Google",
+          "referenceBp": 61.0,
+          "predictionBp": 61.885218323670365,
+          "errorBp": 0.8852183236703652
+        },
+        {
+          "company": "Microsoft",
+          "referenceBp": 44.6,
+          "predictionBp": 44.6827996371737,
+          "errorBp": 0.08279963717370009
+        },
+        {
+          "company": "Meta",
+          "referenceBp": 83.5,
+          "predictionBp": 83.84929702296786,
+          "errorBp": 0.34929702296786047
+        }
+      ]
+    },
+    {
+      "method": "original_global_affine_0904",
+      "trainingDates": [
+        "2026-09-04"
+      ],
+      "targetDate": "2026-09-11",
+      "parameters": {
+        "intercept": 0.7504276230147156,
+        "slope": 0.9924845831194723
+      },
+      "n": 6,
+      "maeBp": 0.30762708288880347,
+      "rmseBp": 0.4179550674895568,
+      "maxAbsBp": 0.8879755573145971,
+      "predictions": [
+        {
+          "company": "Oracle",
+          "referenceBp": 186.1,
+          "predictionBp": 186.27483464133644,
+          "errorBp": 0.17483464133644588
+        },
+        {
+          "company": "NVIDIA",
+          "referenceBp": 77.7,
+          "predictionBp": 77.73153023966503,
+          "errorBp": 0.03153023966503099
+        },
+        {
+          "company": "Amazon",
+          "referenceBp": 63.9,
+          "predictionBp": 63.586650123859485,
+          "errorBp": -0.3133498761405136
+        },
+        {
+          "company": "Google",
+          "referenceBp": 61.0,
+          "predictionBp": 61.8879755573146,
+          "errorBp": 0.8879755573145971
+        },
+        {
+          "company": "Microsoft",
+          "referenceBp": 44.6,
+          "predictionBp": 44.68881518519376,
+          "errorBp": 0.0888151851937593
+        },
+        {
+          "company": "Meta",
+          "referenceBp": 83.5,
+          "predictionBp": 83.84925699768247,
+          "errorBp": 0.349256997682474
+        }
+      ]
+    }
+  ]
+}

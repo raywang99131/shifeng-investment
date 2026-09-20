@@ -1,5 +1,6 @@
 akshare
 beautifulsoup4
+feedparser
 lxml
 openpyxl
 pandas

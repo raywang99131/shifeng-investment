@@ -1,0 +1,16 @@
+.git
+.worktrees
+.env
+.env.*
+node_modules
+dist
+logs
+output
+tmp
+server/data
+server/public/reports
+server/etf_monitor/.pytest_cache
+server/etf_monitor/.pytest_tmp
+**/__pycache__
+*.pyc
+*.log

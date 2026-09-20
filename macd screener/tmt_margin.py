@@ -874,6 +874,7 @@ def _is_eastmoney_trading_source(item):
         'tushare_historical_reconstruction',
         'tushare_daily_fallback',
         'baostock_historical_reconstruction',
+        'ifind_historical_reconstruction',
     }:
         return True
     if source:

@@ -24,5 +24,16 @@ export function configureProjectPythonRuntime({
   env.PRICE_TRACKING_PYTHON ||= pythonBin;
   env.NEWS_INTELLIGENCE_PYTHON ||= pythonBin;
   env.QUANT_PYTHON_BIN ||= pythonBin;
+  const etfProjectPython = path.join(
+    projectRoot,
+    'server',
+    'data',
+    'etf-python-venv',
+    'bin',
+    'python3',
+  );
+  env.ETF_MONITOR_PYTHON ||= existsSync(etfProjectPython)
+    ? etfProjectPython
+    : pythonBin;
   return pythonBin;
 }
