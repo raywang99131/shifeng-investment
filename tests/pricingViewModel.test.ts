@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildPricingNews, filterUsdTokenPrices, mergeCodingPlanSupplements, mergeTokenPriceSupplements, tokenPriceChartLabel, tokenPriceHasQuote } from '../src/pages/AIDashboard/pricingViewModel.ts';
+import { CODING_PLAN_SUPPLEMENTS, TOKEN_PRICE_SUPPLEMENTS } from '../src/pages/AIDashboard/pricingSupplements.ts';
 import type { PriceEvent, TokenPrice } from '../src/pages/AIDashboard/types.ts';
 
 const price = (overrides: Partial<TokenPrice> = {}): TokenPrice => ({
@@ -83,7 +84,7 @@ test('dated additions retain newer or undated collected quotes, distinct markets
 test('official supplements put newly added models in the original price table without inventing Full API bars', () => {
   const existing = price();
   const rows = mergeTokenPriceSupplements([existing]);
-  assert.equal(rows.length, 5);
+  assert.equal(rows.length, TOKEN_PRICE_SUPPLEMENTS.length + 1);
   assert.equal(rows.at(-1), existing);
   const wonder = rows.find(row => row.model === 'Muse Wonder')!;
   assert.deepEqual([wonder.inputPrice, wonder.cacheReadPrice, wonder.outputPrice], [4, 0.2, 20]);
@@ -105,11 +106,12 @@ test('official supplements put newly added models in the original price table wi
 
 test('Muse Code plans preserve monthly subscription units, separate allowances and later collected prices', () => {
   const rows = mergeCodingPlanSupplements([]);
-  assert.equal(rows.length, 2);
-  assert.deepEqual(rows.map(row => row.monthlyPrice), [50, 200]);
-  assert.match(rows[0].allowanceText!, /20x/);
-  assert.match(rows[1].allowanceText!, /80x/);
-  assert.ok(rows.every(row => row.annualPrice === null && row.currency === 'USD' && row.sourceKind === 'official'));
-  const current = { ...rows[0], monthlyPrice: 45, asOf: '2026-10-14' };
+  assert.equal(rows.length, CODING_PLAN_SUPPLEMENTS.length);
+  const metaPlans = rows.filter(row => row.vendor === 'Meta');
+  assert.deepEqual(metaPlans.map(row => row.monthlyPrice), [50, 200]);
+  assert.match(metaPlans[0].allowanceText!, /20x/);
+  assert.match(metaPlans[1].allowanceText!, /80x/);
+  assert.ok(metaPlans.every(row => row.annualPrice === null && row.currency === 'USD' && row.sourceKind === 'official'));
+  const current = { ...metaPlans[0], monthlyPrice: 45, asOf: '2026-10-14' };
   assert.equal(mergeCodingPlanSupplements([current]).find(row => row.plan === current.plan), current);
 });

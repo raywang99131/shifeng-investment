@@ -22,6 +22,12 @@ export interface FlagshipPriceRow {
   supplementNote?: string;
   outputSuffix?: string;
   highlighted?: boolean;
+  priceSourceUrl?: string;
+  scoreSourceUrl?: string;
+  evaluationLabel?: string;
+  detailNote?: string;
+  releasedAt?: string | null;
+  cacheReadPrice?: number | null;
 }
 
 export const FLAGSHIP_PRICE_SNAPSHOT = {

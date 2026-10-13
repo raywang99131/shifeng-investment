@@ -69,6 +69,7 @@ export interface UsdTokenPrice extends TokenPrice {
 
 const DOMESTIC_VENDORS = new Set([
   'deepseek', 'kimi', 'moonshot', '月之暗面', 'minimax', 'mimo', 'xiaomi', '小米',
+  'longcat', 'meituan', '美团', 'stepfun', '阶跃星辰', 'ling', '百灵', '蚂蚁',
   'qwen', '通义', 'alibaba', '阿里云', '智谱', 'zhipu', 'z.ai', 'glm',
   'doubao', '豆包', 'bytedance', '字节跳动', 'baidu', '百度', 'tencent', '腾讯', 'hunyuan', '混元',
 ]);

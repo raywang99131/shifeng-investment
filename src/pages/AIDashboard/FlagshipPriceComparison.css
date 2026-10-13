@@ -479,3 +479,8 @@
     min-width: 1120px;
   }
 }
+
+.flagship-price-config {
+  fill: var(--flagship-muted);
+  font-size: 13px;
+}
