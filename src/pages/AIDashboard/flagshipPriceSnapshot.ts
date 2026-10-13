@@ -18,6 +18,8 @@ export interface FlagshipPriceRow {
   input: FlagshipPriceValue;
   output: FlagshipPriceValue;
   note: string;
+  /** Later user-supplied reporting, kept separate from the original image transcription. */
+  supplementNote?: string;
   outputSuffix?: string;
   highlighted?: boolean;
 }
@@ -33,6 +35,25 @@ export const FLAGSHIP_PRICE_SNAPSHOT = {
   indexVersion: null,
 } as const;
 
+export const MUSE_WONDER_RELEASE = {
+  date: '2026-10-13',
+  sourceLabel: '财通海外 · 2026-10-13 · 用户提供纪要',
+  title: 'Muse Wonder 发布更新',
+  api: { input: 4, output: 20, unit: '美元 / 百万 tokens' },
+  subscriptions: [
+    { monthlyUsd: 50, baselineUsageMultiplier: 20 },
+    { monthlyUsd: 200, baselineUsageMultiplier: 80 },
+  ],
+  taskCostSource: '财通海外纪要转引 Artificial Analysis 估算',
+  taskCosts: [
+    { model: 'Muse Wonder', usdPerTask: 4.52, highlighted: true },
+    { model: 'Muse Spark 1.3', usdPerTask: 1.60, highlighted: false },
+    { model: 'Claude Opus 5.5', usdPerTask: 5.98, highlighted: false },
+    { model: 'Claude Sonnet 5.5', usdPerTask: 5.46, highlighted: false },
+    { model: 'GPT-6 Astra', usdPerTask: 3.26, highlighted: false },
+  ],
+} as const;
+
 const fixed = (raw: string): FlagshipPriceValue => ({ raw, lower: Number(raw), upper: Number(raw), kind: 'fixed' });
 const interval = (raw: string, lower: number, upper: number, kind: 'range' | 'tiered' = 'range'): FlagshipPriceValue => ({ raw, lower, upper, kind });
 const missing = (): FlagshipPriceValue => ({ raw: '', lower: null, upper: null, kind: 'missing' });
@@ -41,12 +62,12 @@ const missing = (): FlagshipPriceValue => ({ raw: '', lower: null, upper: null, 
 export const FLAGSHIP_PRICE_ROWS: readonly FlagshipPriceRow[] = [
   { id: 'claude-opus-5-5', sourceOrder: 1, model: 'Claude Opus 5.5', sourceStar: false, score: 58, scoreRaw: '58', input: fixed('4'), output: fixed('20'), note: '' },
   { id: 'claude-sonnet-5-5', sourceOrder: 2, model: 'Claude Sonnet 5.5', sourceStar: true, score: 56, scoreRaw: '56', input: fixed('2'), output: fixed('10'), note: '' },
-  { id: 'muse-wonder-full', sourceOrder: 3, model: 'Muse Wonder Full', sourceStar: true, score: 56, scoreRaw: '56', input: missing(), output: missing(), note: '仅订阅制 · 无API刊例价', highlighted: true },
+  { id: 'muse-wonder-full', sourceOrder: 3, model: 'Muse Wonder Full', sourceStar: true, score: 56, scoreRaw: '56', input: missing(), output: missing(), note: '仅订阅制 · 无API刊例价', supplementNote: '财通海外 2026-10-13 用户提供纪要：向 Muse Code 订阅用户开放；50 美元/月（基础档 20x 用量）或 200 美元/月（基础档 80x 用量）；未列示独立 API 报价', highlighted: true },
   { id: 'claude-fable-5-1', sourceOrder: 4, model: 'Claude Fable 5.1', sourceStar: false, score: 53, scoreRaw: '53', input: fixed('10'), output: fixed('50'), note: '' },
   { id: 'gpt-6-astra', sourceOrder: 5, model: 'GPT-6 Astra', sourceStar: false, score: 53, scoreRaw: '53', input: fixed('10'), output: fixed('50'), note: '' },
   { id: 'gemini-4-argon', sourceOrder: 6, model: 'Gemini 4 Argon', sourceStar: true, score: 53, scoreRaw: '53', input: fixed('2'), output: fixed('10'), note: '首发', outputSuffix: '（首发）' },
   { id: 'gpt-6-1-sol', sourceOrder: 7, model: 'GPT-6.1 Sol', sourceStar: true, score: 52, scoreRaw: '52', input: fixed('2'), output: fixed('10'), note: '' },
-  { id: 'muse-wonder', sourceOrder: 8, model: 'Muse Wonder', sourceStar: true, score: 52, scoreRaw: '52', input: fixed('4'), output: fixed('20'), note: '', highlighted: true },
+  { id: 'muse-wonder', sourceOrder: 8, model: 'Muse Wonder', sourceStar: true, score: 52, scoreRaw: '52', input: fixed('4'), output: fixed('20'), note: '', supplementNote: '财通海外 2026-10-13 用户提供纪要：基础版发布；API 输入 4、输出 20 美元/百万 tokens；闭源；单任务成本 4.52 美元（转引 Artificial Analysis 估算）', highlighted: true },
   { id: 'claude-opus-5', sourceOrder: 9, model: 'Claude Opus 5', sourceStar: false, score: 51, scoreRaw: '51', input: fixed('5'), output: fixed('25'), note: '' },
   { id: 'muse-spark-1-3', sourceOrder: 10, model: 'Muse Spark 1.3', sourceStar: false, score: 48, scoreRaw: '48', input: fixed('1.25'), output: fixed('4.25'), note: '' },
   { id: 'gpt-6-sol', sourceOrder: 11, model: 'GPT-6 Sol', sourceStar: false, score: 48, scoreRaw: '48', input: fixed('2'), output: fixed('10'), note: '' },
@@ -75,8 +96,9 @@ export const flagshipModelLabel = (row: FlagshipPriceRow) => `${row.model}${row.
 const exportColumns = ['快照日期', '原图顺序', '模型（含原图星标）', 'AA 智能指数', '输入价（美元/百万tokens）', '输出价（美元/百万tokens）', '备注', '来源'];
 const exportRows = () => FLAGSHIP_PRICE_ROWS.map(row => [
   FLAGSHIP_PRICE_SNAPSHOT.date, String(row.sourceOrder), flagshipModelLabel(row), row.scoreRaw,
-  row.input.raw || '未列示', row.output.raw || '未列示', row.note,
-  FLAGSHIP_PRICE_SNAPSHOT.sourceLabel,
+  row.input.raw || '未列示', row.output.raw || '未列示',
+  row.supplementNote ? `原图备注：${row.note || '无'}；补充纪要（未经独立核实）：${row.supplementNote}` : row.note,
+  row.supplementNote ? `${FLAGSHIP_PRICE_SNAPSHOT.sourceLabel}；补充来源：${MUSE_WONDER_RELEASE.sourceLabel}` : FLAGSHIP_PRICE_SNAPSHOT.sourceLabel,
 ]);
 
 export function buildFlagshipPriceTsv(): string {

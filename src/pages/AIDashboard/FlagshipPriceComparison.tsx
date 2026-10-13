@@ -3,6 +3,7 @@ import { Button, Card, Collapse, Image, Space, Tag, Typography } from 'antd';
 import {
   FLAGSHIP_PRICE_ROWS,
   FLAGSHIP_PRICE_SNAPSHOT,
+  MUSE_WONDER_RELEASE,
   buildFlagshipPriceCsv,
   flagshipModelLabel,
   type FlagshipPriceValue,
@@ -98,6 +99,56 @@ function ModelRow({ row, index }: { row: FlagshipPriceRow; index: number }) {
   </g>;
 }
 
+function MuseWonderRelease({ titleId }: { titleId: string }) {
+  const maxTaskCost = Math.max(...MUSE_WONDER_RELEASE.taskCosts.map(row => row.usdPerTask));
+  return <section className="muse-release" data-testid="muse-release-update" aria-labelledby={titleId}>
+    <div className="muse-release-heading">
+      <h3 id={titleId}>{MUSE_WONDER_RELEASE.title}</h3>
+      <Tag color="blue">新增纪要</Tag>
+    </div>
+    <p className="muse-release-source">{MUSE_WONDER_RELEASE.sourceLabel} · 未经独立核实</p>
+    <p className="muse-release-lead">据纪要，Meta 旗下超级智能实验室于 10 月 13 日凌晨发布基础版 Muse Wonder 及增强版 Muse Wonder Full。</p>
+    <dl className="muse-release-pricing">
+      <div>
+        <dt>Muse Wonder 基础版 · API</dt>
+        <dd className="muse-release-rate"><strong>${MUSE_WONDER_RELEASE.api.input}</strong> 输入 <span>/</span> <strong>${MUSE_WONDER_RELEASE.api.output}</strong> 输出</dd>
+        <dd className="muse-release-small">单位：{MUSE_WONDER_RELEASE.api.unit}；与原图报价一致。</dd>
+      </div>
+      <div>
+        <dt>Muse Wonder Full · Muse Code 订阅</dt>
+        <dd className="muse-release-rate">{MUSE_WONDER_RELEASE.subscriptions.map((plan, index) => <span key={plan.monthlyUsd}>
+          {index > 0 ? <span className="muse-release-plan-divider">或</span> : null}
+          <strong>${plan.monthlyUsd}</strong> / 月 <small>（基础档 {plan.baselineUsageMultiplier}x 用量）</small>
+        </span>)}</dd>
+        <dd className="muse-release-small">向 Muse Code 订阅用户开放；纪要未列示 Full 的独立 API 报价。</dd>
+      </div>
+    </dl>
+    <div className="muse-release-content">
+      <div className="muse-release-report">
+        <h4>纪要观点：长周期智能体与闭源策略</h4>
+        <ul>
+          <li><strong>Active Memory（主动记忆）：</strong>主动记录用户的重要信息与偏好。</li>
+          <li><strong>Active Focus（主动专注）：</strong>持续处理疑难问题，遇到障碍时换方法，并在出错后检查。</li>
+          <li><strong>性能与长周期项目：</strong>纪要称，两款模型在多个基准中可匹敌甚至超越 Claude Fable 5.1、GPT-6 Astra 和 Claude Opus 5.5，在长时间、长周期项目中领先于 Opus、Fable 和 Astra。</li>
+          <li><strong>商业化方向：</strong>据纪要，Muse Wonder 不再开源，旗舰模型走向闭源；个人 Agent Muse 计划接入 Wonder。</li>
+        </ul>
+      </div>
+      <figure className="muse-task-cost">
+        <figcaption><strong>单任务成本</strong><span>美元 / 任务</span></figcaption>
+        <ol aria-label="财通海外转引的五款模型单任务成本估算，单位美元每任务">
+          {MUSE_WONDER_RELEASE.taskCosts.map(row => <li key={row.model} className={row.highlighted ? 'is-highlighted' : undefined}>
+            <span className="muse-task-model">{row.model}</span>
+            <span className="muse-task-track" aria-hidden="true"><span style={{ width: `${row.usdPerTask / maxTaskCost * 100}%` }} /></span>
+            <strong>${row.usdPerTask.toFixed(2)}</strong>
+          </li>)}
+        </ol>
+        <p className="muse-release-small">{MUSE_WONDER_RELEASE.taskCostSource}。该指标为单任务成本估算，与 API 的每百万 tokens 刊例价分别展示。</p>
+      </figure>
+    </div>
+    <p className="muse-release-limit">本区为后续补充纪要；下方 29 个模型的原图分数与报价保持原值。纪要未提供具体评测任务集、配置与成本估算方法，性能判断和成本数据均按所供内容归属来源。</p>
+  </section>;
+}
+
 export default function FlagshipPriceComparison() {
   const svgRef = useRef<SVGSVGElement>(null);
   const id = useId();
@@ -120,6 +171,7 @@ export default function FlagshipPriceComparison() {
     <Paragraph className="flagship-price-intro" type="secondary">
       按原图重绘，保留星标、价格区间与限定条件。该快照与下方自动采集的 AA 数据分别展示；截图内容未经独立核实，原图未注明 AA 指数版本。
     </Paragraph>
+    <MuseWonderRelease titleId={`${id}-muse-release-title`} />
     <Text type="secondary" className="flagship-price-scroll-hint">小屏可左右滑动查看完整图表；导出保留原图数据与备注。</Text>
     <div className="flagship-price-scroll" role="region" aria-label="旗舰模型 API 价格与智能指数图表，可左右滚动" tabIndex={0}>
       <svg ref={svgRef} data-testid="flagship-price-comparison-chart" className="flagship-price-svg" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-labelledby={`${titleId} ${descriptionId}`}>
@@ -170,10 +222,10 @@ export default function FlagshipPriceComparison() {
       </> },
       { key: 'data', label: `查看完整文字数据（${FLAGSHIP_PRICE_ROWS.length} 项）`, children: <div className="flagship-price-data-scroll">
         <table className="flagship-price-data">
-          <caption>2026-10-13 截图转录 · 价格单位：美元 / 百万 tokens</caption>
-          <thead><tr><th scope="col">模型（原图星标）</th><th scope="col">AA 指数</th><th scope="col">输入价</th><th scope="col">输出价</th><th scope="col">原图备注</th></tr></thead>
+          <caption>2026-10-13 截图转录 · 价格单位：美元 / 百万 tokens；两款 Muse 的后续纪要单独列示。</caption>
+          <thead><tr><th scope="col">模型（原图星标）</th><th scope="col">AA 指数</th><th scope="col">输入价</th><th scope="col">输出价</th><th scope="col">原图备注</th><th scope="col">补充纪要（未经独立核实）</th></tr></thead>
           <tbody>{FLAGSHIP_PRICE_ROWS.map(row => <tr key={row.id}>
-            <th scope="row">{flagshipModelLabel(row)}</th><td>{row.scoreRaw}</td><td>{row.input.raw || '未列示'}</td><td>{row.output.raw || '未列示'}</td><td>{row.note || '—'}</td>
+            <th scope="row">{flagshipModelLabel(row)}</th><td>{row.scoreRaw}</td><td>{row.input.raw || '未列示'}</td><td>{row.output.raw || '未列示'}</td><td>{row.note || '—'}</td><td className="flagship-price-supplement-note">{row.supplementNote || '—'}</td>
           </tr>)}</tbody>
         </table>
       </div> },
