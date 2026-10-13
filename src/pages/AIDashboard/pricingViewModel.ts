@@ -32,9 +32,9 @@ function mergeDatedSupplements<T extends { asOf: string }>(
     }
     const additionDate = Date.parse(addition.asOf);
     const collectedDate = Date.parse(rows[index].asOf);
-    // Equal dates and unknown dates retain collected data. This snapshot must not
-    // roll back a later refresh or override a quote whose recency is unknown.
-    if (Number.isFinite(additionDate) && Number.isFinite(collectedDate) && additionDate > collectedDate) {
+    // A manually verified supplement takes precedence over a same-day automated
+    // quote. Later refreshes and quotes whose recency is unknown remain intact.
+    if (Number.isFinite(additionDate) && Number.isFinite(collectedDate) && additionDate >= collectedDate) {
       rows[index] = addition;
     }
   }

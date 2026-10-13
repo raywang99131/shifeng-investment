@@ -1,4 +1,5 @@
 import type { CodingPlan, MetricProvenance, TokenPrice } from './types.ts';
+import { buildLatestTokenPriceSupplements } from './latestTokenPriceSupplements.ts';
 
 const VERIFIED_AT = '2026-10-13';
 const META_PRICING_URL = 'https://dev.meta.ai/docs/pricing-rate-limits';
@@ -168,6 +169,7 @@ export const TOKEN_PRICE_SUPPLEMENTS: readonly TokenPrice[] = [
     sourceLabel: 'Kimi Code 官方模型页', sourceUrl: KIMI_MODEL_URL,
     note: '仅 Kimi Code 订阅入口，未公布独立按量 API 单价。模型 ID：kimi-for-coding 原位升级；最高 1M 上下文，low / high / max。新套餐 Plus 99 元/月起，完整月付和年付价格见 Coding Plan；新 Go 无 Coding 额度。',
   }, KIMI_RELEASE_URL),
+  ...buildLatestTokenPriceSupplements(),
 ];
 
 const metaPlanBase: Omit<CodingPlan, 'plan' | 'monthlyPrice' | 'allowanceText'> = {

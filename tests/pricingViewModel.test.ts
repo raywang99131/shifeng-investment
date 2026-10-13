@@ -71,6 +71,11 @@ test('verified Kimi prices replace the shifted September snapshot and only its t
   assert.deepEqual([corrected.inputPrice, corrected.cacheReadPrice, corrected.outputPrice], [3, 0.3, 15]);
   assert.equal(corrected.asOf, '2026-10-13');
   assert.match(corrected.sourceUrl, /chat-k3\.md$/);
+  const repeated = { ...bad, asOf: '2026-10-13', sourceUrl: 'https://platform.kimi.ai/docs/pricing/chat.md' };
+  const sameDay = mergeTokenPriceSupplements([repeated]).find(row => row.vendor === 'Kimi' && row.model === 'Kimi K3')!;
+  assert.deepEqual([sameDay.inputPrice, sameDay.cacheReadPrice, sameDay.outputPrice], [3, 0.3, 15]);
+  const later = { ...repeated, asOf: '2026-10-14' };
+  assert.equal(mergeTokenPriceSupplements([later]).find(row => row.vendor === 'Kimi' && row.model === 'Kimi K3'), later);
   const events = (['inputPrice', 'cacheReadPrice', 'outputPrice'] as const).map(priceField => ({
     ...bad, id: `kimi|kimi k3|standard|1m context|usd|global|per_million_tokens|${priceField}|2026-09-19|2026-09-20`,
     priceField, oldPrice: 1, newPrice: 2, absoluteDelta: 1, percentDelta: 100, previousAsOf: '2026-09-19',
@@ -94,9 +99,10 @@ test('dated additions retain newer or undated collected quotes, distinct markets
   assert.equal(rows[1], regional);
   assert.equal(rows[2], tier);
   assert.equal(old.inputPrice, 9);
-  for (const existing of [current, { ...old, asOf: '' }, { ...manual, inputPrice: 5 }]) {
+  for (const existing of [current, { ...old, asOf: '' }]) {
     assert.equal(mergeTokenPriceSupplements([existing], [manual])[0], existing);
   }
+  assert.equal(mergeTokenPriceSupplements([{ ...manual, inputPrice: 5 }], [manual])[0], manual);
 });
 
 test('official supplements put newly added models in the original price table without inventing Full API bars', () => {
@@ -120,6 +126,19 @@ test('official supplements put newly added models in the original price table wi
   const flashX = rows.find(row => row.model === 'GLM-5.3-FlashX')!;
   assert.deepEqual([flashX.inputPrice, flashX.cacheReadPrice, flashX.outputPrice], [0.37, 0.075, 1.25]);
   assert.equal(flashX.releasedAt, null);
+});
+
+test('verified same-day Opus standard pricing replaces a fast-mode quote without replacing the separate fast tier', () => {
+  const collected = price({ vendor: 'Anthropic', model: 'Claude Opus 5.5', currency: 'USD',
+    asOf: '2026-10-13', inputPrice: 8, cacheReadPrice: null, outputPrice: 40 });
+  const fast = { ...collected, serviceTier: 'highspeed' };
+  const rows = mergeTokenPriceSupplements([collected, fast]);
+  const standard = rows.filter(row => row.vendor === collected.vendor && row.model === collected.model
+    && row.contextTier === 'standard' && row.serviceTier === 'standard' && row.region === 'global' && row.currency === 'USD');
+  assert.equal(standard.length, 1);
+  assert.deepEqual([standard[0].inputPrice, standard[0].cacheReadPrice, standard[0].outputPrice], [4, 0.2, 20]);
+  assert.equal(rows.find(row => row.model === fast.model && row.serviceTier === 'highspeed'), fast);
+  assert.equal(collected.inputPrice, 8);
 });
 
 test('Muse Code plans preserve monthly subscription units, separate allowances and later collected prices', () => {
