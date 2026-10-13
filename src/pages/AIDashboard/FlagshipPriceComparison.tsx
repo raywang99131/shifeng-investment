@@ -224,7 +224,7 @@ export default function FlagshipPriceComparison() {
       { key: 'recent', label: `近期专项模型与开放更新（${RECENT_SPECIALIST_UPDATES.length} 项）`, children: <div className="flagship-price-data-scroll">
         <table className="flagship-price-data"><caption>专项模型保留原计费单位；未进入通用文本综合指数价格排序。</caption>
           <thead><tr><th>厂商 / 型号</th><th>日期</th><th>开放状态</th><th>价格与单位</th><th>说明 / 来源</th></tr></thead>
-          <tbody>{RECENT_SPECIALIST_UPDATES.map(row => <tr key={row.model}><th scope="row">{row.vendor}<br />{row.model}</th><td>{row.date || '未确认'}</td><td>{row.status}</td><td>{row.pricing}</td><td>{row.note}<br /><a href={row.sourceUrl} target="_blank" rel="noreferrer">官方来源</a></td></tr>)}</tbody>
+          <tbody>{RECENT_SPECIALIST_UPDATES.map(row => <tr key={row.model}><th scope="row">{row.vendor}<br />{row.model}</th><td>{row.date || '未确认'}</td><td>{row.status}</td><td>{row.pricing}</td><td>{row.note}<br /><a href={row.sourceUrl} target="_blank" rel="noreferrer">官方来源</a>{row.supportingSources?.map(source => <span key={source.url}> · <a href={source.url} target="_blank" rel="noreferrer">{source.label}</a></span>)}</td></tr>)}</tbody>
         </table>
       </div> },
       { key: 'method', label: '口径说明与原图（点击图片放大）', children: <>

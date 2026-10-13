@@ -4,10 +4,22 @@ export const RECENT_SPECIALIST_UPDATES: readonly {
   model: string;
   date: string | null;
   status: string;
-  pricing: string;
+  pricing: string | null;
+  aaIntelligenceIndex?: number | null;
+  supportingSources?: readonly { label: string; url: string }[];
   sourceUrl: string;
   note: string;
 }[] = [
+  {
+    vendor: '智谱', model: 'GLM-Legal', date: '2026-10-12',
+    status: 'Beta；API需申请接入', pricing: null, aaIntelligenceIndex: null,
+    sourceUrl: 'https://z.ai/blog/glm-legal',
+    supportingSources: [
+      { label: 'Vals 法律评测', url: 'https://www.vals.ai/models/zai_glm-legal' },
+      { label: '官方 API 接入申请', url: 'https://z.ai/consultation/legal' },
+    ],
+    note: '以 GLM-5.3-Flash 为底座，面向合同审查、证据分析与合规工作流。Vals Harvey LAB 得分 19.17%，评测页当前第 7/79；这是法律领域评测，不是 AA 综合智能指数。官方 API 刊例价与 AA 综合指数未核实，均留空；AutoClaw 即将接入。',
+  },
   {
     vendor: 'Google', model: 'Nano Banana 2.1', date: '2026-10-06',
     status: '正式开放；图像生成',
