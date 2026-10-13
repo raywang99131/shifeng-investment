@@ -23,7 +23,7 @@ function officialProvenance(sourceLabel: string, sourceUrl: string): MetricProve
 
 type OfficialTokenSupplement = Pick<TokenPrice,
   'vendor' | 'model' | 'inputPrice' | 'cacheReadPrice' | 'outputPrice' | 'sourceLabel' | 'sourceUrl'
-> & Partial<Pick<TokenPrice, 'generation' | 'releasedAt' | 'region' | 'currency' | 'publicPrice' | 'note'>>;
+> & Partial<Pick<TokenPrice, 'generation' | 'releasedAt' | 'region' | 'currency' | 'publicPrice' | 'note' | 'contextTier' | 'cacheWritePrice'>>;
 
 function officialTokenSupplement(row: OfficialTokenSupplement, releaseSourceUrl: string): TokenPrice {
   const currency = row.currency || 'USD';
@@ -50,6 +50,12 @@ const metaTokenBase: Omit<TokenPrice, 'model' | 'inputPrice' | 'cacheReadPrice' 
 
 // Dated additions to the original pricing tables. Later collected quotes take precedence.
 export const TOKEN_PRICE_SUPPLEMENTS: readonly TokenPrice[] = [
+  officialTokenSupplement({
+    vendor: 'Kimi', model: 'Kimi K3', generation: 'K3', releasedAt: '2026-07-17', contextTier: '1M context',
+    inputPrice: 3, cacheReadPrice: 0.3, cacheWritePrice: 3, outputPrice: 15,
+    sourceLabel: 'Kimi 官方美元价目表', sourceUrl: 'https://platform.kimi.ai/docs/pricing/chat-k3.md',
+    note: '2026-10-13按官网表头复核：缓存写入TTL 5min为3美元（默认）、1h为6美元；缓存命中0.30、未命中输入3、输出15美元/百万Tokens。旧9/20自动抓取误把新增写入缓存列当作输入/输出，已由此记录纠正；不属于实际调价。',
+  }, 'https://www.kimi.com/news/kimi-k3'),
   {
     ...metaTokenBase, model: 'Muse Wonder', publicPrice: true,
     inputPrice: 4, cacheReadPrice: 0.2, outputPrice: 20,

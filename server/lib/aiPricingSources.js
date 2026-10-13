@@ -461,9 +461,72 @@ function parseCodingTables(html, definition, document, config) {
 }
 
 function parseKimiK3Markdown(markdown, definition, document, config) {
-  const row = String(markdown || '').match(/\["kimi-k3",\s*"1M tokens"([\s\S]{0,500}?)\]/i)?.[1] || '';
-  const values = [...row.matchAll(/\{\s*"\$"\s*\}([\d.]+)/g)].map((match) => Number(match[1]));
-  if (values.length < 3) throw new Error('kimi-pricing K3 official price row not found');
+  const text = String(markdown || '');
+  // Parse only the literal DocTable containing K3; never execute the page's MDX.
+  const tables = [...text.matchAll(/<DocTable\b([\s\S]*?\]\s*\})\s*\/>/g)]
+    .filter((match) => /"kimi-k3"/i.test(match[1]));
+  if (tables.length !== 1) throw new Error('kimi-pricing K3 official price table missing or ambiguous');
+  const table = tables[0][1];
+  const columns = table.match(/columns\s*=\s*\{\s*\[([\s\S]*?)\]\s*\}/)?.[1];
+  const rowText = table.match(/rows\s*=\s*\{\s*\[([\s\S]*?)\]\s*\}/)?.[1];
+  if (!columns || !rowText) throw new Error('kimi-pricing K3 official table columns missing');
+  const headers = [...columns.matchAll(/\btitle\s*:\s*("(?:\\.|[^"\\])*")/g)]
+    .map((match) => normalizeHeader(JSON.parse(match[1])));
+  const headerPatterns = {
+    model: /^(?:model|模型)$/,
+    unit: /^(?:unit|计费单位)$/,
+    input: /^(?:inputprice(?:cachemiss)?|输入价格(?:缓存未命中)?)$/,
+    cacheRead: /^(?:cachedinputprice|inputpricecachehit|输入价格缓存命中)$/,
+    output: /^(?:outputprice|输出价格)$/,
+    cacheWrite5min: /^(?:cachewriteprice|缓存写入)ttl5min$/,
+    cacheWrite1h: /^(?:cachewriteprice|缓存写入)ttl1h$/,
+    context: /^(?:contextwindow|上下文窗口)$/,
+  };
+  const indices = new Map();
+  headers.forEach((header, index) => {
+    const name = Object.keys(headerPatterns).find((key) => headerPatterns[key].test(header));
+    if (!name || indices.has(name)) throw new Error('kimi-pricing K3 unknown or ambiguous price header');
+    indices.set(name, index);
+  });
+  const required = ['model', 'unit', 'input', 'cacheRead', 'output'];
+  if (required.some((name) => !indices.has(name))
+    || indices.has('cacheWrite5min') !== indices.has('cacheWrite1h')) {
+    throw new Error('kimi-pricing K3 required price headers missing');
+  }
+  const rows = [...rowText.matchAll(/\[([\s\S]*?)\]/g)].map((match) => {
+    let remaining = match[1].trim();
+    const cells = [];
+    while (remaining) {
+      const cell = remaining.match(/^("(?:\\.|[^"\\])*"|<>\s*\{\s*"[$¥￥]"\s*\}\s*\d+(?:\.\d+)?\s*<\/>)\s*(?:,|$)/);
+      if (!cell) throw new Error('kimi-pricing K3 unsupported table column value');
+      const value = cell[1];
+      const jsxPrice = value.match(/^<>\s*\{\s*"([$¥￥])"\s*\}\s*(\d+(?:\.\d+)?)\s*<\/>$/);
+      cells.push(jsxPrice ? `${jsxPrice[1]}${jsxPrice[2]}` : JSON.parse(value));
+      remaining = remaining.slice(cell[0].length).trim();
+    }
+    if (cells.length !== headers.length) throw new Error('kimi-pricing K3 table column count mismatch');
+    return cells;
+  }).filter((row) => /^kimi-k3$/i.test(row[indices.get('model')]));
+  if (rows.length !== 1) throw new Error('kimi-pricing K3 official price row missing or ambiguous');
+  const row = rows[0];
+  if (!/^1M\s+tokens$/i.test(row[indices.get('unit')])) throw new Error('kimi-pricing K3 unsupported token unit column');
+  const prices = new Map();
+  let currency = null;
+  for (const name of ['input', 'cacheRead', 'output', 'cacheWrite5min', 'cacheWrite1h']) {
+    if (!indices.has(name)) continue;
+    const price = row[indices.get(name)].match(/^(\$|USD|¥|￥|CNY|RMB)\s*(\d+(?:\.\d+)?)$/i);
+    if (!price) throw new Error('kimi-pricing K3 price currency is not established');
+    const cellCurrency = /^(?:\$|USD)$/i.test(price[1]) ? 'USD' : 'CNY';
+    if (currency && currency !== cellCurrency) throw new Error('kimi-pricing K3 mixed price currencies');
+    currency = cellCurrency;
+    prices.set(name, Number(price[2]));
+  }
+  const note = [];
+  if (prices.has('cacheWrite5min')) {
+    const default5min = /5min\s+tier\s+applies\s+by\s+default|默认按\s*5min\s*档/i.test(text);
+    note.push(`缓存写入${default5min ? '默认' : ''} TTL 5min：${prices.get('cacheWrite5min')} ${currency} / 1M tokens；TTL 1h：${prices.get('cacheWrite1h')} ${currency} / 1M tokens，按 TTL 分档计价`);
+  }
+  if (indices.has('context')) note.push(`官网上下文窗口：${row[indices.get('context')]}`);
   return [normalizeTokenPrice({
     vendor: config.vendor,
     model: 'Kimi K3',
@@ -471,13 +534,14 @@ function parseKimiK3Markdown(markdown, definition, document, config) {
     currentGeneration: true,
     contextTier: '1M context',
     serviceTier: 'standard',
-    currency: 'USD',
+    currency,
     priceUnit: 'per_million_tokens',
-    inputPrice: values[1],
-    cacheReadPrice: values[0],
-    cacheWritePrice: null,
-    outputPrice: values[2],
-    ...sourceFields(definition, document, '从 Kimi 官网 K3 Markdown 定价表读取缓存命中、缓存未命中与输出价格'),
+    inputPrice: prices.get('input'),
+    cacheReadPrice: prices.get('cacheRead'),
+    cacheWritePrice: prices.get('cacheWrite5min') ?? null,
+    outputPrice: prices.get('output'),
+    note: note.join('；') || null,
+    ...sourceFields(definition, document, '从 Kimi 官网 K3 Markdown 表按列名读取价格与实际币种；缓存写入按 TTL 单独保留，不进行币种换算'),
   })];
 }
 

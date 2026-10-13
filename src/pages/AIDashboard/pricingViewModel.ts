@@ -160,7 +160,14 @@ const PRICE_FIELD_LABELS: Record<PriceEvent['priceField'], string> = {
 
 export function buildPricingNews(events: PriceEvent[]): PricingNewsItem[] {
   const grouped = new Map<string, PriceEvent[]>();
+  // The 2026-09-20 Kimi adapter read the newly added cache-write columns as
+  // cache-read/input/output. These exact stored observations are parser errors,
+  // not price changes; future observations and genuine historical news remain.
+  // Rechecked against https://platform.kimi.ai/docs/pricing/chat-k3.md on 10/13.
+  const invalidKimiEvents = new Set(PRICE_FIELDS.filter(field => field !== 'cacheWritePrice').map(field =>
+    `kimi|kimi k3|standard|1m context|usd|global|per_million_tokens|${field}|2026-09-19|2026-09-20`));
   for (const event of events) {
+    if (invalidKimiEvents.has(event.id)) continue;
     const key = [event.vendor, event.model, event.contextTier, event.serviceTier, event.region, event.currency, event.asOf, event.sourceUrl].join('|');
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key)!.push(event);

@@ -64,6 +64,24 @@ test('official news keeps its publication date separate from effective date and 
   assert.match(deepseek.sourceUrl, /^https:\/\/api-docs\.deepseek\.com\//);
 });
 
+test('verified Kimi prices replace the shifted September snapshot and only its three invalid change events are excluded', () => {
+  const bad = price({ vendor: 'Kimi', model: 'Kimi K3', contextTier: '1M context', currency: 'USD',
+    asOf: '2026-09-20', inputPrice: 6, cacheReadPrice: 3, outputPrice: 0.3 });
+  const corrected = mergeTokenPriceSupplements([bad]).find(row => row.vendor === 'Kimi' && row.model === 'Kimi K3')!;
+  assert.deepEqual([corrected.inputPrice, corrected.cacheReadPrice, corrected.outputPrice], [3, 0.3, 15]);
+  assert.equal(corrected.asOf, '2026-10-13');
+  assert.match(corrected.sourceUrl, /chat-k3\.md$/);
+  const events = (['inputPrice', 'cacheReadPrice', 'outputPrice'] as const).map(priceField => ({
+    ...bad, id: `kimi|kimi k3|standard|1m context|usd|global|per_million_tokens|${priceField}|2026-09-19|2026-09-20`,
+    priceField, oldPrice: 1, newPrice: 2, absoluteDelta: 1, percentDelta: 100, previousAsOf: '2026-09-19',
+  } as PriceEvent));
+  const future = { ...events[0], id: 'valid-later-kimi-change', asOf: '2026-10-14' };
+  const observations = buildPricingNews([...events, future]).filter(item => item.kind === 'observation');
+  assert.equal(observations.length, 1);
+  assert.equal(observations[0].publishedAt, '2026-10-14');
+  assert.equal(bad.inputPrice, 6);
+});
+
 test('dated additions retain newer or undated collected quotes, distinct markets and tiers, and do not mutate input', () => {
   const old = price({ vendor: 'Meta', model: 'Muse Wonder', currency: 'USD', asOf: '2026-10-01', inputPrice: 9 });
   const current = { ...old, asOf: '2026-10-14', inputPrice: 3 };

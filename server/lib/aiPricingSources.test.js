@@ -75,6 +75,65 @@ test('official Kimi markdown adapter parses the latest K3 cache-hit, cache-miss,
   }, { model: 'Kimi K3', currency: 'USD', input: 3, cache: 0.3, output: 15, current: true });
 });
 
+test('official Kimi K3 five-price table keeps cache-write TTL columns separate from input and output', () => {
+  const source = definition('kimi-pricing');
+  const adapter = createOfficialPricingAdapter(source);
+  const { token } = adapter.parsePricing(document(readFixture('kimi-k3-pricing-cache-ttl.md'), source.entryUrl));
+
+  assert.equal(token.length, 1);
+  assert.deepEqual({
+    currency: token[0].currency, input: token[0].inputPrice, cache: token[0].cacheReadPrice,
+    write: token[0].cacheWritePrice, output: token[0].outputPrice, serviceTier: token[0].serviceTier,
+  }, { currency: 'USD', input: 3, cache: 0.3, write: 3, output: 15, serviceTier: 'standard' });
+  assert.match(token[0].note, /默认 TTL 5min/);
+  assert.match(token[0].note, /TTL 1h[^；]*6 USD/);
+  assert.equal(token[0].sourceUrl, source.entryUrl);
+});
+
+test('official Kimi K3 Chinese table reads CNY from price cells without assuming USD or converting', () => {
+  const source = definition('kimi-pricing');
+  const { token } = createOfficialPricingAdapter(source).parsePricing(document(readFixture('kimi-k3-pricing-cache-ttl-cny.md'), source.entryUrl));
+
+  assert.deepEqual({
+    currency: token[0].currency, input: token[0].inputPrice, cache: token[0].cacheReadPrice,
+    write: token[0].cacheWritePrice, output: token[0].outputPrice,
+  }, { currency: 'CNY', input: 20, cache: 2, write: 20, output: 100 });
+  assert.match(token[0].note, /TTL 1h[^；]*40 CNY/);
+});
+
+test('official Kimi K3 maps prices by named headers even when price columns are reordered', () => {
+  const source = definition('kimi-pricing');
+  const { token } = createOfficialPricingAdapter(source).parsePricing(document(`
+    <DocTable
+      columns={[
+        { title: "Output Price" }, { title: "Model" }, { title: "Input Price (Cache Miss)" },
+        { title: "Unit" }, { title: "Input Price (Cache Hit)" },
+      ]}
+      rows={[
+        ["$15.00", "kimi-k3", "$3.00", "1M tokens", "$0.30"],
+      ]}
+    />
+  `, source.entryUrl));
+
+  assert.deepEqual([token[0].inputPrice, token[0].cacheReadPrice, token[0].outputPrice], [3, 0.3, 15]);
+  assert.equal(token[0].cacheWritePrice, null);
+});
+
+test('official Kimi K3 refuses unknown, missing or ambiguous headers and mixed or unspecified currencies', () => {
+  const source = definition('kimi-pricing');
+  const adapter = createOfficialPricingAdapter(source);
+  const fixture = readFixture('kimi-k3-pricing-cache-ttl.md');
+  for (const invalid of [
+    fixture.replace('Input Price\", width', 'Unknown Price\", width'),
+    fixture.replace('Cached Input Price', 'Input Price'),
+    fixture.replace('Cache Write Price (TTL 1h)', 'Cache Write Price (TTL 1d)'),
+    fixture.replace('<>{"$"}15.00</>', '"¥100.00"'),
+    fixture.replace('<>{"$"}15.00</>', '"15.00"'),
+  ]) {
+    assert.throws(() => adapter.parsePricing(document(invalid, source.entryUrl)), /kimi-pricing.*(?:header|currenc(?:y|ies)|column)/i);
+  }
+});
+
 test('official xAI model page records Grok input, cached-input, and output API prices', () => {
   const source = definition('xai-pricing');
   const adapter = createOfficialPricingAdapter(source);
