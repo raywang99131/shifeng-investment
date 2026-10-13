@@ -1,4 +1,5 @@
-import type { PriceEvent, TokenPrice } from './types.ts';
+import type { CodingPlan, PriceEvent, TokenPrice } from './types.ts';
+import { CODING_PLAN_SUPPLEMENTS, TOKEN_PRICE_SUPPLEMENTS } from './pricingSupplements.ts';
 
 export type PricingRegion = 'all' | 'domestic' | 'overseas';
 
@@ -12,6 +13,53 @@ export const TOKEN_PRICE_FX = Object.freeze({
 
 const PRICE_FIELDS = ['inputPrice', 'cacheReadPrice', 'cacheWritePrice', 'outputPrice'] as const;
 type PriceValues = Pick<TokenPrice, typeof PRICE_FIELDS[number]>;
+
+function normalizedKey(parts: Array<string | null>): string {
+  return parts.map(part => (part || '').trim().toLowerCase().replace(/\s+/g, ' ')).join('|');
+}
+
+function mergeDatedSupplements<T extends { asOf: string }>(
+  collected: T[], additions: readonly T[], keyOf: (row: T) => string,
+): T[] {
+  const rows = [...collected];
+  const newRows: T[] = [];
+  for (const addition of additions) {
+    const key = keyOf(addition);
+    const index = rows.findIndex(row => keyOf(row) === key);
+    if (index < 0) {
+      if (!newRows.some(row => keyOf(row) === key)) newRows.push(addition);
+      continue;
+    }
+    const additionDate = Date.parse(addition.asOf);
+    const collectedDate = Date.parse(rows[index].asOf);
+    // Equal dates and unknown dates retain collected data. This snapshot must not
+    // roll back a later refresh or override a quote whose recency is unknown.
+    if (Number.isFinite(additionDate) && Number.isFinite(collectedDate) && additionDate > collectedDate) {
+      rows[index] = addition;
+    }
+  }
+  return [...newRows, ...rows];
+}
+
+export function mergeTokenPriceSupplements(
+  collected: TokenPrice[], additions: readonly TokenPrice[] = TOKEN_PRICE_SUPPLEMENTS,
+): TokenPrice[] {
+  return mergeDatedSupplements(collected, additions, row => normalizedKey([
+    row.vendor, row.model, row.contextTier, row.serviceTier, row.region, row.currency,
+  ]));
+}
+
+export function mergeCodingPlanSupplements(
+  collected: CodingPlan[], additions: readonly CodingPlan[] = CODING_PLAN_SUPPLEMENTS,
+): CodingPlan[] {
+  return mergeDatedSupplements(collected, additions, row => normalizedKey([
+    row.vendor, row.plan, row.region, row.currency,
+  ]));
+}
+
+export function tokenPriceHasQuote(row: TokenPrice): boolean {
+  return PRICE_FIELDS.some(field => row[field] !== null && Number.isFinite(row[field]));
+}
 
 export interface UsdTokenPrice extends TokenPrice {
   originalCurrency: string;

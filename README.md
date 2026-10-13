@@ -70,6 +70,8 @@ docker compose up --build
 
 新增 2026-10-13 财通海外 Muse Wonder 发布补充（用户提供纪要）：分别列示基础版 API 单价、Full 的 50/200 美元订阅及 20x/80x 用量、Active Memory/Active Focus 与闭源策略，并单独展示纪要转引的 AA 单任务成本。补充保留来源及日期，不改写原截图指数，也不将订阅费或单任务成本混入 API 价格条。
 
+原「模型价格」API Token / Coding Plan 表同步加入 2026-10-13 官网核对补充（`pricingSupplements.ts`）：Muse Wonder 为 4 / 0.20 / 20 USD/百万输入、缓存命中、输出 Token；Full 无 API 单价，关联 Muse Code 50/200 美元月费及 20x/80x 权益。同步核对 GLM-5.3-Flash / FlashX；FlashX 独立发布日期未找到。补充按型号、档位、地区和币种合并，更晚、同日或日期未知的自动采集记录保留；API 缺价不画为零，订阅不折算 Token 单价。
+
 CDS 已增加 ISDA 新模型并行对比。安装、验证、曲线导入及状态说明见 [CDS 并行验证](docs/cds-isda-parallel.md)。
 
 AI 看板位于 `/ai-dashboard`，沿用网站现有访问边界，不再要求单独输入访问口令。ARR 与估值使用已核对的表格快照 `server/data/ai-dashboard/growth-reference.json`，同时保留已核验的公司官网历史 ARR。总览和 ARR 页共用 OpenAI、Anthropic 全历史图，每家公司一条线，数据点颜色区分来源，预测不进入历史图。月度区以亿美元计，Yipit 区以十亿美元计；读取时统一单位并重算日期和倍数公式，不使用 Excel 的零值公式缓存。历史 P/ARR 按月份使用同月或此前 ARR，原表的前瞻分母及公式假设另行标注。该文件是人工核对快照，刷新不会重新下载飞书或改变实际观测日期；后续需核对原表并更新该文件。价格、融资、官网模型卡、算力租赁等板块继续读取登记过的公开网页。

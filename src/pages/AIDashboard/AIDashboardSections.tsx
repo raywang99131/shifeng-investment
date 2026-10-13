@@ -72,8 +72,11 @@ import {
 import {
   buildPricingNews,
   filterUsdTokenPrices,
+  mergeCodingPlanSupplements,
+  mergeTokenPriceSupplements,
   TOKEN_PRICE_FX,
   tokenPriceChartLabel,
+  tokenPriceHasQuote,
   type PricingRegion,
   type UsdTokenPrice,
 } from './pricingViewModel';
@@ -672,7 +675,7 @@ function TokenPriceCharts({ prices, region, onRegionChange }: {
   const palette = useChartPalette();
   const screens = Grid.useBreakpoint();
   const compact = !screens.sm;
-  const rows = prices.toReversed();
+  const rows = prices.filter(tokenPriceHasQuote).toReversed();
   const height = Math.max(340, rows.length * 34 + 110);
   const option = {
     animation: false,
@@ -715,8 +718,8 @@ function TokenPriceCharts({ prices, region, onRegionChange }: {
         ]}
       />
     )}>
-      {prices.length ? <ReactECharts key={region} option={option} style={{ height }} notMerge /> : <NoData description="该范围暂无 API Token 价格" />}
-      <Text type="secondary" className="ai-attribution">USD / 1M Tokens · {prices.length} 个报价档位</Text>
+      {rows.length ? <ReactECharts key={region} option={option} style={{ height }} notMerge /> : <NoData description="该范围暂无 API Token 价格" />}
+      <Text type="secondary" className="ai-attribution">USD / 1M Tokens · {rows.length} 个 API 报价档位{prices.length > rows.length ? `；另有 ${prices.length - rows.length} 个未列示 API 单价的型号，见下方明细` : ''}</Text>
     </ChartCard>
   );
 }
@@ -749,6 +752,7 @@ function PriceEventsCard({ events }: { events: PriceEvent[] }) {
 }
 
 function TokenPriceValue({ row, field }: { row: UsdTokenPrice; field: 'inputPrice' | 'cacheReadPrice' | 'outputPrice' }) {
+  if (!tokenPriceHasQuote(row) && row.publicPrice === false) return <Text type="secondary">未列示</Text>;
   const label = field === 'cacheReadPrice' ? '缓存读取（命中）原价' : '原价';
   return (
     <Tooltip title={`${label} ${formatCurrencyPrice(row.originalPrices[field], row.originalCurrency, 4)} / 1M Tokens${row.originalCurrency === 'CNY' ? `；按 ${TOKEN_PRICE_FX.asOf} 参考汇率折算` : ''}`}>
@@ -757,9 +761,9 @@ function TokenPriceValue({ row, field }: { row: UsdTokenPrice; field: 'inputPric
   );
 }
 
-function TokenPricing({ data }: DashboardProps) {
+function TokenPricing({ data, onOpenCodingPlans }: DashboardProps & { onOpenCodingPlans: () => void }) {
   const [region, setRegion] = useState<PricingRegion>('all');
-  const prices = useMemo(() => filterUsdTokenPrices(data.modelPricing.token, region), [data.modelPricing.token, region]);
+  const prices = useMemo(() => filterUsdTokenPrices(mergeTokenPriceSupplements(data.modelPricing.token), region), [data.modelPricing.token, region]);
   return (
     <div className="ai-section-stack">
       <Alert
@@ -781,15 +785,18 @@ function TokenPricing({ data }: DashboardProps) {
           size="small"
           pagination={{ pageSize: 25, showSizeChanger: false }}
           tableLayout="fixed"
-          scroll={{ x: 760 }}
+          scroll={{ x: 1660 }}
           locale={{ emptyText: <NoData description="该范围暂无 API Token 价格" /> }}
           dataSource={prices}
           columns={[
             { title: '厂商', dataIndex: 'vendor', fixed: 'left', width: 110 },
-            { title: '模型', dataIndex: 'model', width: 260, className: 'ai-model-name', render: (value, row) => <>{value}{row.contextTier && row.contextTier !== 'standard' ? <><br /><Text type="secondary">{row.contextTier}</Text></> : null}{row.marketLabel ? <><br /><Text type="secondary">{row.marketLabel}</Text></> : null}</> },
+            { title: '模型', dataIndex: 'model', width: 260, className: 'ai-model-name', render: (value, row) => <>{value}{row.contextTier && row.contextTier !== 'standard' ? <><br /><Text type="secondary">{row.contextTier}</Text></> : null}{row.marketLabel ? <><br /><Text type="secondary">{row.marketLabel}</Text></> : null}{row.vendor === 'Meta' && row.model === 'Muse Wonder Full' && !tokenPriceHasQuote(row) ? <><br /><Tag>仅订阅</Tag><Button type="link" size="small" onClick={onOpenCodingPlans}>查看 Coding Plan</Button></> : null}</> },
             { title: '输入', width: 130, align: 'right', render: (_, row) => <TokenPriceValue row={row} field="inputPrice" /> },
             { title: '缓存', width: 130, align: 'right', render: (_, row) => <TokenPriceValue row={row} field="cacheReadPrice" /> },
             { title: '输出', width: 130, align: 'right', render: (_, row) => <TokenPriceValue row={row} field="outputPrice" /> },
+            { title: '发布 / 核对日期', width: 170, render: (_, row) => <><span>发布：{dateLabel(row.releasedAt)}</span><br /><Text type="secondary">核对：{dateLabel(row.asOf)}</Text></> },
+            { title: '来源', width: 180, render: (_, row) => <Link href={row.sourceUrl} target="_blank" rel="noreferrer">{row.sourceLabel}</Link> },
+            { title: '说明', dataIndex: 'note', width: 420, render: value => value || '—' },
           ]}
         />
       </ChartCard>
@@ -823,6 +830,7 @@ function VideoPricing({ data }: DashboardProps) {
 }
 
 function CodingPlanPricing({ data }: DashboardProps) {
+  const plans = useMemo(() => mergeCodingPlanSupplements(data.modelPricing.codingPlans), [data.modelPricing.codingPlans]);
   return (
     <ChartCard title="Coding Plan 价格">
       <Table
@@ -830,14 +838,16 @@ function CodingPlanPricing({ data }: DashboardProps) {
         size="small"
         pagination={{ pageSize: 15, showSizeChanger: false }}
         tableLayout="fixed"
-        scroll={{ x: 640 }}
+        scroll={{ x: 1320 }}
         locale={{ emptyText: <NoData description="尚未从厂商官网确认 Coding Plan 价格" /> }}
-        dataSource={data.modelPricing.codingPlans}
+        dataSource={plans}
         columns={[
           { title: '厂商', dataIndex: 'vendor', fixed: 'left', width: 120 },
           { title: '套餐', dataIndex: 'plan', width: 240 },
           { title: '月付', dataIndex: 'monthlyPrice', width: 130, align: 'right', render: (value, row) => row.pricingMode === 'fixed' ? formatCurrencyPrice(value, row.currency) : <Tag>{row.pricingMode === 'inquiry' ? '询价' : '未公开'}</Tag> },
-          { title: '来源', width: 150, render: (_, row) => <a href={row.sourceUrl} target="_blank" rel="noreferrer">{row.sourceLabel}</a> },
+          { title: '用量 / 权益', dataIndex: 'allowanceText', width: 240, render: value => value || '—' },
+          { title: '来源 / 核对日期', width: 180, render: (_, row) => <><Link href={row.sourceUrl} target="_blank" rel="noreferrer">{row.sourceLabel}</Link><br /><Text type="secondary">{dateLabel(row.asOf)}</Text></> },
+          { title: '说明', dataIndex: 'note', width: 410, render: value => value || '—' },
         ]}
       />
     </ChartCard>
@@ -845,10 +855,11 @@ function CodingPlanPricing({ data }: DashboardProps) {
 }
 
 export function ModelPricingSection({ data }: DashboardProps) {
+  const [pricingTab, setPricingTab] = useState('token');
   return (
     <div className="ai-section-stack">
-      <Tabs className="ai-inner-tabs" items={[
-        { key: 'token', label: 'API Token', children: <TokenPricing data={data} /> },
+      <Tabs className="ai-inner-tabs" activeKey={pricingTab} onChange={setPricingTab} items={[
+        { key: 'token', label: 'API Token', children: <TokenPricing data={data} onOpenCodingPlans={() => setPricingTab('coding')} /> },
         { key: 'video', label: '视频模型', children: <VideoPricing data={data} /> },
         { key: 'coding', label: 'Coding Plan', children: <CodingPlanPricing data={data} /> },
       ]} />
