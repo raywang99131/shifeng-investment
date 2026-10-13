@@ -1,0 +1,278 @@
+.flagship-price-comparison {
+  --flagship-text: var(--ai-cds-heading, #172033);
+  --flagship-muted: var(--ai-secondary-text, #8c8c8c);
+  --flagship-score-grid: #dce7ed;
+  --flagship-score-guide: #d7e4ec;
+  --flagship-input: #eda6a9;
+  --flagship-output: #b4081c;
+}
+
+.flagship-price-comparison .ant-card-head-wrapper {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.flagship-price-comparison .ant-card-head-title {
+  white-space: normal;
+}
+
+.flagship-price-intro {
+  margin: 12px 0 18px;
+  max-width: 1000px;
+}
+
+.flagship-price-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--ai-border, #f0f0f0);
+  border-radius: 10px;
+  background: var(--ai-surface, #fff);
+  scrollbar-gutter: stable;
+}
+
+.flagship-price-scroll:focus-visible {
+  outline: 2px solid #1677ff;
+  outline-offset: 3px;
+}
+
+.flagship-price-svg {
+  display: block;
+  width: 100%;
+  min-width: 1040px;
+  height: auto;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  fill: var(--flagship-text);
+}
+
+.flagship-price-background {
+  fill: var(--ai-surface, #fff);
+}
+
+.flagship-price-chart-title {
+  font-size: 28px;
+  font-weight: 650;
+  letter-spacing: 1px;
+}
+
+.flagship-price-chart-subtitle {
+  font-size: 20px;
+}
+
+.flagship-score-heading {
+  fill: #226385;
+  font-size: 20px;
+}
+
+.flagship-price-heading {
+  font-size: 20px;
+}
+
+.flagship-score-tick,
+.flagship-price-tick {
+  font-size: 19px;
+}
+
+.flagship-score-tick {
+  fill: #226385;
+}
+
+.flagship-price-legend {
+  font-size: 17px;
+}
+
+.flagship-score-grid {
+  stroke: var(--flagship-score-grid);
+  stroke-width: 2;
+}
+
+.flagship-score-guide {
+  stroke: var(--flagship-score-guide);
+  stroke-width: 2;
+}
+
+.flagship-price-grid,
+.flagship-price-divider {
+  stroke: var(--ai-border, #e0e0e0);
+  stroke-width: 1.5;
+}
+
+.flagship-score-axis {
+  stroke: #226385;
+  stroke-width: 1.5;
+}
+
+.flagship-price-axis {
+  stroke: var(--flagship-text);
+  stroke-width: 1.5;
+}
+
+.flagship-price-model {
+  font-size: 22px;
+  font-weight: 400;
+}
+
+.flagship-price-highlight {
+  fill: none;
+  stroke: var(--flagship-text);
+  stroke-width: 2;
+}
+
+.flagship-price-row.is-highlighted .flagship-price-model,
+.flagship-price-row.is-highlighted .flagship-price-output .flagship-price-value {
+  fill: #d3313f;
+}
+
+.flagship-score-pill {
+  fill: #195e83;
+}
+
+.flagship-score-value {
+  fill: #fff;
+  font-size: 21px;
+  font-variant-numeric: tabular-nums;
+}
+
+.flagship-score-missing {
+  fill: var(--ai-surface, #fff);
+  stroke: var(--flagship-muted);
+  stroke-width: 1.7;
+  stroke-dasharray: 6 4;
+}
+
+.flagship-score-missing-text {
+  fill: var(--flagship-muted);
+  font-size: 20px;
+}
+
+.flagship-price-input {
+  color: var(--flagship-input);
+}
+
+.flagship-price-output {
+  color: var(--flagship-output);
+}
+
+.flagship-price-solid {
+  fill: currentColor;
+}
+
+.flagship-price-upper {
+  fill: currentColor;
+  fill-opacity: .16;
+  stroke: currentColor;
+  stroke-width: 1;
+  stroke-dasharray: 3 2;
+}
+
+.flagship-price-value {
+  fill: var(--flagship-text);
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+}
+
+.flagship-price-note {
+  fill: var(--flagship-muted);
+  font-size: 19px;
+}
+
+.flagship-price-tier-note {
+  font-size: 17px;
+}
+
+.flagship-price-footnote {
+  fill: var(--flagship-muted);
+  font-size: 16px;
+}
+
+.flagship-price-caption {
+  margin: 10px 0 16px;
+  font-size: 12px;
+}
+
+.flagship-price-method {
+  padding-left: 20px;
+  margin: 0 0 18px;
+}
+
+.flagship-price-method li + li {
+  margin-top: 8px;
+}
+
+.flagship-price-original {
+  max-width: 380px;
+  margin: 0;
+}
+
+.flagship-price-original figcaption {
+  margin-top: 8px;
+  color: var(--flagship-muted);
+  font-size: 12px;
+}
+
+.flagship-price-data-scroll {
+  overflow-x: auto;
+}
+
+.flagship-price-data {
+  width: 100%;
+  min-width: 740px;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+
+.flagship-price-data caption {
+  margin-bottom: 12px;
+  color: var(--flagship-muted);
+  text-align: left;
+}
+
+.flagship-price-data th,
+.flagship-price-data td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--ai-border, #f0f0f0);
+}
+
+.flagship-price-data tbody th {
+  font-weight: 400;
+}
+
+.flagship-price-scroll-hint {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 12px;
+}
+
+[data-theme='dark'] .flagship-price-comparison {
+  --flagship-score-grid: #283e4c;
+  --flagship-score-guide: #344956;
+  --flagship-input: #e8a0a8;
+  --flagship-output: #e35c6b;
+}
+
+[data-theme='dark'] .flagship-score-heading,
+[data-theme='dark'] .flagship-score-tick {
+  fill: #7fbbdc;
+}
+
+[data-theme='dark'] .flagship-score-axis {
+  stroke: #7fbbdc;
+}
+
+[data-theme='dark'] .flagship-price-row.is-highlighted .flagship-price-model,
+[data-theme='dark'] .flagship-price-row.is-highlighted .flagship-price-output .flagship-price-value {
+  fill: #ff7a85;
+}
+
+@media (max-width: 767px) {
+  .flagship-price-comparison .ant-card-head {
+    padding-block: 14px;
+  }
+
+  .flagship-price-comparison .ant-card-extra {
+    margin-inline-start: 0;
+  }
+
+  .flagship-price-svg {
+    min-width: 1120px;
+  }
+}

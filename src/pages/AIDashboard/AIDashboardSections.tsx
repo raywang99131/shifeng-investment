@@ -3,6 +3,7 @@ import ReactECharts from 'echarts-for-react';
 import OpenRouterWeeklyChart from './OpenRouterWeeklyChart';
 import CdsModelComparisonPanel from './CdsModelComparisonPanel';
 import NebiusComputeResearch from './NebiusComputeResearch';
+import FlagshipPriceComparison from './FlagshipPriceComparison';
 import { buildComputeHistory } from './computeHistory';
 import { arrChartSeries, arrSourceCategory, arrValueLabel, primaryArrMetrics, latestCompanyValuations, type LatestCompanyValuation } from './arrChart';
 import {
@@ -1142,6 +1143,7 @@ export function ArtificialAnalysisSection({ data }: DashboardProps) {
 
   return (
     <div className="ai-section-stack">
+      <FlagshipPriceComparison />
       <Alert
         showIcon
         type="warning"
