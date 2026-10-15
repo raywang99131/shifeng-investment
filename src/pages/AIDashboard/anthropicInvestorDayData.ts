@@ -64,6 +64,89 @@ export const ANTHROPIC_INVESTOR_DAY = {
   },
 } as const;
 
+/** Attributed commentary stays separate from revenue, ARR observations and valuation history. */
+export const ANTHROPIC_INVESTOR_DAY_FOLLOWUP = {
+  receivedAt: '2026-10-15',
+  author: '用户提供补充纪要 · 作者未署名',
+  summary: '纪要以“数字不够好”评价增速放缓，认为短期估值仍受ARR影响、AI进展不能只用ARR衡量。以下保留研究判断及其核对状态，不作为公司指导或一致预期。',
+  quarterGrowthReview: {
+    memoQ2: 1.43, memoQ3: 0.46,
+    calculatedQ2: quarters[1].momPercent!, calculatedQ3: quarters[2].momPercent!,
+  },
+  items: [
+    {
+      id: 'growth-reconciliation', topic: '季度增速复算',
+      claim: '纪要称Q2环比约143%、Q3约46%，收入为47、116、168亿美元。',
+      assessment: '按这组收入复算为146.8%和44.8%，增速放缓方向一致。FT旧版Q2为115亿美元时，Q3环比约46.1%；不同报道版本分别保留，不混用。',
+      verification: '计算已复核', sourceLabel: 'Reuters季度收入',
+      sourceUrl: ANTHROPIC_INVESTOR_DAY.sources.reuters.url,
+    },
+    {
+      id: 'monthly-arr-estimate', topic: '月度ARR测算',
+      claim: '纪要转述8至9月月增速约5%，并称为主流测算。',
+      assessment: '未提供分月收入、ARR底表或测算样本，仅保留纪要转述。此前Q3月增均值约6%来自另一纪要，期间和方法不同；季度收入不足以唯一反推月度增速。',
+      verification: '纪要转述，待核', sourceLabel: '补充纪要（未署名）',
+      sourceUrl: ANTHROPIC_INVESTOR_DAY.sources.memos.url,
+    },
+    {
+      id: 'ramp-model-sample', topic: 'Ramp竞争样本',
+      claim: '纪要引述GPT-6 Astra占企业AI支出13%、Claude占8%，据此讨论9月份额竞争。',
+      assessment: '13%/8%的原始模型样本、截至日及Claude具体模型尚未核实。Ramp 10/14月报另列9月供应商付费采用率：Anthropic43.8%、OpenAI40.6%；采用率不是消费额份额，模型样本也不同于AI Index总样本。',
+      verification: '模型比例待核', sourceLabel: 'Ramp官方10/14月报',
+      sourceUrl: 'https://ramp.com/data/ai-index-oct-2026',
+    },
+    {
+      id: 'openrouter-spend', topic: 'OpenRouter消费额',
+      claim: '纪要称OpenAI消费额两年半来首次超过Anthropic。',
+      assessment: '9/22官方文章称，9/7当周OpenAI占两家合计消费金额略超50%，为官方所称自2024-02-24当周以来首次。仅限OpenRouter、两家模型合计、排除转售；不是Token份额或10月全市场收入。“首次”未独立复算。',
+      verification: '公开来源核对', sourceLabel: 'OpenRouter · 2026-09-22',
+      sourceUrl: 'https://openrouter.ai/data/newsletter/the-token-state-of-play',
+    },
+    {
+      id: 'gross-margin-claim', topic: '毛利率口径',
+      claim: '纪要转述调整后毛利率85%。',
+      assessment: '尚未取得支持公司整体85%口径的公开财务材料，调整项目、期间及成本范围待核。与此前纪要营业利润率11%分列，不相互替代，也不由算力收入/支出比1.7推导。',
+      verification: '纪要转述，待核', sourceLabel: '补充纪要（未署名）',
+      sourceUrl: ANTHROPIC_INVESTOR_DAY.sources.memos.url,
+    },
+    {
+      id: 'cpi-context', topic: 'CPI背景',
+      claim: '纪要认为CPI超预期叠加公司经营数据影响市场。',
+      assessment: 'BLS确认9月CPI同比3.7%、季调环比0.6%，10/14美东08:30发布。BLS不提供市场一致预期；“超预期”和资产价格归因仍需预测样本与事件窗口。',
+      verification: '实际数据公开核对', sourceLabel: 'BLS · 2026-10-14',
+      sourceUrl: 'https://www.bls.gov/news.release/archives/cpi_10142026.htm',
+    },
+    {
+      id: 'market-reaction', topic: '市场反应转述',
+      claim: '纪要称AnthropicUSDT先跌4%再跌1%，互连/光模块和存储续跌2%–3%，AVGO和ASML跌幅不到1%。',
+      assessment: '未提供交易平台、资产定义、板块标的清单和观察起止时点，跌幅及因果归属待核。“AnthropicUSDT”不改称Anthropic股票价格，不据此推断公司股权估值变动。',
+      verification: '行情与归因待核', sourceLabel: '补充纪要（未署名）',
+      sourceUrl: ANTHROPIC_INVESTOR_DAY.sources.memos.url,
+    },
+    {
+      id: 'investor-feedback', topic: '投资者反馈与观点',
+      claim: '纪要称一级投资者较乐观、二级对数字不满意，并以创新和杰文斯效应讨论长期需求。',
+      assessment: '属于匿名、定性的参会反馈及研究框架，样本未说明，不能代表投资者总体。AI进展与ARR并非同一指标；短期如何定价为纪要观点，不据此推出确定收益或交易结论。',
+      verification: '研究观点', sourceLabel: '补充纪要（未署名）',
+      sourceUrl: ANTHROPIC_INVESTOR_DAY.sources.memos.url,
+    },
+    {
+      id: 'october-watch', topic: '10月竞争与财报跟踪',
+      claim: '纪要期待Opus5.5的10月份额数据，并关注下一轮CSP财报催化。',
+      assessment: 'OpenRouter 10/1文章支持Opus5.5发布首周采用强劲，尚不能证明完整10月份额改善。后续按同平台、同消费额口径核对；CSP披露时间以各公司投资者关系日历为准。',
+      verification: '研究观察项', sourceLabel: 'OpenRouter · 2026-10-01',
+      sourceUrl: 'https://openrouter.ai/data/newsletter/model-half-life',
+    },
+    {
+      id: 'endpoints-event', topic: 'AI4S / Endpoints',
+      claim: '纪要建议关注Endpoints会议中的Anthropic发言。',
+      assessment: '公开议程列有Anthropic药物发现与开发研究负责人Nathan Frey，活动为10/14纽约/线上AI Day 2026。收到纪要时活动日期已过；跟踪发言实录与内容，具体场次及发言结论待核。',
+      verification: '活动安排公开核对', sourceLabel: '主办方记者议程公告',
+      sourceUrl: 'https://www.linkedin.com/posts/max-bayer-20435179_endpoints-news-ai-day-2026-ai-in-biopharma-activity-7504216340757372928-TqW0',
+    },
+  ],
+} as const;
+
 export const INVESTOR_DAY_VALUATION_SCENARIOS: {
   id: string; label: string; period: string; arrLow: number; arrHigh: number;
   parrLow: number; parrHigh: number; note: string;

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { Button, Card, Col, Row, Space, Statistic, Table, Tag, Tooltip, Typography } from 'antd';
 import { useTheme } from '../../hooks/useTheme';
-import { ANTHROPIC_INVESTOR_DAY, INVESTOR_DAY_VALUATION_SCENARIOS } from './anthropicInvestorDayData';
+import { ANTHROPIC_INVESTOR_DAY, ANTHROPIC_INVESTOR_DAY_FOLLOWUP, INVESTOR_DAY_VALUATION_SCENARIOS } from './anthropicInvestorDayData';
 import './AnthropicInvestorDayResearch.css';
 
 const { Paragraph, Text, Link } = Typography;
@@ -171,6 +171,29 @@ export default function AnthropicInvestorDayResearch() {
         中金摘录的 Q3“16.8 亿美元”与 Reuters 报道的 168 亿美元冲突，存在十倍单位疑误；本页季度收入采用 Reuters 口径。
       </Paragraph>
     </div>
+
+    <section id="anthropic-investor-followup" className="anthropic-investor-section">
+      <h3>增速与竞争跟踪 · 补充纪要</h3>
+      <Space wrap size={[8, 8]}>
+        <Tag color="blue">收到 {ANTHROPIC_INVESTOR_DAY_FOLLOWUP.receivedAt}</Tag>
+        <Text type="secondary">{ANTHROPIC_INVESTOR_DAY_FOLLOWUP.author}</Text>
+      </Space>
+      <Paragraph className="anthropic-investor-intro">{ANTHROPIC_INVESTOR_DAY_FOLLOWUP.summary}</Paragraph>
+      <Table
+        rowKey="id" size="small" pagination={false} scroll={{ x: 1065 }} dataSource={[...ANTHROPIC_INVESTOR_DAY_FOLLOWUP.items]}
+        columns={[
+          { title: '主题', dataIndex: 'topic', width: 135 },
+          { title: '纪要表述', dataIndex: 'claim', width: 300 },
+          { title: '核对与口径', dataIndex: 'assessment', width: 440 },
+          { title: '状态及来源', width: 190, render: (_, row) => <>
+            <Tag color={/待核/.test(row.verification) ? 'orange' : /计算|公开/.test(row.verification) ? 'blue' : undefined}>{row.verification}</Tag>
+            <div>{row.sourceUrl.startsWith('https://')
+              ? <Link href={row.sourceUrl} target="_blank" rel="noopener noreferrer">{row.sourceLabel}</Link>
+              : <Text type="secondary">{row.sourceLabel}</Text>}</div>
+          </> },
+        ]}
+      />
+    </section>
 
     <Row gutter={[24, 16]} className="anthropic-investor-section">
       <Col xs={24} lg={12}>
