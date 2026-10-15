@@ -49,6 +49,7 @@ import {
   OverviewSection,
 } from './AIDashboardSections';
 import { IceCdsImportModal } from './IceCdsImportModal';
+import { withInvestorDayGrowthSupplement } from './anthropicInvestorDayData';
 import './AIDashboardPanel.css';
 
 const { Title, Text, Paragraph } = Typography;
@@ -270,26 +271,29 @@ export const AIDashboardPanel: React.FC = () => {
     messageApi.success(`ICE CDS 已导入：${batchId}`);
   }, [load, messageApi]);
 
-  const tabs = useMemo(() => data ? [
-    { key: 'overview', label: '总览', children: <OverviewSection data={data} /> },
-    { key: 'arr', label: 'ARR & 估值', children: <ArrValuationSection data={data} /> },
-    { key: 'openrouter', label: 'OpenRouter', children: <OpenRouterSection data={data} refreshing={openRouterRefreshing} /> },
-    { key: 'pricing', label: '模型价格', children: <ModelPricingSection data={data} /> },
-    { key: 'benchmark', label: 'Benchmark', children: <BenchmarkSection data={data} refreshing={benchmarkRefreshing} /> },
-    { key: 'aa', label: 'AA 指数与成本', children: <ArtificialAnalysisSection data={data} /> },
-    { key: 'compute', label: '算力租赁', children: <ComputeRentalSection data={data} /> },
+  const displayData = useMemo(() => data ? withInvestorDayGrowthSupplement(data) : null, [data]);
+  const tabs = useMemo(() => displayData ? [
+    { key: 'overview', label: '总览', children: <OverviewSection data={displayData} onOpenComputeResearch={() => setActiveTab('compute')} onOpenInvestorDay={() => setActiveTab('arr')} /> },
+    { key: 'arr', label: 'ARR & 估值', children: <ArrValuationSection data={displayData} /> },
+    { key: 'openrouter', label: 'OpenRouter', children: <OpenRouterSection data={displayData} refreshing={openRouterRefreshing} /> },
+    { key: 'pricing', label: '模型价格', children: <ModelPricingSection data={displayData} /> },
+    { key: 'benchmark', label: 'Benchmark', children: <BenchmarkSection data={displayData} refreshing={benchmarkRefreshing} /> },
+    { key: 'aa', label: 'AA 指数与成本', children: <ArtificialAnalysisSection data={displayData} /> },
+    { key: 'compute', label: '算力租赁', children: <ComputeRentalSection data={displayData} /> },
     {
       key: 'debt',
       label: '融资与债务',
       children: (
         <DebtFinancingSection
-          data={data}
+          data={displayData}
           cdsImportStatus={cdsImportStatus}
           onImportIceCds={() => setCdsImportOpen(true)}
+          onOpenComputeResearch={() => setActiveTab('compute')}
+          onOpenInvestorDay={() => setActiveTab('arr')}
         />
       ),
     },
-  ] : [], [benchmarkRefreshing, openRouterRefreshing, cdsImportStatus, data]);
+  ] : [], [benchmarkRefreshing, openRouterRefreshing, cdsImportStatus, displayData]);
 
   if (auth === 'checking' || (loading && !data)) return <><Skeleton active paragraph={{ rows: 8 }} />{messageContext}</>;
   if (auth === 'required') return <>{messageContext}<AccessGate loading={submitting} onSubmit={login} /></>;

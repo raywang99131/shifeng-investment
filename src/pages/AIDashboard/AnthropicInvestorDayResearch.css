@@ -1,0 +1,65 @@
+.anthropic-investor-intro {
+  margin: 14px 0 18px;
+  max-width: 1000px;
+}
+
+.anthropic-investor-section {
+  margin-top: 24px;
+}
+
+.anthropic-investor-research h3 {
+  margin: 0 0 12px;
+  color: var(--ai-cds-heading, #172033);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.anthropic-investor-caption.ant-typography {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.anthropic-investor-annualized {
+  margin-top: 18px;
+  padding: 12px 14px;
+  border: 1px solid var(--ai-border, #e4e9f0);
+  border-radius: 8px;
+  background: var(--ai-surface, #fff);
+}
+
+.anthropic-investor-facts {
+  margin: 0;
+  padding-left: 20px;
+  line-height: 1.9;
+}
+
+.anthropic-investor-facts li + li {
+  margin-top: 5px;
+}
+
+.anthropic-investor-sources {
+  display: grid;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--ai-border, #e4e9f0);
+  font-size: 12px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+.anthropic-investor-summary .ant-statistic-content {
+  font-size: 23px;
+}
+
+.anthropic-investor-summary .ant-card-head-wrapper {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+@media (max-width: 767px) {
+  .anthropic-investor-summary .ant-card-extra {
+    margin-inline-start: 0;
+  }
+}

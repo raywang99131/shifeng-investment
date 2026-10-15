@@ -3,6 +3,8 @@ import ReactECharts from 'echarts-for-react';
 import OpenRouterWeeklyChart from './OpenRouterWeeklyChart';
 import CdsModelComparisonPanel from './CdsModelComparisonPanel';
 import NebiusComputeResearch from './NebiusComputeResearch';
+import AnthropicComputeResearch, { AnthropicComputeSummary } from './AnthropicComputeResearch';
+import AnthropicInvestorDayResearch, { AnthropicInvestorDaySummary } from './AnthropicInvestorDayResearch';
 import FlagshipPriceComparison from './FlagshipPriceComparison';
 import { buildComputeHistory } from './computeHistory';
 import { arrChartSeries, arrSourceCategory, arrValueLabel, primaryArrMetrics, latestCompanyValuations, type LatestCompanyValuation } from './arrChart';
@@ -380,8 +382,8 @@ function CombinedArrChart({ metrics, height = 360 }: { metrics: ArrCompanyMetric
             ? `<a href="${escapeHtml(point.sourceUrl)}" target="_blank" rel="noreferrer">来源 ${escapeHtml(point.sourceCell || '')}</a>` : '';
           return [
             `${item.marker}<b>${escapeHtml(item.seriesName)}</b>`,
-            `${escapeHtml(date)} · ${point.preliminary ? 'MTD 初步估计' : '历史观测'}`,
-            `来源：${escapeHtml(point.sourceLabel)} · ${{ official: '官方口径', yipit: 'Yipit', unspecified: '机构未注明' }[arrSourceCategory(point)]}`,
+            `${escapeHtml(date)} · ${point.preliminary ? 'MTD 初步估计' : point.sourceKind === 'estimate' ? '历史估算' : '历史观测'}`,
+            `来源：${escapeHtml(point.sourceLabel)} · ${{ official: '官方口径', yipit: 'Yipit', unspecified: '研究报告 / 原表跟踪' }[arrSourceCategory(point)]}`,
             `ARR：${escapeHtml(arrValueLabel(point))} 亿美元`,
             point.valueHigh !== undefined ? '图中以区间中点定位，原始区间见上方。' : '',
             point.kind === 'actual' && point.comparisonLabel ? `${point.consecutiveMonth ? '月环比' : '相邻观测变化'}：${escapeHtml(formatArrDelta(point.momAbsolute, point.momPercent))}<br/>${escapeHtml(point.comparisonLabel)}` : '',
@@ -411,7 +413,7 @@ function CombinedArrChart({ metrics, height = 360 }: { metrics: ArrCompanyMetric
     };
   }, [compact, metrics, palette]);
   if (!metrics.some((metric) => metric.actualPoints.length || metric.forecastPoints.length)) return <NoData description="暂无 ARR 数据" />;
-  return <><Space wrap size={12}><Text type="secondary">● Anthropic · ◆ OpenAI</Text><Tag color="blue">官方披露</Tag><Tag color="orange">Yipit</Tag><Tag>报告 / 原表未注明机构</Tag></Space><ReactECharts option={option} style={{ height }} notMerge />
+  return <><Space wrap size={12}><Text type="secondary">● Anthropic · ◆ OpenAI</Text><Tag color="blue">官方披露</Tag><Tag color="orange">Yipit</Tag><Tag>研究报告 / 原表跟踪</Tag></Space><ReactECharts option={option} style={{ height }} notMerge />
     {metrics.some((m) => m.actualPoints.some((p) => p.comparisonNote)) && <Text type="secondary">标注口径待核对的观测以独立点展示、不连线；不据此推断 ARR 下降。</Text>}
   </>;
 }
@@ -485,7 +487,7 @@ function latestArrCompany(data: AiDashboardSnapshot) {
   return primaryArrMetrics(data.arrAndValuation.companies).toSorted((left, right) => (right.latestActual?.observedAt || '').localeCompare(left.latestActual?.observedAt || ''))[0] || null;
 }
 
-export function OverviewSection({ data }: DashboardProps) {
+export function OverviewSection({ data, onOpenComputeResearch, onOpenInvestorDay }: DashboardProps & { onOpenComputeResearch?: () => void; onOpenInvestorDay?: () => void }) {
   const arr = latestArrCompany(data);
   const arrPoint = arr?.latestActual;
   const capital = data.capitalEvents?.[0] || data.debtFinancing?.[0];
@@ -497,13 +499,13 @@ export function OverviewSection({ data }: DashboardProps) {
         <Col xs={24} sm={12} xl={6}>
           <Card className="ai-kpi-card">
             <Statistic
-              title={<Space size={6}><span>{`最新 ARR${arr ? ` · ${arr.company}` : ''}`}</span><MetricHelp point={arrPoint} /></Space>}
+              title={<Space size={6}><span>{`最新 ARR${arrPoint?.sourceKind === 'estimate' ? '（估算）' : ''}${arr ? ` · ${arr.company}` : ''}`}</span><MetricHelp point={arrPoint} /></Space>}
               value={arrPoint?.value ?? '—'}
               suffix={arr ? '亿美元' : undefined}
               precision={arr ? 2 : undefined}
               prefix={<LineChartOutlined />}
             />
-            <Text type="secondary">{arrPoint ? `${arr.sourceLabel} · ${arrPoint.observedAt} · ${arrPoint.preliminary ? 'MTD 初值，可能修订' : `较上次 ${formatArrDelta(arrPoint.momAbsolute, arrPoint.momPercent)}`}` : '暂无环比观测'}</Text>
+            <Text type="secondary">{arrPoint ? `${arr.sourceLabel} · ${arrPoint.datePrecision === 'month' ? arrPoint.month : arrPoint.observedAt} · ${arrPoint.preliminary ? 'MTD 初值，可能修订' : arrPoint.sourceKind === 'estimate' ? '研究推算，非公司披露' : `较上次 ${formatArrDelta(arrPoint.momAbsolute, arrPoint.momPercent)}`}` : '暂无环比观测'}</Text>
           </Card>
         </Col>
         <Col xs={24} sm={12} xl={6}>
@@ -520,11 +522,13 @@ export function OverviewSection({ data }: DashboardProps) {
         </Col>
         <Col xs={24} sm={12} xl={6}>
           <Card className="ai-kpi-card">
-            <Statistic title={`最新 P/ARR${valuation ? ` · ${valuation.company}` : ''}`} value={valuation ? formatMultiple(valuation.parrLow, valuation.parrHigh) : '—'} />
+            <Statistic title={`融资估值 P/ARR${valuation ? ` · ${valuation.company}` : ''}`} value={valuation ? formatMultiple(valuation.parrLow, valuation.parrHigh) : '—'} />
             <Text type="secondary">估值期间 {valuation?.datePrecision === 'month' ? valuation.asOf.slice(0, 7) : dateLabel(valuation?.asOf)} · ARR 更新 {valuation?.arrPoint?.datePrecision === 'month' ? valuation.arrAsOf?.slice(0, 7) : dateLabel(valuation?.arrAsOf)}{valuation?.arrPoint?.preliminary ? ' · 初估' : ''}</Text>
           </Card>
         </Col>
       </Row>
+      <AnthropicInvestorDaySummary onOpenResearch={onOpenInvestorDay} />
+      <AnthropicComputeSummary variant="overview" onOpenResearch={onOpenComputeResearch} />
       <Row gutter={[16, 16]}>
         <Col xs={24} xl={12}>
           <ChartCard title="OpenAI 与 Anthropic · 历史 ARR" extra={arr?.stale ? <Tag color="warning">部分观测超过 18 天</Tag> : <Tag color="success">观测有效</Tag>}>
@@ -553,7 +557,7 @@ export function OverviewSection({ data }: DashboardProps) {
           </ChartCard>
         </Col>
         <Col xs={24} xl={12}>
-          <ChartCard title="最新估值与 P/ARR">
+          <ChartCard title="已记录融资估值与最新 ARR 配对">
             <ValuationTable data={currentValuations} />
           </ChartCard>
         </Col>
@@ -570,12 +574,13 @@ function ValuationTable({ data }: { data: LatestCompanyValuation[] }) {
       { title: '公司', dataIndex: 'company', fixed: 'left', width: 115 },
       { title: '估值（亿美元）', width: 155, align: 'right', render: (_, row) => row.valuationLow === row.valuationHigh ? compactNumber(row.valuationLow) : `${compactNumber(row.valuationLow)}–${compactNumber(row.valuationHigh)}` },
       { title: 'ARR', width: 110, align: 'right', render: (_, row) => row.arrPoint ? arrValueLabel(row.arrPoint) : '—' },
-      { title: 'P/ARR', width: 120, align: 'right', render: (_, row) => <><Text strong>{row.parrUpperBound && row.parrHigh !== null ? `<${formatMultiple(row.parrHigh, row.parrHigh)}` : formatMultiple(row.parrLow, row.parrHigh)}</Text>{row.arrPoint?.preliminary && <div><Text type="secondary">初估</Text></div>}</> },
+      { title: 'P/ARR', width: 120, align: 'right', render: (_, row) => <><Text strong>{row.parrUpperBound && row.parrHigh !== null ? `<${formatMultiple(row.parrHigh, row.parrHigh)}` : formatMultiple(row.parrLow, row.parrHigh)}</Text>{row.arrPoint?.preliminary ? <div><Text type="secondary">初估</Text></div> : row.arrPoint?.sourceKind === 'estimate' ? <div><Text type="secondary">估算分母</Text></div> : null}</> },
       { title: '来源', width: 190, render: (_, row) => <Tooltip title={<>
         <div>估值：{row.datePrecision === 'month' ? row.asOf.slice(0, 7) : row.asOf} · {row.sourceLabel} {row.sourceCell}</div>
         <div>ARR：{row.arrPoint?.datePrecision === 'month' ? row.arrPoint.month : row.arrAsOf || '未披露'} · {row.arrSourceLabel} {row.arrPoint?.sourceCell}</div>
         <div>最新明确估值 ÷ 最新历史 ARR；两项日期可能不同。</div>
         {row.arrPoint?.preliminary && <div>ARR 为 MTD 初步估计，B2B 样本未齐，倍数会随修订变化；不使用月底推算值。</div>}
+        {!row.arrPoint?.preliminary && row.arrPoint?.sourceKind === 'estimate' && <div>ARR 分母为研究推算，并非公司公开披露；IPO 预期估值另列于 Investor Day 情景。</div>}
         {row.multipleKind === 'P/S' && <div>原表倍数列为 P/S；此处使用 ARR 跟踪值重新计算。</div>}
       </>}><Space size={5}>
         {row.sourceUrl ? <Link href={row.sourceUrl} target="_blank" rel="noreferrer">{row.sourceLabel?.includes('飞书') ? '飞书表格' : row.sourceLabel || '估值来源'}</Link> : <Text>{row.sourceLabel || '未注明'}</Text>}
@@ -593,6 +598,7 @@ export function ArrValuationSection({ data }: DashboardProps) {
   const currentValuations = latestCompanyValuations(data.arrAndValuation.valuations, metrics);
   return (
     <div className="ai-section-stack">
+      <AnthropicInvestorDayResearch />
       <ChartCard title="OpenAI 与 Anthropic · 历史 ARR" extra={<Text type="secondary">单位：亿美元</Text>}>
         <Row gutter={[20, 12]}>
           <Col xs={24} lg={18}><CombinedArrChart metrics={primary} height={370} /></Col>
@@ -600,8 +606,8 @@ export function ArrValuationSection({ data }: DashboardProps) {
             <Flex vertical gap={14} className="ai-arr-aside">
               {latest.map((metric) => metric.latestActual && <Card size="small" key={metric.seriesId}>
                 <Statistic title={`${metric.company} · ${metric.sourceLabel}`} value={arrValueLabel(metric.latestActual)} suffix="亿美元" />
-                <Text type="secondary">观测 {metric.latestActual.observedAt}</Text><br/>
-                {metric.latestActual.preliminary ? <Tag color="warning">MTD 初值 · 可能修订</Tag> : <Text type="secondary">较上次 {formatArrDelta(metric.latestActual.momAbsolute, metric.latestActual.momPercent)}</Text>}
+                <Text type="secondary">观测 {metric.latestActual.datePrecision === 'month' ? metric.latestActual.month : metric.latestActual.observedAt}</Text><br/>
+                {metric.latestActual.preliminary ? <Tag color="warning">MTD 初值 · 可能修订</Tag> : metric.latestActual.sourceKind === 'estimate' ? <Tag color="warning">历史估算 · 非公司披露</Tag> : <Text type="secondary">较上次 {formatArrDelta(metric.latestActual.momAbsolute, metric.latestActual.momPercent)}</Text>}
                 {metric.latestActual.reportSummary && <div><Text type="secondary">{metric.latestActual.reportSummary}</Text></div>}
               </Card>)}
               <Text type="secondary">汇集两家公司全部历史观测。点颜色区分来源，形状区分公司；拖动下方时间条可放大查看。Yipit 已乘 10 换算为亿美元。</Text>
@@ -610,7 +616,7 @@ export function ArrValuationSection({ data }: DashboardProps) {
           </Col>
         </Row>
       </ChartCard>
-      <ChartCard title="最新估值与 P/ARR" extra={<Text type="secondary">金额单位：亿美元</Text>}>
+      <ChartCard title="已记录融资估值与最新 ARR 配对" extra={<Text type="secondary">金额单位：亿美元</Text>}>
         <ValuationTable data={currentValuations} />
       </ChartCard>
       {reference && <Alert type="info" showIcon title="数据已按飞书表格核对" description={<>
@@ -1247,6 +1253,7 @@ export function ComputeRentalSection({ data }: DashboardProps) {
   const comparableLatest = latest.filter((row) => row.currency === 'USD');
   return (
     <div className="ai-section-stack">
+      <AnthropicComputeResearch />
       <NebiusComputeResearch />
       <Alert type="info" showIcon title="报价说明" description="按北京时间记录每日实际采集的报价。涨跌比较同平台、同 GPU、同规格、同地区和同计费方式的价格；未取得报价的日期留空。" />
       <Row gutter={[16, 16]}>
@@ -1334,7 +1341,9 @@ export function DebtFinancingSection({
   data,
   cdsImportStatus,
   onImportIceCds,
-}: DashboardProps & { cdsImportStatus?: IceCdsImportStatus | null; onImportIceCds?: () => void }) {
+  onOpenComputeResearch,
+  onOpenInvestorDay,
+}: DashboardProps & { cdsImportStatus?: IceCdsImportStatus | null; onImportIceCds?: () => void; onOpenComputeResearch?: () => void; onOpenInvestorDay?: () => void }) {
   const [selectedEntity, setSelectedEntity] = React.useState('all');
   const allEvents = data.capitalEvents || [];
   const entities = [...new Set(allEvents.map((event) => event.entity))].sort((left, right) => left.localeCompare(right, 'zh-CN'));
@@ -1346,6 +1355,8 @@ export function DebtFinancingSection({
   return (
     <div className="ai-section-stack">
       <Alert type="info" showIcon title="覆盖口径" description="覆盖全球与中国 CSP、模型厂商的股权轮、固定息债、浮息贷款、可转债与授信；金额保留原币，可比美元只在披露或核验汇率口径存在时使用。利率缺失保持空值，不由相邻交易推断。" />
+      <AnthropicInvestorDaySummary onOpenResearch={onOpenInvestorDay} />
+      <AnthropicComputeSummary variant="debt" onOpenResearch={onOpenComputeResearch} />
       <Flex justify="space-between" align="center" wrap gap={12}>
         <Title level={4} style={{ margin: 0 }}>融资历史与债务条件</Title>
         <Select value={selectedEntity} onChange={setSelectedEntity} style={{ minWidth: 220 }} options={[
