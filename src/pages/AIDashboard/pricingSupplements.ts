@@ -1,5 +1,6 @@
 import type { CodingPlan, MetricProvenance, TokenPrice } from './types.ts';
 import { buildLatestTokenPriceSupplements } from './latestTokenPriceSupplements.ts';
+import { MUSE_SPARK_OPEN_UPDATE } from './museSparkOpenUpdate.ts';
 
 const VERIFIED_AT = '2026-10-13';
 const META_PRICING_URL = 'https://dev.meta.ai/docs/pricing-rate-limits';
@@ -51,6 +52,26 @@ const metaTokenBase: Omit<TokenPrice, 'model' | 'inputPrice' | 'cacheReadPrice' 
 
 // Dated additions to the original pricing tables. Later collected quotes take precedence.
 export const TOKEN_PRICE_SUPPLEMENTS: readonly TokenPrice[] = [
+  {
+    vendor: MUSE_SPARK_OPEN_UPDATE.vendor, model: MUSE_SPARK_OPEN_UPDATE.model,
+    generation: MUSE_SPARK_OPEN_UPDATE.model, releasedAt: MUSE_SPARK_OPEN_UPDATE.releasedAt,
+    region: 'global', category: 'multimodal-input-text-output', contextTier: '1M context',
+    serviceTier: MUSE_SPARK_OPEN_UPDATE.hostedQuote.serviceTier,
+    currency: MUSE_SPARK_OPEN_UPDATE.hostedQuote.currency, priceUnit: 'per_million_tokens', originalUnit: 'USD / 1M Tokens',
+    publicPrice: true, currentGeneration: true,
+    inputPrice: MUSE_SPARK_OPEN_UPDATE.hostedQuote.input, cacheReadPrice: MUSE_SPARK_OPEN_UPDATE.hostedQuote.cacheRead,
+    cacheWritePrice: null, outputPrice: MUSE_SPARK_OPEN_UPDATE.hostedQuote.output,
+    sourceLabel: MUSE_SPARK_OPEN_UPDATE.hostedQuote.sourceLabel, sourceUrl: MUSE_SPARK_OPEN_UPDATE.sources.pricing.url,
+    sourceKind: 'official', asOf: MUSE_SPARK_OPEN_UPDATE.checkedAt, retrievedAt: MUSE_SPARK_OPEN_UPDATE.checkedAt,
+    note: `${MUSE_SPARK_OPEN_UPDATE.hostedQuote.note} ${MUSE_SPARK_OPEN_UPDATE.specificationNote}`,
+    provenance: {
+      sourceLabel: MUSE_SPARK_OPEN_UPDATE.hostedQuote.sourceLabel, sourceUrl: MUSE_SPARK_OPEN_UPDATE.sources.pricing.url,
+      sourceKind: 'official', asOf: MUSE_SPARK_OPEN_UPDATE.checkedAt, retrievedAt: MUSE_SPARK_OPEN_UPDATE.checkedAt,
+      methodology: '直接读取 Baseten 官方托管 API 刊例，单位 USD / 1M Tokens；保留第三方提供方与独立服务档，不按 Meta 第一方报价或 AA 中位数处理。',
+      commentary: `模型发布日期与权重许可另见 ${MUSE_SPARK_OPEN_UPDATE.sources.release.url} 和 ${MUSE_SPARK_OPEN_UPDATE.sources.weights.url}`,
+      stale: false,
+    },
+  },
   officialTokenSupplement({
     vendor: 'Kimi', model: 'Kimi K3', generation: 'K3', releasedAt: '2026-07-17', contextTier: '1M context',
     inputPrice: 3, cacheReadPrice: 0.3, cacheWritePrice: 3, outputPrice: 15,

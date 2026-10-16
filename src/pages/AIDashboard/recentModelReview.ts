@@ -1,4 +1,6 @@
-// Official specialist-model and access updates checked on 2026-10-13.
+import { MUSE_SPARK_OPEN_UPDATE } from './museSparkOpenUpdate.ts';
+
+// Base specialist/access review: 2026-10-13; only Muse Spark Open supplemented on 2026-10-16.
 export const RECENT_SPECIALIST_UPDATES: readonly {
   vendor: string;
   model: string;
@@ -10,6 +12,15 @@ export const RECENT_SPECIALIST_UPDATES: readonly {
   sourceUrl: string;
   note: string;
 }[] = [
+  {
+    vendor: MUSE_SPARK_OPEN_UPDATE.vendor, model: MUSE_SPARK_OPEN_UPDATE.model, date: MUSE_SPARK_OPEN_UPDATE.releasedAt,
+    status: '已发布开放权重；自托管 / Baseten 第三方托管 API',
+    pricing: 'Baseten 第三方托管：输入 $1.25、缓存读取 $0.15、输出 $4.25，USD / 百万 Token',
+    aaIntelligenceIndex: MUSE_SPARK_OPEN_UPDATE.aa.score,
+    sourceUrl: MUSE_SPARK_OPEN_UPDATE.sources.release.url,
+    supportingSources: [MUSE_SPARK_OPEN_UPDATE.sources.weights, MUSE_SPARK_OPEN_UPDATE.sources.aa, MUSE_SPARK_OPEN_UPDATE.sources.pricing, MUSE_SPARK_OPEN_UPDATE.sources.tweet],
+    note: `${MUSE_SPARK_OPEN_UPDATE.specificationNote} AA v${MUSE_SPARK_OPEN_UPDATE.aa.indexVersion} 为 39 分，评测配置 ${MUSE_SPARK_OPEN_UPDATE.aa.evaluationLabel}。${MUSE_SPARK_OPEN_UPDATE.hostedQuote.note} 本项核对日 ${MUSE_SPARK_OPEN_UPDATE.checkedAt}，独立于 Muse Spark 1.3 与 Muse Wonder / Full。`,
+  },
   {
     vendor: '智谱', model: 'GLM-Legal', date: '2026-10-12',
     status: 'Beta；API需申请接入', pricing: null, aaIntelligenceIndex: null,

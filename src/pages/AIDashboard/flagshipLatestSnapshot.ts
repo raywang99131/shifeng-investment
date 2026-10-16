@@ -1,10 +1,12 @@
 import { FLAGSHIP_PRICE_ROWS, flagshipModelLabel, type FlagshipPriceRow, type FlagshipPriceValue } from './flagshipPriceSnapshot.ts';
 import { FLAGSHIP_AA_VERIFIED } from './flagshipAaVerified.ts';
+import { MUSE_SPARK_OPEN_UPDATE } from './museSparkOpenUpdate.ts';
 
 export const LATEST_MODEL_REVIEW = {
   date: '2026-10-13', indexVersion: FLAGSHIP_AA_VERIFIED.indexVersion,
+  supplementDate: MUSE_SPARK_OPEN_UPDATE.checkedAt,
   methodologyUrl: FLAGSHIP_AA_VERIFIED.methodologyUrl,
-  summary: '核对原图 27 个已收录分数，并补充近期发布、轻量与订阅模型。各模型评测配置见明细；公开权重不代表免费托管 API。',
+  summary: '核对原图 27 个已收录分数，并补充近期发布、轻量与订阅模型。各模型评测配置见明细；公开权重不代表免费托管 API。2026-10-16 仅增补 Muse Spark Open 独立记录，其他模型的核对日期保持 2026-10-13。',
 } as const;
 
 const fixed = (raw: string): FlagshipPriceValue => ({ raw, lower: Number(raw), upper: Number(raw), kind: 'fixed' });
@@ -68,11 +70,23 @@ const unscored = ['glm-5-3-flashx', 'kimi-k2-8-preview'].map((id, index) => with
   score: null, scoreRaw: '未收录', input: missing(), output: missing(), note: '',
 }, undefined));
 
-export const LATEST_FLAGSHIP_ROWS: readonly FlagshipPriceRow[] = [...original, ...additional, ...unscored]
+const sparkOpen = MUSE_SPARK_OPEN_UPDATE;
+const sparkOpenRow: FlagshipPriceRow = {
+  id: sparkOpen.id, sourceOrder: 200, model: sparkOpen.model, sourceStar: false,
+  score: sparkOpen.aa.score, scoreRaw: String(sparkOpen.aa.score),
+  input: fixed(String(sparkOpen.hostedQuote.input)), output: fixed(String(sparkOpen.hostedQuote.output)),
+  cacheReadPrice: sparkOpen.hostedQuote.cacheRead,
+  note: sparkOpen.hostedQuote.serviceTier,
+  detailNote: `${sparkOpen.specificationNote} AA v${sparkOpen.aa.indexVersion}，${sparkOpen.aa.evaluationLabel} 配置。${sparkOpen.hostedQuote.note}`,
+  priceSourceUrl: sparkOpen.sources.pricing.url, scoreSourceUrl: sparkOpen.sources.aa.url,
+  evaluationLabel: sparkOpen.aa.evaluationLabel, releasedAt: sparkOpen.releasedAt, checkedAt: sparkOpen.checkedAt,
+};
+
+export const LATEST_FLAGSHIP_ROWS: readonly FlagshipPriceRow[] = [...original, ...additional, ...unscored, sparkOpenRow]
   .sort((a, b) => (b.score ?? -1) - (a.score ?? -1) || a.sourceOrder - b.sourceOrder);
 
 export function latestFlagshipExportRows(): string[][] {
-  return LATEST_FLAGSHIP_ROWS.map((row, index) => [LATEST_MODEL_REVIEW.date, String(index + 1), flagshipModelLabel(row), row.scoreRaw,
+  return LATEST_FLAGSHIP_ROWS.map((row, index) => [row.checkedAt ?? LATEST_MODEL_REVIEW.date, String(index + 1), flagshipModelLabel(row), row.scoreRaw,
     row.input.raw || '未列示', row.output.raw || '未列示', `${row.note}${row.detailNote ? `；${row.detailNote}` : ''}`,
     row.priceSourceUrl || (row.sourceOrder <= 29 && (row.input.lower !== null || row.output.lower !== null) ? '用户提供原图' : '未核实厂商 API 单价'), LATEST_MODEL_REVIEW.indexVersion, row.evaluationLabel || '未收录', row.scoreSourceUrl || '未收录',
     row.releasedAt || '未独立核实', row.cacheReadPrice === null || row.cacheReadPrice === undefined ? '未列示/见分档说明' : String(row.cacheReadPrice)]);

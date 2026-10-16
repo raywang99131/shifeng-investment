@@ -15,6 +15,9 @@ import {
   buildFlagshipPriceCsv,
   type FlagshipPriceRow,
 } from '../src/pages/AIDashboard/flagshipPriceSnapshot.ts';
+import { TOKEN_PRICE_SUPPLEMENTS } from '../src/pages/AIDashboard/pricingSupplements.ts';
+import { mergeTokenPriceSupplements } from '../src/pages/AIDashboard/pricingViewModel.ts';
+import { RECENT_SPECIALIST_UPDATES } from '../src/pages/AIDashboard/recentModelReview.ts';
 
 const latest = (id: string): FlagshipPriceRow => {
   const row = LATEST_FLAGSHIP_ROWS.find(candidate => candidate.id === id);
@@ -99,10 +102,10 @@ test('the original 29-model transcription keeps all historical values, stars and
   assert.equal(parseCsv(buildFlagshipPriceCsv()).length, 30);
 });
 
-test('the refreshed snapshot contains 45 unique models and retains the original model identities', () => {
+test('the refreshed snapshot contains 46 unique models and retains the original model identities', () => {
   assert.equal(LATEST_MODEL_REVIEW.date, '2026-10-13');
-  assert.equal(LATEST_FLAGSHIP_ROWS.length, 45);
-  assert.equal(new Set(LATEST_FLAGSHIP_ROWS.map(row => row.id)).size, 45);
+  assert.equal(LATEST_FLAGSHIP_ROWS.length, 46);
+  assert.equal(new Set(LATEST_FLAGSHIP_ROWS.map(row => row.id)).size, 46);
   for (const original of FLAGSHIP_PRICE_ROWS) {
     const refreshed = latest(original.id);
     assert.equal(refreshed.model, original.model);
@@ -117,12 +120,12 @@ test('the refreshed snapshot contains 45 unique models and retains the original 
   ]);
 });
 
-test('all 41 scored rows resolve to the same AA v4.3.2 record and preserve evaluation configurations', () => {
+test('the original 41 AA records remain intact alongside the separately dated 42nd scored row', () => {
   assert.equal(LATEST_MODEL_REVIEW.indexVersion, '4.3.2');
   assert.equal(FLAGSHIP_AA_VERIFIED.checkedDate, '2026-10-13');
   assert.equal(FLAGSHIP_AA_VERIFIED.models.length, 41);
   assert.equal(new Set(FLAGSHIP_AA_VERIFIED.models.map(model => model.slug)).size, 41);
-  assert.equal(LATEST_FLAGSHIP_ROWS.filter(row => row.score !== null).length, 41);
+  assert.equal(LATEST_FLAGSHIP_ROWS.filter(row => row.score !== null).length, 42);
   for (const evaluation of FLAGSHIP_AA_VERIFIED.models) {
     const original = evaluation.originalSourceOrder === null ? undefined : FLAGSHIP_PRICE_ROWS[evaluation.originalSourceOrder - 1];
     const row = latest(original?.id ?? evaluation.slug);
@@ -135,6 +138,55 @@ test('all 41 scored rows resolve to the same AA v4.3.2 record and preserve evalu
   assert.equal(latest('qwen-3-8-max-0902').scoreSourceUrl, 'https://artificialanalysis.ai/models/qwen3-8-max');
   assert.match(latest('claude-opus-5-5').evaluationLabel!, /Max.*Default Fallback/);
   assert.equal(latest('grok-4-7').evaluationLabel, 'Xhigh');
+});
+
+test('Muse Spark Open keeps its own evaluation, hosted-price provider and identity beside Spark 1.3 and Wonder', () => {
+  const open = latest('muse-spark-open');
+  assert.equal(open.model, 'Muse Spark Open');
+  assert.equal(open.score, 39);
+  assert.equal(open.evaluationLabel, 'Xhigh');
+  assert.equal(open.scoreSourceUrl, 'https://artificialanalysis.ai/models/muse-spark-open');
+  assert.equal(open.priceSourceUrl, 'https://www.baseten.co/library/muse-spark-open/');
+  assert.match(open.note, /Baseten.*第三方/);
+  assert.equal(open.releasedAt, '2026-10-15');
+  assert.equal(latest('muse-spark-1-3').score, 48);
+  assert.equal(latest('muse-wonder').score, 52);
+  assert.equal(FLAGSHIP_PRICE_ROWS.some(row => row.id === open.id), false);
+  assert.equal(FLAGSHIP_AA_VERIFIED.models.some(row => row.slug === open.id), false);
+
+  const hosted = TOKEN_PRICE_SUPPLEMENTS.find(row => row.model === open.model)!;
+  assert.ok(hosted);
+  assert.deepEqual([hosted.inputPrice, hosted.cacheReadPrice, hosted.outputPrice], [1.25, 0.15, 4.25]);
+  assert.match(hosted.sourceLabel, /Baseten.*第三方/);
+  assert.equal(hosted.provenance.sourceUrl, hosted.sourceUrl);
+  assert.equal(hosted.sourceUrl, open.priceSourceUrl);
+  assert.equal(hosted.asOf, '2026-10-16');
+  assert.equal(hosted.retrievedAt, '2026-10-16');
+  assert.notEqual(hosted.serviceTier, 'standard');
+  const differentProvider = { ...hosted, serviceTier: 'standard', asOf: '2026-10-17', inputPrice: 9 };
+  const merged = mergeTokenPriceSupplements([differentProvider], [hosted]);
+  assert.equal(merged.length, 2);
+  assert.equal(merged.find(row => row.serviceTier === 'standard'), differentProvider);
+
+  const update = RECENT_SPECIALIST_UPDATES.find(row => row.model === open.model)!;
+  assert.equal(RECENT_SPECIALIST_UPDATES.length, 19);
+  assert.ok(update);
+  assert.match(update.status, /开放权重/);
+  assert.match(update.note, /Muse Model License/);
+  assert.equal(update.sourceUrl, 'https://research.meta.ai/blog/muse-spark-open');
+});
+
+test('the Open supplement dates only the new row and its CSV/TSV exports while the base snapshot date stays unchanged', () => {
+  assert.equal(LATEST_MODEL_REVIEW.date, '2026-10-13');
+  assert.equal(LATEST_MODEL_REVIEW.supplementDate, '2026-10-16');
+  const csv = parseCsv(buildLatestFlagshipCsv()).slice(1);
+  const tsv = buildLatestFlagshipTsv().split('\n').slice(1).map(row => row.split('\t'));
+  for (const [index, row] of LATEST_FLAGSHIP_ROWS.entries()) {
+    const expected = row.id === 'muse-spark-open' ? '2026-10-16' : '2026-10-13';
+    assert.equal(csv[index][0], expected, row.id);
+    assert.equal(tsv[index][0], expected, row.id);
+    assert.equal(row.checkedAt ?? LATEST_MODEL_REVIEW.date, expected, row.id);
+  }
 });
 
 test('GLM Flash uses the current 42 score while FlashX keeps its own price and no borrowed score', () => {
@@ -238,11 +290,11 @@ test('price bounds distinguish missing, zero and positive quotes and fit the dis
   }
 });
 
-test('CSV and TSV deliver all 45 rows and 13 columns with source, version, configuration and conditions', () => {
+test('CSV and TSV deliver all 46 rows and 13 columns with source, version, configuration and conditions', () => {
   const csv = parseCsv(buildLatestFlagshipCsv());
   const tsv = buildLatestFlagshipTsv().split('\n').map(line => line.split('\t'));
-  assert.equal(csv.length, 46);
-  assert.equal(tsv.length, 46);
+  assert.equal(csv.length, 47);
+  assert.equal(tsv.length, 47);
   assert.equal(LATEST_FLAGSHIP_COLUMNS.length, 13);
   assert.deepEqual(csv[0], [
     '核对日期', '显示顺序', '模型', 'AA 智能指数', '输入价（USD/百万tokens）', '输出价（USD/百万tokens）',
@@ -253,7 +305,7 @@ test('CSV and TSV deliver all 45 rows and 13 columns with source, version, confi
   csv.slice(1).forEach((cells, index) => {
     const row = LATEST_FLAGSHIP_ROWS[index];
     assert.equal(cells.length, 13, row.id);
-    assert.equal(cells[0], '2026-10-13');
+    assert.equal(cells[0], row.checkedAt ?? LATEST_MODEL_REVIEW.date);
     assert.equal(cells[1], String(index + 1));
     assert.equal(cells[2], `${row.model}${row.sourceStar ? ' ★' : ''}`);
     assert.equal(cells[3], row.score === null ? '未收录' : String(row.score));

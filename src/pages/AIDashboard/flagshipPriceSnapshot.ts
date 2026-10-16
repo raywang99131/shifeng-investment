@@ -28,6 +28,8 @@ export interface FlagshipPriceRow {
   detailNote?: string;
   releasedAt?: string | null;
   cacheReadPrice?: number | null;
+  /** Date of an independently checked later supplement; does not redate the base snapshot. */
+  checkedAt?: string;
 }
 
 export const FLAGSHIP_PRICE_SNAPSHOT = {

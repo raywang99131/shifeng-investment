@@ -11,6 +11,7 @@ import {
 } from './flagshipPriceSnapshot';
 import { LATEST_FLAGSHIP_ROWS, LATEST_MODEL_REVIEW, buildLatestFlagshipCsv } from './flagshipLatestSnapshot';
 import { RECENT_SPECIALIST_UPDATES } from './recentModelReview';
+import { MUSE_SPARK_OPEN_UPDATE } from './museSparkOpenUpdate';
 import './FlagshipPriceComparison.css';
 
 const { Paragraph, Text } = Typography;
@@ -37,7 +38,7 @@ function downloadFile(content: string, mimeType: string, filename: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function exportChart(svg: SVGSVGElement | null) {
+function exportChart(svg: SVGSVGElement | null, date: string) {
   if (!svg) return;
   const clone = svg.cloneNode(true) as SVGSVGElement;
   const originals = [svg, ...svg.querySelectorAll('*')];
@@ -52,7 +53,7 @@ function exportChart(svg: SVGSVGElement | null) {
   clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
   clone.setAttribute('width', String(WIDTH));
   clone.setAttribute('height', svg.viewBox.baseVal.height.toString());
-  downloadFile(`<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(clone)}`, 'image/svg+xml;charset=utf-8', `旗舰模型API价格与智能指数-${FLAGSHIP_PRICE_SNAPSHOT.date}.svg`);
+  downloadFile(`<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(clone)}`, 'image/svg+xml;charset=utf-8', `旗舰模型API价格与智能指数-${date}.svg`);
 }
 
 function PriceBar({ price, centerY, direction, priceMax, suffix = '' }: {
@@ -171,28 +172,36 @@ export default function FlagshipPriceComparison() {
     id="flagship-api-price-comparison"
     title={latest ? '主流大模型 API 价格与智能指数对比' : FLAGSHIP_PRICE_SNAPSHOT.title}
     extra={<Space wrap size={8}>
-      <Button size="small" onClick={() => downloadFile(`\uFEFF${(latest ? buildLatestFlagshipCsv() : buildFlagshipPriceCsv())}`, 'text/csv;charset=utf-8', `旗舰模型API价格-${FLAGSHIP_PRICE_SNAPSHOT.date}.csv`)}>导出 CSV</Button>
-      <Button size="small" onClick={() => exportChart(svgRef.current)}>导出 SVG</Button>
+      <Button size="small" onClick={() => downloadFile(`\uFEFF${(latest ? buildLatestFlagshipCsv() : buildFlagshipPriceCsv())}`, 'text/csv;charset=utf-8', `旗舰模型API价格-${latest ? LATEST_MODEL_REVIEW.supplementDate : FLAGSHIP_PRICE_SNAPSHOT.date}.csv`)}>导出 CSV</Button>
+      <Button size="small" onClick={() => exportChart(svgRef.current, latest ? LATEST_MODEL_REVIEW.supplementDate : FLAGSHIP_PRICE_SNAPSHOT.date)}>导出 SVG</Button>
     </Space>}
   >
     <Space wrap size={[8, 8]}>
       <Segmented aria-label="对比图版本" value={view} onChange={value => setView(String(value))} options={[{ label: '最新核对（含新增）', value: 'latest' }, { label: '原图 29 模型', value: 'original' }]} />
-      <Tag color="blue">{latest ? '核对日期' : '截图日期'} {FLAGSHIP_PRICE_SNAPSHOT.date}</Tag>
+      <Tag color="blue">{latest ? '增补日期' : '截图日期'} {latest ? LATEST_MODEL_REVIEW.supplementDate : FLAGSHIP_PRICE_SNAPSHOT.date}</Tag>
+      {latest && <Tag>主体核对 {LATEST_MODEL_REVIEW.date}</Tag>}
       <Tag>{latest ? `AA v${LATEST_MODEL_REVIEW.indexVersion}` : '用户提供快照'}</Tag>
       <Tag>{rows.length} 个模型 · {latest ? '按智能指数排列' : '原图顺序'}</Tag>
     </Space>
     <Paragraph className="flagship-price-intro" type="secondary">
-      {latest ? '已补入近期新模型，智能指数按 AA v4.3.2 核对，价格优先采用厂商官网并保留促销、分档与可用性条件。未收录指数与未公开 API 单价均保留为空；星标沿用原图。' : '按原图重绘，保留星标、价格区间与限定条件。原图未注明 AA 指数版本；此处保存原始转录。'}
+      {latest ? '已补入近期新模型，智能指数按 AA v4.3.2 核对，价格优先采用厂商官网并保留促销、分档与可用性条件。Muse Spark Open 采用明确标注的 Baseten 第三方托管报价。未收录指数与未公开 API 单价均保留为空；星标沿用原图。' : '按原图重绘，保留星标、价格区间与限定条件。原图未注明 AA 指数版本；此处保存原始转录。'}
     </Paragraph>
+    {latest && <Paragraph className="flagship-price-intro">
+      <Text strong>Muse Spark Open 新增：</Text>
+      {MUSE_SPARK_OPEN_UPDATE.releasedAt} 发布，开放权重；AA {MUSE_SPARK_OPEN_UPDATE.aa.score}（Xhigh）。
+      Baseten 托管 API 输入 / 输出 ${MUSE_SPARK_OPEN_UPDATE.hostedQuote.input} / ${MUSE_SPARK_OPEN_UPDATE.hostedQuote.output}，缓存读取 ${MUSE_SPARK_OPEN_UPDATE.hostedQuote.cacheRead}，均为每百万 Token。
+      Wonder 系列闭源与 Spark Open 开放权重分别记录，商业使用仍需遵守 Muse Model License。
+      {' '}<a href={MUSE_SPARK_OPEN_UPDATE.sources.release.url} target="_blank" rel="noreferrer">Meta 官方公告</a>
+    </Paragraph>}
     <MuseWonderRelease titleId={`${id}-muse-release-title`} />
     <Text type="secondary" className="flagship-price-scroll-hint">小屏可左右滑动查看完整图表；CSV 和 SVG 导出当前所选版本。</Text>
     <div className="flagship-price-scroll" role="region" aria-label="旗舰模型 API 价格与智能指数图表，可左右滚动" tabIndex={0}>
       <svg ref={svgRef} data-testid="flagship-price-comparison-chart" className="flagship-price-svg" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-labelledby={`${titleId} ${descriptionId}`}>
-        <title id={titleId}>{FLAGSHIP_PRICE_SNAPSHOT.title}，2026 年 10 月 13 日{latest ? '官网与 AA 核对更新' : '用户截图快照'}</title>
+        <title id={titleId}>{FLAGSHIP_PRICE_SNAPSHOT.title}，{latest ? `${LATEST_MODEL_REVIEW.supplementDate} 增补；主体核对 ${LATEST_MODEL_REVIEW.date}` : '2026 年 10 月 13 日用户截图快照'}</title>
         <desc id={descriptionId}>{rows.length} 个模型。{latest ? `智能指数统一采用 AA v${LATEST_MODEL_REVIEW.indexVersion}；缺失分数排在末尾。` : '按原图顺序排列。'}左侧蓝色数字为 Artificial Analysis 智能指数，刻度为 {scoreMin} 至 {scoreMax}；右侧输入价为粉色、输出价为红色，统一使用 0 至 {priceMax} 美元每百万 tokens 的线性刻度。实心条表示价格下限，浅色虚线条延伸到上限。Muse Wonder Full 和 Muse Wonder 保留原图框选。缺失报价不画条，未收录指数保持缺失。下方可展开完整文字数据。</desc>
         <rect width={WIDTH} height={HEIGHT} className="flagship-price-background" />
         <text x={WIDTH / 2} y={37} textAnchor="middle" className="flagship-price-chart-title">{latest ? '主流大模型 API 价格与智能指数对比' : FLAGSHIP_PRICE_SNAPSHOT.title}</text>
-        <text x={WIDTH / 2} y={68} textAnchor="middle" className="flagship-price-chart-subtitle">2026/10/13 · {latest ? `AA v${LATEST_MODEL_REVIEW.indexVersion} · 官网价格核对更新` : `【${FLAGSHIP_PRICE_SNAPSHOT.team}】`}</text>
+        <text x={WIDTH / 2} y={68} textAnchor="middle" className="flagship-price-chart-subtitle">{latest ? `${LATEST_MODEL_REVIEW.supplementDate} 增补 · AA v${LATEST_MODEL_REVIEW.indexVersion} · 主体核对 ${LATEST_MODEL_REVIEW.date}` : `2026/10/13 · 【${FLAGSHIP_PRICE_SNAPSHOT.team}】`}</text>
         <text x={SCORE_LEFT + SCORE_WIDTH / 2} y={103} textAnchor="middle" className="flagship-score-heading">Artificial Analysis 智能指数</text>
         <text x={PRICE_LEFT + PRICE_WIDTH / 2} y={103} textAnchor="middle" className="flagship-price-heading">API 刊例价（美元 / 百万 tokens）</text>
         <g className="flagship-price-input"><rect x={810} y={117} width={30} height={12} className="flagship-price-solid" /></g>
@@ -214,7 +223,7 @@ export default function FlagshipPriceComparison() {
         {rows.map((row, index) => <ModelRow key={row.id} row={row} index={index} scoreMin={scoreMin} scoreMax={scoreMax} priceMax={priceMax} />)}
         <line x1={PRICE_LEFT} x2={PRICE_LEFT + PRICE_WIDTH + 22} y1={BOTTOM} y2={BOTTOM} className="flagship-price-axis" />
         <text x={24} y={BOTTOM + 65} className="flagship-price-footnote">实心 = 下限；浅色虚线 = 上限。分档与区间均保留原值；★ 沿用原图标记。</text>
-        <text x={24} y={BOTTOM + 90} className="flagship-price-footnote">{latest ? '资料来源：厂商官网、Artificial Analysis v4.3.2；逐项来源与条件见文字明细' : '资料来源：厂商官网、Artificial Analysis、中信建投整理（用户提供截图，未独立核实）'}</text>
+        <text x={24} y={BOTTOM + 90} className="flagship-price-footnote">{latest ? '资料来源：厂商及托管提供商官网、Artificial Analysis v4.3.2；逐项来源与条件见文字明细' : '资料来源：厂商官网、Artificial Analysis、中信建投整理（用户提供截图，未独立核实）'}</text>
       </svg>
     </div>
     <Paragraph className="flagship-price-caption" type="secondary">
@@ -222,14 +231,14 @@ export default function FlagshipPriceComparison() {
     </Paragraph>
     <Collapse className="flagship-price-details" items={[
       { key: 'recent', label: `近期专项模型与开放更新（${RECENT_SPECIALIST_UPDATES.length} 项）`, children: <div className="flagship-price-data-scroll">
-        <table className="flagship-price-data"><caption>专项模型保留原计费单位；未进入通用文本综合指数价格排序。</caption>
+        <table className="flagship-price-data"><caption>专项模型保留原计费单位；通用模型的开放更新也在此列示，已核实的通用价格与指数另见主图。</caption>
           <thead><tr><th>厂商 / 型号</th><th>日期</th><th>开放状态</th><th>价格与单位</th><th>说明 / 来源</th></tr></thead>
           <tbody>{RECENT_SPECIALIST_UPDATES.map(row => <tr key={row.model}><th scope="row">{row.vendor}<br />{row.model}</th><td>{row.date || '未确认'}</td><td>{row.status}</td><td>{row.pricing}</td><td>{row.note}<br /><a href={row.sourceUrl} target="_blank" rel="noreferrer">官方来源</a>{row.supportingSources?.map(source => <span key={source.url}> · <a href={source.url} target="_blank" rel="noreferrer">{source.label}</a></span>)}</td></tr>)}</tbody>
         </table>
       </div> },
       { key: 'method', label: '口径说明与原图（点击图片放大）', children: <>
         <ul className="flagship-price-method">
-          <li>原图与最新核对日期均为2026-10-13，刷新不会改变。最新核对版统一AA v4.3.2，原图自身未注明版本；星标沿用原图。</li>
+          <li>原图与主体核对日期为2026-10-13；2026-10-16仅增补Muse Spark Open，其他条目沿用主体核对日期。最新核对版统一AA v4.3.2，原图自身未注明版本；星标沿用原图。</li>
           <li>价格条从0起；最新核对版共用0–100刻度，原图版共用0–50刻度。区间及分档以实心绘制较低端、浅色虚线绘制较高端；标签保留两端精度。</li>
           <li>Haiku两档对应≤100K / &gt;100K；GPT标准服务分档为≤272K / &gt;272K。优惠/刊例、上下文分档与各模型限制见文字明细。不同推理配置仍分别注明，指数为英语文本套件综合分，不等同于视觉/金融专项排名。</li>
           <li>仅订阅与未核实API报价留空；未收录指数留空。只有厂商明确的限时免费显示0；开放权重不按免费托管API处理。原图版本保留原值。</li>
@@ -241,7 +250,7 @@ export default function FlagshipPriceComparison() {
       </> },
       { key: 'data', label: `查看完整文字数据（${rows.length} 项）`, children: <div className="flagship-price-data-scroll">
         <table className="flagship-price-data">
-          <caption>2026-10-13 {latest ? '官网与 AA 核对更新' : '截图转录'} · 价格单位：美元 / 百万 tokens。</caption>
+          <caption>{latest ? `${LATEST_MODEL_REVIEW.supplementDate} 增补；主体核对 ${LATEST_MODEL_REVIEW.date}` : '2026-10-13 截图转录'} · 价格单位：美元 / 百万 tokens。</caption>
           <thead><tr><th scope="col">模型（原图星标）</th><th scope="col">AA 指数</th><th scope="col">输入价</th><th scope="col">输出价</th><th scope="col">说明</th><th scope="col">{latest ? '核对来源与评测配置' : '补充纪要（未经独立核实）'}</th></tr></thead>
           <tbody>{rows.map(row => <tr key={row.id}>
             <th scope="row">{flagshipModelLabel(row)}</th><td>{row.scoreRaw}</td><td>{row.input.raw || '未列示'}</td><td>{row.output.raw || '未列示'}</td><td>{row.note || '—'}</td><td className="flagship-price-supplement-note">{latest ? <>{row.detailNote || '—'}<br />{row.priceSourceUrl ? <a href={row.priceSourceUrl} target="_blank" rel="noreferrer">价格来源</a> : <span>{row.input.lower === null ? '未核实厂商 API 单价' : '价格沿用原图'}</span>}{' · '}{row.scoreSourceUrl ? <a href={row.scoreSourceUrl} target="_blank" rel="noreferrer">AA {row.evaluationLabel}</a> : <span>AA 未收录</span>}</> : row.supplementNote || '—'}</td>
