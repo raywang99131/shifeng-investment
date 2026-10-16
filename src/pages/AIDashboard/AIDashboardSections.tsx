@@ -3,6 +3,7 @@ import ReactECharts from 'echarts-for-react';
 import OpenRouterWeeklyChart from './OpenRouterWeeklyChart';
 import CdsModelComparisonPanel from './CdsModelComparisonPanel';
 import NebiusComputeResearch from './NebiusComputeResearch';
+import BofaCapacityResearch from './BofaCapacityResearch';
 import AnthropicComputeResearch, { AnthropicComputeSummary } from './AnthropicComputeResearch';
 import AnthropicInvestorDayResearch, { AnthropicInvestorDaySummary } from './AnthropicInvestorDayResearch';
 import FlagshipPriceComparison from './FlagshipPriceComparison';
@@ -1253,6 +1254,7 @@ export function ComputeRentalSection({ data }: DashboardProps) {
   const comparableLatest = latest.filter((row) => row.currency === 'USD');
   return (
     <div className="ai-section-stack">
+      <BofaCapacityResearch />
       <AnthropicComputeResearch />
       <NebiusComputeResearch />
       <Alert type="info" showIcon title="报价说明" description="按北京时间记录每日实际采集的报价。涨跌比较同平台、同 GPU、同规格、同地区和同计费方式的价格；未取得报价的日期留空。" />
